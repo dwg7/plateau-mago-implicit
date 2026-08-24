@@ -12,6 +12,12 @@ if [ -z "$DATASET" ]; then
     exit 1
 fi
 
+if ! [[ "$DATASET" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "ERROR: Invalid dataset name: $DATASET" >&2
+    echo "  Dataset must match ^[a-zA-Z0-9_-]+\$ (no slashes, spaces, or shell metacharacters)." >&2
+    exit 1
+fi
+
 MANIFEST="$REPO_ROOT/data/input-manifest.yml"
 SOURCE_DIR="$REPO_ROOT/data/source/$DATASET"
 

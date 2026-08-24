@@ -13,6 +13,12 @@ if [ -z "$DATASET" ]; then
     exit 1
 fi
 
+if ! [[ "$DATASET" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "ERROR: Invalid dataset name: $DATASET" >&2
+    echo "  Dataset must match ^[a-zA-Z0-9_-]+\$ (no slashes, spaces, or shell metacharacters)." >&2
+    exit 1
+fi
+
 OUTPUT_BASE="$REPO_ROOT/data/output/${DATASET}/${MODE}/${PROFILE}"
 REPORT_DIR="$REPO_ROOT/manifests/reports"
 
