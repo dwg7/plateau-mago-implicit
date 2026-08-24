@@ -1,0 +1,90 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-24T21:58:54.287835+00:00",
+  "input_dir": "/Users/hfu/plateau-mago-implicit/data/output/sarabetsu/implicit/small/20260824T215851Z-sarabetsu-implicit-small",
+  "file_count": 4,
+  "normalized_tileset": {
+    "asset": {
+      "version": "1.1"
+    },
+    "geometricError": 154.376,
+    "root": {
+      "boundingVolume": {
+        "region": [
+          2.500237,
+          0.744564,
+          2.500238,
+          0.744565,
+          0.0,
+          154.376
+        ]
+      },
+      "content": {
+        "uri": "data/R/{level}/{x}/{y}.glb"
+      },
+      "geometricError": 64.0,
+      "implicitTiling": {
+        "availableLevels": 4,
+        "subdivisionScheme": "QUADTREE",
+        "subtreeLevels": 4,
+        "subtrees": {
+          "uri": "subtrees/R/{level}/{x}/{y}.json"
+        }
+      },
+      "refine": "ADD"
+    }
+  },
+  "files": [
+    {
+      "path": "data/R/3/4/2.glb",
+      "size_bytes": 4804,
+      "sha256": "bfd5d4550f48c37d0e197211dd2e2604e61f7de0812f48906a53326065f13655"
+    },
+    {
+      "path": "subtrees/R/0/0/0.bin",
+      "size_bytes": 64,
+      "sha256": "dae2f856213c53f7bd497854811024beffe8bca3cf3a95836f299f7a1a72eded"
+    },
+    {
+      "path": "subtrees/R/0/0/0.json",
+      "size_bytes": 370,
+      "sha256": "242bf7fd6e9381bf1b7573dd5675241783b618207ad1a64c62309e2c28be0c6a"
+    },
+    {
+      "path": "tileset.json",
+      "size_bytes": 433,
+      "sha256": "4e8640202f3cb3720a934c1379595b3452295199ed03495add0d85e16b5d83bd",
+      "normalized_content": {
+        "asset": {
+          "version": "1.1"
+        },
+        "geometricError": 154.376,
+        "root": {
+          "boundingVolume": {
+            "region": [
+              2.500237,
+              0.744564,
+              2.500238,
+              0.744565,
+              0.0,
+              154.376
+            ]
+          },
+          "content": {
+            "uri": "data/R/{level}/{x}/{y}.glb"
+          },
+          "geometricError": 64.0,
+          "implicitTiling": {
+            "availableLevels": 4,
+            "subdivisionScheme": "QUADTREE",
+            "subtreeLevels": 4,
+            "subtrees": {
+              "uri": "subtrees/R/{level}/{x}/{y}.json"
+            }
+          },
+          "refine": "ADD"
+        }
+      }
+    }
+  ]
+}
