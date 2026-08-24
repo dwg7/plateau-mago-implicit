@@ -52,7 +52,7 @@ echo ""
 # TBD guard tests (scripts should fail when TBD values are present)
 echo "--- TBD guard tests ---"
 run_test "fetch.sh fails on TBD_VERIFIED_SOURCE_REQUIRED" \
-    "! bash '$REPO_ROOT/scripts/fetch.sh' sarabetsu 2>/dev/null"
+    "! bash '$REPO_ROOT/scripts/fetch.sh' tbd-guard-test 2>/dev/null"
 echo ""
 
 # Fixture tests
