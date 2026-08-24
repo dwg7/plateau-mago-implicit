@@ -145,6 +145,12 @@ if [ -f "$ROOT_TILESET" ]; then
     ROOT_TILESET_BYTES="$(wc -c < "$ROOT_TILESET")"
 fi
 
+# On success, point "latest" at this build so consumers (the viewer, ad
+# hoc curl/inspection) don't need to know the timestamped BUILD_ID.
+if [ "$RETURN_CODE" -eq 0 ]; then
+    ln -sfn "$BUILD_ID" "$OUTPUT_BASE/${DATASET}/${MODE}/${PROFILE}/latest"
+fi
+
 # Write build manifest
 cat > "$MANIFEST_FILE" << EOF
 schema_version: "1"

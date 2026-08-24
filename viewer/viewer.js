@@ -10,11 +10,17 @@
  * - Attribution display
  */
 
-// Predefined viewpoints
+// Predefined viewpoints.
+//
+// tilesetUrl is absolute and points at nginx's /tiles/ location (aliased to
+// data/output/ — see config/nginx.conf and compose.yml), under a "latest"
+// symlink that scripts/build.sh updates on every successful build to point
+// at that build's timestamped BUILD_ID directory. This must stay in sync
+// with the output path scripts/build.sh actually writes to.
 const VIEWPOINTS = {
   sarabetsu_explicit_small: {
     label: 'Sarabetsu Village — Explicit (small)',
-    tilesetUrl: '../data/output/sarabetsu/explicit/small/tileset.json',
+    tilesetUrl: '/tiles/sarabetsu/explicit/small/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(143.1, 42.6, 5000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
@@ -24,7 +30,7 @@ const VIEWPOINTS = {
   },
   sarabetsu_implicit_small: {
     label: 'Sarabetsu Village — Implicit (small)',
-    tilesetUrl: '../data/output/sarabetsu/implicit/small/tileset.json',
+    tilesetUrl: '/tiles/sarabetsu/implicit/small/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(143.1, 42.6, 5000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
@@ -34,7 +40,7 @@ const VIEWPOINTS = {
   },
   muroran_explicit_small: {
     label: 'Muroran City — Explicit (small)',
-    tilesetUrl: '../data/output/muroran/explicit/small/tileset.json',
+    tilesetUrl: '/tiles/muroran/explicit/small/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(141.0, 42.3, 8000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
@@ -44,7 +50,7 @@ const VIEWPOINTS = {
   },
   muroran_implicit_small: {
     label: 'Muroran City — Implicit (small)',
-    tilesetUrl: '../data/output/muroran/implicit/small/tileset.json',
+    tilesetUrl: '/tiles/muroran/implicit/small/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(141.0, 42.3, 8000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
@@ -167,8 +173,7 @@ document.getElementById('datasetSelect').addEventListener('change', function () 
   const vp = VIEWPOINTS[key];
   if (!vp) return;
 
-  // Try to find the most recent build
-  const url = resolveTilesetUrl(vp.tilesetUrl);
+  const url = vp.tilesetUrl;
   document.getElementById('customUrl').value = url;
 
   loadTileset(url, vp.label).then(() => {
@@ -177,14 +182,6 @@ document.getElementById('datasetSelect').addEventListener('change', function () 
     }
   });
 });
-
-// Find most recent tileset (try direct path, then scan latest)
-function resolveTilesetUrl(pattern) {
-  // Replace trailing tileset.json with pattern for latest build
-  // For simplicity, use the pattern directly.
-  // In production, this could be a manifest lookup.
-  return pattern;
-}
 
 // Load button
 document.getElementById('loadBtn').addEventListener('click', () => {

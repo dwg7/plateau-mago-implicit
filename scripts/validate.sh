@@ -23,9 +23,9 @@ OUTPUT_BASE="$REPO_ROOT/data/output/${DATASET}/${MODE}/${PROFILE}"
 LOG_DIR="$REPO_ROOT/manifests/reports"
 mkdir -p "$LOG_DIR"
 
-# Find most recent build
-LATEST_BUILD="$(find "$OUTPUT_BASE" -maxdepth 1 -type d | sort | tail -1)"
-if [ -z "$LATEST_BUILD" ] || [ "$LATEST_BUILD" = "$OUTPUT_BASE" ]; then
+# Find most recent build (exclude $OUTPUT_BASE itself)
+LATEST_BUILD="$(find "$OUTPUT_BASE" -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
+if [ -z "$LATEST_BUILD" ]; then
     echo "ERROR: No build found at $OUTPUT_BASE" >&2
     echo "  Run: make build DATASET=$DATASET MODE=$MODE PROFILE=$PROFILE" >&2
     exit 1
