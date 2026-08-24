@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Run fixture tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh tests/*.sh
+
+      - name: Run tests
+        run: bash tests/run-tests.sh
+
+  lint-shell:
+    name: Lint shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Check shell scripts
+        run: |
+          find scripts tests -name "*.sh" -exec shellcheck --severity=warning {} +
+
+  lint-python:
+    name: Lint Python tools
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Lint Python files
+        run: |
+          flake8 tools/ --max-line-length=100 --extend-ignore=E501,W503,E203
+
+  check-configs:
+    name: Check configuration files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install PyYAML
+
+      - name: Validate YAML files
+        run: |
+          python3 -c "
+          import yaml, sys, os
+          errors = 0
+          for root, dirs, files in os.walk('.'):
+              for f in files:
+                  if f.endswith('.yml') or f.endswith('.yaml'):
+                      path = os.path.join(root, f)
+                      if '.git' in path:
+                          continue
+                      try:
+                          yaml.safe_load(open(path))
+                          print(f'  OK: {path}')
+                      except yaml.YAMLError as e:
+                          print(f'  ERROR: {path}: {e}')
+                          errors += 1
+          if errors:
+              sys.exit(1)
+          print(f'All YAML files valid.')
+          "
+
+  check-docs:
+    name: Check documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required docs exist
+        run: |
+          MISSING=0
+          for doc in hypothesis scope architecture data-selection test-plan \
+                     reproducibility determinism validation performance \
+                     information-retention respectful-positioning limitations findings; do
+            if [ ! -f "docs/${doc}.md" ]; then
+              echo "MISSING: docs/${doc}.md"
+              MISSING=$((MISSING + 1))
+            else
+              echo "OK: docs/${doc}.md"
+            fi
+          done
+          if [ "$MISSING" -gt 0 ]; then
+            echo "$MISSING required docs missing"
+            exit 1
+          fi
+
+      - name: Check README links to docs
+        run: |
+          python3 -c "
+          import re, sys, os
+          readme = open('README.md').read()
+          errors = 0
+          for match in re.finditer(r'\[([^\]]+)\]\(([^\)]+)\)', readme):
+              href = match.group(2)
+              if href.startswith('http') or href.startswith('#'):
+                  continue
+              path = href.split('#')[0]
+              if path and not os.path.exists(path):
+                  print(f'  BROKEN LINK: {href}')
+                  errors += 1
+              else:
+                  print(f'  OK: {href}')
+          if errors:
+              sys.exit(1)
+          print(f'All README links valid.')
+          "

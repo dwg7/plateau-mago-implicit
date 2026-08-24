@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: >
+  If you use or reference this experiment, please cite it using the metadata
+  in this file.
+type: software
+title: >
+  plateau-mago-implicit: Implicit 3D Tiles from Project PLATEAU CityGML
+  using Mago 3DTiler
+abstract: >
+  A small, rigorous, reproducible technical experiment testing whether building
+  data from Project PLATEAU CityGML for Muroran City (室蘭市) and Sarabetsu
+  Village (更別村) can be converted into Implicit 3D Tiles using Mago 3DTiler
+  in a deterministic and reproducible manner, and consumed comfortably with
+  CesiumJS from ordinary static HTTP storage. Presented in the working style
+  of UN Open GIS Initiative DWG7.
+repository-code: https://github.com/dwg7/plateau-mago-implicit
+license: CC0-1.0
+keywords:
+  - 3D Tiles
+  - Implicit Tiling
+  - CityGML
+  - Project PLATEAU
+  - Mago 3DTiler
+  - CesiumJS
+  - reproducibility
+  - determinism
+  - static delivery
+  - open source
+  - UN Open GIS Initiative
+  - DWG7
+  - Muroran
+  - Sarabetsu
+references:
+  - type: software
+    title: Mago 3DTiler
+    authors:
+      - name: Gaia3D, Inc.
+    url: https://github.com/Gaia3D/mago-3d-tiler
+  - type: software
+    title: CesiumJS
+    authors:
+      - name: Cesium GS, Inc.
+    url: https://cesium.com/platform/cesiumjs/
+  - type: dataset
+    title: Project PLATEAU Building CityGML
+    authors:
+      - name: Ministry of Land, Infrastructure, Transport and Tourism
+    url: https://www.mlit.go.jp/plateau/
+    license: CC-BY-4.0

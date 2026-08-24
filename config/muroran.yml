@@ -1,0 +1,85 @@
+# Muroran City (室蘭市) dataset configuration
+# All unresolved values are marked TBD_VERIFIED_SOURCE_REQUIRED.
+# Resolve before running any experiment step.
+
+schema_version: "1"
+
+municipality:
+  name_en: "Muroran City"
+  name_ja: "室蘭市"
+  code: "01205"
+  prefecture_en: "Hokkaido"
+  prefecture_ja: "北海道"
+
+dataset:
+  # PLATEAU dataset identifier
+  identifier: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # Dataset year
+  year: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # PLATEAU specification version
+  plateau_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # CityGML version
+  citygml_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # Source catalog URL
+  catalog_url: "https://www.geospatial.jp/ckan/organization/mlit-plateau"
+  # Version-specific download URL (prefer immutable)
+  download_url: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # Archive file name
+  archive_name: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # Archive checksum (SHA-256)
+  archive_sha256: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # Archive file size (bytes)
+  archive_size_bytes: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # License
+  license: "CC BY 4.0"
+  # Attribution
+  attribution: "国土交通省 Project PLATEAU"
+
+source:
+  # Paths within the archive to building CityGML files
+  # Populated after Phase 0 inspection
+  building_files: []
+  # Selected file(s) for small (Phase 5) experiment
+  small_files: []
+  # Reason for selection
+  small_files_reason: "TBD_VERIFIED_SOURCE_REQUIRED"
+
+# Source statistics (populated after Phase 0 inspection)
+source_stats:
+  citygml_file_count: "TBD_VERIFIED_SOURCE_REQUIRED"
+  building_count: "TBD_VERIFIED_SOURCE_REQUIRED"
+  gml_id_count: "TBD_VERIFIED_SOURCE_REQUIRED"
+  lods_present: []
+  polygon_count: "TBD_VERIFIED_SOURCE_REQUIRED"
+  texture_references: "TBD_VERIFIED_SOURCE_REQUIRED"
+  crs: "TBD_VERIFIED_SOURCE_REQUIRED"
+  bbox_min_lat: "TBD_VERIFIED_SOURCE_REQUIRED"
+  bbox_max_lat: "TBD_VERIFIED_SOURCE_REQUIRED"
+  bbox_min_lon: "TBD_VERIFIED_SOURCE_REQUIRED"
+  bbox_max_lon: "TBD_VERIFIED_SOURCE_REQUIRED"
+
+# CRS observations
+crs:
+  srs_name: "TBD_VERIFIED_SOURCE_REQUIRED"
+  axis_order: "TBD_VERIFIED_SOURCE_REQUIRED"
+  epoch: "TBD_VERIFIED_SOURCE_REQUIRED"
+  notes: "Muroran has coastal and sloped terrain. Verify ellipsoidal height handling."
+
+# Predefined camera positions for CesiumJS viewer
+camera_positions:
+  default:
+    name: "Muroran City overview"
+    longitude: 141.0
+    latitude: 42.3
+    height: 8000
+    heading: 0
+    pitch: -45
+    roll: 0
+  small_area:
+    name: "Small test area"
+    longitude: "TBD_VERIFIED_SOURCE_REQUIRED"
+    latitude: "TBD_VERIFIED_SOURCE_REQUIRED"
+    height: 1000
+    heading: 0
+    pitch: -45
+    roll: 0

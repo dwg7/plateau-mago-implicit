@@ -1,0 +1,25 @@
+services:
+  tiler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MAGO_VERSION: "${MAGO_VERSION:-TBD_VERIFIED_SOURCE_REQUIRED}"
+        MAGO_JAR_SHA256: "${MAGO_JAR_SHA256:-TBD_VERIFIED_SOURCE_REQUIRED}"
+        MAGO_JAR_URL: "${MAGO_JAR_URL:-TBD_VERIFIED_SOURCE_REQUIRED}"
+    image: "plateau-mago-implicit-tiler:${MAGO_VERSION:-local}"
+    volumes:
+      - ./data/source:/data/input:ro
+      - ./data/output:/data/output
+    environment:
+      - JAVA_OPTS=${JAVA_OPTS:--Xmx4g}
+
+  server:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./data/output:/usr/share/nginx/html/tiles:ro
+      - ./viewer:/usr/share/nginx/html/viewer:ro
+      - ./config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${SERVER_PORT:-8080}:80"
+    depends_on: []

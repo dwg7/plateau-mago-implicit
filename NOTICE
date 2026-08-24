@@ -1,0 +1,71 @@
+# NOTICE
+
+## Repository code
+
+This repository's scripts, configuration, tools, viewer, and documentation are
+released under the CC0 1.0 Universal license. See LICENSE.
+
+## Project PLATEAU source data
+
+Building CityGML datasets are sourced from Project PLATEAU (プロジェクト PLATEAU),
+a national digital twin initiative by the Ministry of Land, Infrastructure,
+Transport and Tourism (国土交通省, MLIT).
+
+**Attribution required:**
+
+> 国土交通省 Project PLATEAU
+> https://www.mlit.go.jp/plateau/
+
+Datasets are published under the Creative Commons Attribution 4.0 International
+(CC BY 4.0) license unless otherwise specified in the dataset catalog.
+
+Source data is NOT included in this repository. Download scripts are provided
+under `scripts/fetch.sh`. See `data/input-manifest.yml` for dataset details.
+
+## Mago 3DTiler
+
+Mago 3DTiler is developed by Gaia3D, Inc.
+
+> Gaia3D, Inc. — https://www.gaia3d.com/
+> Mago 3DTiler — https://github.com/Gaia3D/mago-3d-tiler
+
+The Docker image is used without modification. See `config/common.yml` for the
+pinned image reference.
+
+## CesiumJS
+
+CesiumJS is developed by Cesium GS, Inc.
+
+> Cesium GS, Inc. — https://cesium.com/
+> CesiumJS — https://cesium.com/platform/cesiumjs/
+
+CesiumJS is used under the Apache License 2.0.
+
+## 3D Tiles specification
+
+The 3D Tiles specification is developed and maintained by the Open Geospatial
+Consortium and Cesium GS, Inc.
+
+> OGC 3D Tiles — https://www.ogc.org/standard/3dtiles/
+> CesiumGS/3d-tiles — https://github.com/CesiumGS/3d-tiles
+
+## Coordinate reference systems
+
+Japan Plane Rectangular Coordinate System (平面直角座標系) definitions are
+maintained by the Geospatial Information Authority of Japan (国土地理院, GSI).
+
+> Geospatial Information Authority of Japan — https://www.gsi.go.jp/
+
+## Data catalogs
+
+Datasets are distributed through the G-Spatial Information Center
+(G空間情報センター) and the PLATEAU data catalog.
+
+> G-Spatial Information Center — https://www.geospatial.jp/
+> PLATEAU data catalog — https://www.geospatial.jp/ckan/organization/mlit-plateau
+
+## UN Open GIS Initiative
+
+This experiment is presented in the working style of UN Open GIS Initiative DWG7.
+
+> UN Open GIS Initiative — https://www.opengis.net/
