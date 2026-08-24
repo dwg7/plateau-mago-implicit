@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-08-24T21:58:54.241121+00:00",
+  "generated_at": "2026-08-24T22:24:45.990359+00:00",
   "input_dir": "/Users/hfu/plateau-mago-implicit/data/output/sarabetsu/implicit/small/20260824T215746Z-sarabetsu-implicit-small",
   "file_count": 4,
   "normalized_tileset": {
@@ -38,7 +38,11 @@
     {
       "path": "data/R/3/4/2.glb",
       "size_bytes": 4804,
-      "sha256": "713822a90bc9ce91fa87365bdb18f51252eaead2617a88b5de28c813da4e638b"
+      "sha256": "713822a90bc9ce91fa87365bdb18f51252eaead2617a88b5de28c813da4e638b",
+      "glb_normalized": {
+        "normalized_sha256": "af474134d4988530f8486b135cbb882a089bd278b5539609fda490c62ee91939",
+        "redacted_property_count": 1
+      }
     },
     {
       "path": "subtrees/R/0/0/0.bin",
@@ -48,7 +52,10 @@
     {
       "path": "subtrees/R/0/0/0.json",
       "size_bytes": 370,
-      "sha256": "242bf7fd6e9381bf1b7573dd5675241783b618207ad1a64c62309e2c28be0c6a"
+      "sha256": "242bf7fd6e9381bf1b7573dd5675241783b618207ad1a64c62309e2c28be0c6a",
+      "subtree_counts": {
+        "error": "'list' object has no attribute 'get'"
+      }
     },
     {
       "path": "tileset.json",
