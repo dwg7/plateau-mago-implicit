@@ -8,15 +8,15 @@ datasets:
     municipality_name_en: "Sarabetsu Village"
     municipality_name_ja: "更別村"
     municipality_code: "01639"
-    plateau_identifier: "TBD_VERIFIED_SOURCE_REQUIRED"
-    catalog_url: "https://www.geospatial.jp/ckan/organization/mlit-plateau"
-    download_url: "TBD_VERIFIED_SOURCE_REQUIRED"
-    archive_name: "TBD_VERIFIED_SOURCE_REQUIRED"
-    archive_sha256: "TBD_VERIFIED_SOURCE_REQUIRED"
-    archive_size_bytes: "TBD_VERIFIED_SOURCE_REQUIRED"
-    dataset_year: "TBD_VERIFIED_SOURCE_REQUIRED"
-    plateau_version: "TBD_VERIFIED_SOURCE_REQUIRED"
-    citygml_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+    plateau_identifier: "01639_sarabetsu-mura_city_2023"
+    catalog_url: "https://www.geospatial.jp/ckan/dataset/plateau-01639-sarabetsu-mura-2023"
+    download_url: "https://assets.cms.plateau.reearth.io/assets/81/fcc64a-cc94-403e-9022-d187415f00f5/01639_sarabetsu-mura_city_2023_citygml_2_op.zip"
+    archive_name: "01639_sarabetsu-mura_city_2023_citygml_2_op.zip"
+    archive_sha256: "6a4639c5699c8d27581a6d44051aa449d5fc5dc7f2b42ee679fa8d8b3ddda086"
+    archive_size_bytes: "1148012455"
+    dataset_year: "2023"
+    plateau_version: "4.1"
+    citygml_version: "2.0"
     license: "CC BY 4.0"
     attribution: "国土交通省 Project PLATEAU"
     notes: >
@@ -27,6 +27,31 @@ datasets:
     municipality_name_en: "Muroran City"
     municipality_name_ja: "室蘭市"
     municipality_code: "01205"
+    plateau_identifier: "01205_muroran-shi_city_2022"
+    catalog_url: "https://www.geospatial.jp/ckan/dataset/plateau-01205-muroran-shi-2022"
+    download_url: "https://assets.cms.plateau.reearth.io/assets/ab/da35f0-8c55-43d1-ad9e-1689bbc084a8/01205_muroran-shi_city_2022_citygml_4_op.zip"
+    archive_name: "01205_muroran-shi_city_2022_citygml_4_op.zip"
+    archive_sha256: "1ed95f59d5374cc809999fc57ac18501f667fef2b32af0f4a104de44422600a9"
+    archive_size_bytes: "238403688"
+    dataset_year: "2022"
+    plateau_version: "4.1"
+    citygml_version: "2.0"
+    license: "CC BY 4.0"
+    attribution: "国土交通省 Project PLATEAU"
+    notes: >
+      Second and more demanding target. Used to test denser urban distribution,
+      terrain variation, coastal and sloped areas, larger output volume,
+      subtree organization, and CesiumJS behavior.
+
+  # Not a real dataset — exists only so tests/run-tests.sh's TBD guard test
+  # (`fetch.sh fails on TBD_VERIFIED_SOURCE_REQUIRED`) has something to
+  # test against that stays unresolved permanently. Testing against
+  # sarabetsu/muroran directly broke the moment those were resolved for
+  # real (Phase 0, 2026-08-25) — never point that test at a real dataset.
+  tbd-guard-test:
+    municipality_name_en: "TBD guard test fixture"
+    municipality_name_ja: "TBDガードテスト用"
+    municipality_code: "00000"
     plateau_identifier: "TBD_VERIFIED_SOURCE_REQUIRED"
     catalog_url: "https://www.geospatial.jp/ckan/organization/mlit-plateau"
     download_url: "TBD_VERIFIED_SOURCE_REQUIRED"
@@ -37,8 +62,7 @@ datasets:
     plateau_version: "TBD_VERIFIED_SOURCE_REQUIRED"
     citygml_version: "TBD_VERIFIED_SOURCE_REQUIRED"
     license: "CC BY 4.0"
-    attribution: "国土交通省 Project PLATEAU"
+    attribution: "n/a"
     notes: >
-      Second and more demanding target. Used to test denser urban distribution,
-      terrain variation, coastal and sloped areas, larger output volume,
-      subtree organization, and CesiumJS behavior.
+      Intentionally never resolved. Do not fetch, build, or otherwise use
+      this dataset name for anything other than the TBD guard test.

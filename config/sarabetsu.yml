@@ -12,58 +12,277 @@ municipality:
   prefecture_ja: "北海道"
 
 dataset:
-  # PLATEAU dataset identifier
-  identifier: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # Dataset year
-  year: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # PLATEAU specification version
-  plateau_version: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # CityGML version
-  citygml_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # PLATEAU dataset identifier (from the CKAN dataset page and in-archive
+  # metadata citation title: "3D都市モデル_01639_city_2023")
+  identifier: "01639_sarabetsu-mura_city_2023"
+  # Dataset year (as used in the catalog page URL and archive filename;
+  # note the archive's own README.md title says "（2022年度）" — the
+  # underlying survey/creation fiscal year differs from the catalog year
+  # this release is filed under. Recorded verbatim, not reconciled.)
+  year: "2023"
+  # PLATEAU specification version (README.md: "3D都市モデル標準製品仕様書 第4.1版")
+  plateau_version: "4.1"
+  # CityGML version (xmlns:core="http://www.opengis.net/citygml/2.0" in the
+  # building GML files; iur/uro extension namespace is 3.1)
+  citygml_version: "2.0"
   # Source catalog URL
-  catalog_url: "https://www.geospatial.jp/ckan/organization/mlit-plateau"
-  # Version-specific download URL (prefer immutable)
-  download_url: "TBD_VERIFIED_SOURCE_REQUIRED"
+  catalog_url: "https://www.geospatial.jp/ckan/dataset/plateau-01639-sarabetsu-mura-2023"
+  # Version-specific download URL (immutable content-addressed CMS asset path)
+  download_url: "https://assets.cms.plateau.reearth.io/assets/81/fcc64a-cc94-403e-9022-d187415f00f5/01639_sarabetsu-mura_city_2023_citygml_2_op.zip"
   # Archive file name
-  archive_name: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # Archive checksum (SHA-256)
-  archive_sha256: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # Archive file size (bytes)
-  archive_size_bytes: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # License
+  archive_name: "01639_sarabetsu-mura_city_2023_citygml_2_op.zip"
+  # Archive checksum (SHA-256), computed after download on 2026-08-25
+  archive_sha256: "6a4639c5699c8d27581a6d44051aa449d5fc5dc7f2b42ee679fa8d8b3ddda086"
+  # Archive file size (bytes), confirmed via HTTP Content-Length and local file size
+  archive_size_bytes: "1148012455"
+  # License (one of several options offered by PLATEAU Site Policy; this
+  # project uses CC BY 4.0)
   license: "CC BY 4.0"
   # Attribution
   attribution: "国土交通省 Project PLATEAU"
 
 source:
-  # Paths within the archive to building CityGML files
-  # Populated after Phase 0 inspection
-  building_files: []
-  # Selected file for small (Phase 1/2) experiment
-  small_file: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # Paths (relative to udx/bldg/) of all building CityGML mesh files in the
+  # archive, from `unzip -l`. 187 files total.
+  building_files:
+    - "63436098_bldg_6697_op.gml"
+    - "63436099_bldg_6697_op.gml"
+    - "63436185_bldg_6697_op.gml"
+    - "63436187_bldg_6697_op.gml"
+    - "63436188_bldg_6697_op.gml"
+    - "63436189_bldg_6697_op.gml"
+    - "63436190_bldg_6697_op.gml"
+    - "63436192_bldg_6697_op.gml"
+    - "63436193_bldg_6697_op.gml"
+    - "63436194_bldg_6697_op.gml"
+    - "63436196_bldg_6697_op.gml"
+    - "63436197_bldg_6697_op.gml"
+    - "63436198_bldg_6697_op.gml"
+    - "63436199_bldg_6697_op.gml"
+    - "63436290_bldg_6697_op.gml"
+    - "63437008_bldg_6697_op.gml"
+    - "63437009_bldg_6697_op.gml"
+    - "63437019_bldg_6697_op.gml"
+    - "63437029_bldg_6697_op.gml"
+    - "63437039_bldg_6697_op.gml"
+    - "63437100_bldg_6697_op.gml"
+    - "63437101_bldg_6697_op.gml"
+    - "63437102_bldg_6697_op.gml"
+    - "63437103_bldg_6697_op.gml"
+    - "63437104_bldg_6697_op.gml"
+    - "63437105_bldg_6697_op.gml"
+    - "63437106_bldg_6697_op.gml"
+    - "63437107_bldg_6697_op.gml"
+    - "63437108_bldg_6697_op.gml"
+    - "63437109_bldg_6697_op.gml"
+    - "63437110_bldg_6697_op.gml"
+    - "63437112_bldg_6697_op.gml"
+    - "63437113_bldg_6697_op.gml"
+    - "63437114_bldg_6697_op.gml"
+    - "63437115_bldg_6697_op.gml"
+    - "63437116_bldg_6697_op.gml"
+    - "63437117_bldg_6697_op.gml"
+    - "63437118_bldg_6697_op.gml"
+    - "63437119_bldg_6697_op.gml"
+    - "63437120_bldg_6697_op.gml"
+    - "63437121_bldg_6697_op.gml"
+    - "63437122_bldg_6697_op.gml"
+    - "63437123_bldg_6697_op.gml"
+    - "63437124_bldg_6697_op.gml"
+    - "63437125_bldg_6697_op.gml"
+    - "63437126_bldg_6697_op.gml"
+    - "63437127_bldg_6697_op.gml"
+    - "63437128_bldg_6697_op.gml"
+    - "63437129_bldg_6697_op.gml"
+    - "63437130_bldg_6697_op.gml"
+    - "63437131_bldg_6697_op.gml"
+    - "63437132_bldg_6697_op.gml"
+    - "63437133_bldg_6697_op.gml"
+    - "63437134_bldg_6697_op.gml"
+    - "63437135_bldg_6697_op.gml"
+    - "63437136_bldg_6697_op.gml"
+    - "63437137_bldg_6697_op.gml"
+    - "63437138_bldg_6697_op.gml"
+    - "63437139_bldg_6697_op.gml"
+    - "63437140_bldg_6697_op.gml"
+    - "63437141_bldg_6697_op.gml"
+    - "63437142_bldg_6697_op.gml"
+    - "63437143_bldg_6697_op.gml"
+    - "63437144_bldg_6697_op.gml"
+    - "63437145_bldg_6697_op.gml"
+    - "63437146_bldg_6697_op.gml"
+    - "63437147_bldg_6697_op.gml"
+    - "63437148_bldg_6697_op.gml"
+    - "63437149_bldg_6697_op.gml"
+    - "63437150_bldg_6697_op.gml"
+    - "63437151_bldg_6697_op.gml"
+    - "63437152_bldg_6697_op.gml"
+    - "63437153_bldg_6697_op.gml"
+    - "63437154_bldg_6697_op.gml"
+    - "63437155_bldg_6697_op.gml"
+    - "63437157_bldg_6697_op.gml"
+    - "63437158_bldg_6697_op.gml"
+    - "63437159_bldg_6697_op.gml"
+    - "63437161_bldg_6697_op.gml"
+    - "63437162_bldg_6697_op.gml"
+    - "63437163_bldg_6697_op.gml"
+    - "63437165_bldg_6697_op.gml"
+    - "63437166_bldg_6697_op.gml"
+    - "63437167_bldg_6697_op.gml"
+    - "63437168_bldg_6697_op.gml"
+    - "63437169_bldg_6697_op.gml"
+    - "63437171_bldg_6697_op.gml"
+    - "63437172_bldg_6697_op.gml"
+    - "63437173_bldg_6697_op.gml"
+    - "63437174_bldg_6697_op.gml"
+    - "63437175_bldg_6697_op.gml"
+    - "63437176_bldg_6697_op.gml"
+    - "63437177_bldg_6697_op.gml"
+    - "63437178_bldg_6697_op.gml"
+    - "63437179_bldg_6697_op.gml"
+    - "63437182_bldg_6697_op.gml"
+    - "63437183_bldg_6697_op.gml"
+    - "63437184_bldg_6697_op.gml"
+    - "63437185_bldg_6697_op.gml"
+    - "63437186_bldg_6697_op.gml"
+    - "63437187_bldg_6697_op.gml"
+    - "63437188_bldg_6697_op.gml"
+    - "63437189_bldg_6697_op.gml"
+    - "63437192_bldg_6697_op.gml"
+    - "63437193_bldg_6697_op.gml"
+    - "63437194_bldg_6697_op.gml"
+    - "63437195_bldg_6697_op.gml"
+    - "63437196_bldg_6697_op.gml"
+    - "63437197_bldg_6697_op.gml"
+    - "63437198_bldg_6697_op.gml"
+    - "63437199_bldg_6697_op.gml"
+    - "63437200_bldg_6697_op.gml"
+    - "63437201_bldg_6697_op.gml"
+    - "63437202_bldg_6697_op.gml"
+    - "63437210_bldg_6697_op.gml"
+    - "63437211_bldg_6697_op.gml"
+    - "63437212_bldg_6697_op.gml"
+    - "63437213_bldg_6697_op.gml"
+    - "63437220_bldg_6697_op.gml"
+    - "63437222_bldg_6697_op.gml"
+    - "63437223_bldg_6697_op.gml"
+    - "63437230_bldg_6697_op.gml"
+    - "63437231_bldg_6697_op.gml"
+    - "63437232_bldg_6697_op.gml"
+    - "63437233_bldg_6697_op.gml"
+    - "63437240_bldg_6697_op.gml"
+    - "63437242_bldg_6697_op.gml"
+    - "63437243_bldg_6697_op.gml"
+    - "63437244_bldg_6697_op.gml"
+    - "63437251_bldg_6697_op.gml"
+    - "63437252_bldg_6697_op.gml"
+    - "63437253_bldg_6697_op.gml"
+    - "63437254_bldg_6697_op.gml"
+    - "63437260_bldg_6697_op.gml"
+    - "63437261_bldg_6697_op.gml"
+    - "63437270_bldg_6697_op.gml"
+    - "63437280_bldg_6697_op.gml"
+    - "63437290_bldg_6697_op.gml"
+    - "63437291_bldg_6697_op.gml"
+    - "64430103_bldg_6697_op.gml"
+    - "64430104_bldg_6697_op.gml"
+    - "64430105_bldg_6697_op.gml"
+    - "64430106_bldg_6697_op.gml"
+    - "64430107_bldg_6697_op.gml"
+    - "64430108_bldg_6697_op.gml"
+    - "64430109_bldg_6697_op.gml"
+    - "64430113_bldg_6697_op.gml"
+    - "64430114_bldg_6697_op.gml"
+    - "64430115_bldg_6697_op.gml"
+    - "64430116_bldg_6697_op.gml"
+    - "64430117_bldg_6697_op.gml"
+    - "64430118_bldg_6697_op.gml"
+    - "64430119_bldg_6697_op.gml"
+    - "64430124_bldg_6697_op.gml"
+    - "64430125_bldg_6697_op.gml"
+    - "64430126_bldg_6697_op.gml"
+    - "64430127_bldg_6697_op.gml"
+    - "64430128_bldg_6697_op.gml"
+    - "64430129_bldg_6697_op.gml"
+    - "64430135_bldg_6697_op.gml"
+    - "64430136_bldg_6697_op.gml"
+    - "64430137_bldg_6697_op.gml"
+    - "64430138_bldg_6697_op.gml"
+    - "64430139_bldg_6697_op.gml"
+    - "64430146_bldg_6697_op.gml"
+    - "64430147_bldg_6697_op.gml"
+    - "64430148_bldg_6697_op.gml"
+    - "64430149_bldg_6697_op.gml"
+    - "64430159_bldg_6697_op.gml"
+    - "64430169_bldg_6697_op.gml"
+    - "64430200_bldg_6697_op.gml"
+    - "64430201_bldg_6697_op.gml"
+    - "64430210_bldg_6697_op.gml"
+    - "64430211_bldg_6697_op.gml"
+    - "64430220_bldg_6697_op.gml"
+    - "64430221_bldg_6697_op.gml"
+    - "64430230_bldg_6697_op.gml"
+    - "64430231_bldg_6697_op.gml"
+    - "64430232_bldg_6697_op.gml"
+    - "64430240_bldg_6697_op.gml"
+    - "64430241_bldg_6697_op.gml"
+    - "64430250_bldg_6697_op.gml"
+    - "64430251_bldg_6697_op.gml"
+    - "64430252_bldg_6697_op.gml"
+    - "64430260_bldg_6697_op.gml"
+    - "64430261_bldg_6697_op.gml"
+    - "64430262_bldg_6697_op.gml"
+  # Selected file for small (Phase 1/2) experiment: the smallest bldg mesh
+  # file by byte size (8,455 bytes), containing exactly one bldg:Building
+  # (gml:id="bldg_c86b549e-78ae-4129-b7d5-717fa6968e57") with LOD0 footprint
+  # + LOD1 solid geometry.
+  small_file: "udx/bldg/63437290_bldg_6697_op.gml"
   # Reason for selection
-  small_file_reason: "TBD_VERIFIED_SOURCE_REQUIRED"
+  small_file_reason: "Smallest available building mesh file by byte size; contains exactly one building, minimizing variables for the initial parse/coordinate/height baseline (Phase 1)."
 
-# Source statistics (populated after Phase 0 inspection)
+# Source statistics — real output of `make inspect DATASET=sarabetsu`
+# (tools/inspect_citygml.py), run 2026-08-25 against the fully-extracted
+# archive (1139 .gml/.xml files, 1123 with a parsed bbox). Report:
+# manifests/reports/inspect-sarabetsu.json
 source_stats:
-  citygml_file_count: "TBD_VERIFIED_SOURCE_REQUIRED"
-  building_count: "TBD_VERIFIED_SOURCE_REQUIRED"
-  gml_id_count: "TBD_VERIFIED_SOURCE_REQUIRED"
-  lods_present: []
-  polygon_count: "TBD_VERIFIED_SOURCE_REQUIRED"
-  texture_references: "TBD_VERIFIED_SOURCE_REQUIRED"
-  crs: "TBD_VERIFIED_SOURCE_REQUIRED"
-  bbox_min_lat: "TBD_VERIFIED_SOURCE_REQUIRED"
-  bbox_max_lat: "TBD_VERIFIED_SOURCE_REQUIRED"
-  bbox_min_lon: "TBD_VERIFIED_SOURCE_REQUIRED"
-  bbox_max_lon: "TBD_VERIFIED_SOURCE_REQUIRED"
+  citygml_file_count: 1139
+  building_count: 6795
+  gml_id_count: 1324582
+  lods_present: [1, 2, 3]
+  polygon_count: 7643758
+  texture_references: 0
+  crs: "http://www.opengis.net/def/crs/EPSG/0/6697"
+  bbox_min_lat: 42.5349167
+  bbox_max_lat: 42.7659167
+  bbox_min_lon: 142.99825
+  bbox_max_lon: 143.3590417
 
-# CRS observations (populated after Phase 0 inspection)
+# CRS observations — real, from inspection. Every one of the 1139 source
+# files uses this same CRS (single srs_name across the whole dataset).
 crs:
-  srs_name: "TBD_VERIFIED_SOURCE_REQUIRED"
-  axis_order: "TBD_VERIFIED_SOURCE_REQUIRED"
-  epoch: "TBD_VERIFIED_SOURCE_REQUIRED"
-  notes: ""
+  srs_name: "http://www.opengis.net/def/crs/EPSG/0/6697"
+  # EPSG:6697 = JGD2011 (3D geographic). Observed axis order in gml:pos /
+  # lowerCorner / upperCorner is (latitude, longitude, height) — e.g. the
+  # small_file's envelope is "42.660... 143.253... 0" to "42.660...
+  # 143.253... 154.376", where the first number is clearly latitude
+  # (Hokkaido is ~42-43°N) and the second longitude. This is northing-first,
+  # NOT the (lon, lat, height) order 3D Tiles/CesiumJS use internally —
+  # Mago 3DTiler's --crs/--proj handling must account for this.
+  axis_order: "lat, lon, height (northing-first)"
+  epoch: "JGD2011 (no explicit epoch in the CityGML; JGD2011 is a static/plate-fixed datum, not epoch-dependent like ITRF)"
+  # Verified 2026-08-25 by actually running mago-3d-tiler 1.16.2 against
+  # udx/bldg/63437290_bldg_6697_op.gml (the small_file). Passing --crs
+  # 6697, 6668, or 4326 all silently produced WRONG output coordinates
+  # (building placed at ~137°W, 37°N — off the California coast — instead
+  # of ~143°E, 43°N). This explicit Proj4 string with +axis=neu (north-
+  # east-up) fixed it: output matched the source envelope exactly. Used by
+  # scripts/build.sh via --proj (which takes precedence over --crs).
+  mago_proj: "+proj=longlat +datum=WGS84 +axis=neu +no_defs"
+  notes: >
+    docs/architecture.md's original assumption that PLATEAU CityGML uses
+    the Plane Rectangular CS (平面直角座標系) does not hold for this
+    dataset (2023 V4 release) — it uses geographic EPSG:6697 instead. See
+    docs/findings.md Phase 0 entry.
 
 # Predefined camera positions for CesiumJS viewer
 camera_positions:
@@ -76,9 +295,12 @@ camera_positions:
     pitch: -45
     roll: 0
   small_area:
-    name: "Small test area"
-    longitude: "TBD_VERIFIED_SOURCE_REQUIRED"
-    latitude: "TBD_VERIFIED_SOURCE_REQUIRED"
+    name: "Small test area (small_file building)"
+    # Midpoint of udx/bldg/63437290_bldg_6697_op.gml's envelope
+    # (42.66038427179971,143.25301635883892,0) to
+    # (42.66041942501154,143.2530700433536,154.376)
+    longitude: 143.2530432
+    latitude: 42.6604018
     height: 1000
     heading: 0
     pitch: -45

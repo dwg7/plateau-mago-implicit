@@ -12,58 +12,173 @@ municipality:
   prefecture_ja: "北海道"
 
 dataset:
-  # PLATEAU dataset identifier
-  identifier: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # Dataset year
-  year: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # PLATEAU specification version
-  plateau_version: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # CityGML version
-  citygml_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # PLATEAU dataset identifier (from the CKAN dataset page and in-archive
+  # metadata citation title: "3D都市モデル_01205_city_2022")
+  identifier: "01205_muroran-shi_city_2022"
+  # Dataset year (matches catalog page URL and archive filename; the
+  # archive's own README.md title also says "（2022年度）", consistent here)
+  year: "2022"
+  # PLATEAU specification version (README.md: "3D都市モデル標準製品仕様書 第4.1版")
+  plateau_version: "4.1"
+  # CityGML version (xmlns:core="http://www.opengis.net/citygml/2.0" in the
+  # building GML files; iur/uro extension namespace is 3.1)
+  citygml_version: "2.0"
   # Source catalog URL
-  catalog_url: "https://www.geospatial.jp/ckan/organization/mlit-plateau"
-  # Version-specific download URL (prefer immutable)
-  download_url: "TBD_VERIFIED_SOURCE_REQUIRED"
+  catalog_url: "https://www.geospatial.jp/ckan/dataset/plateau-01205-muroran-shi-2022"
+  # Version-specific download URL (immutable content-addressed CMS asset path)
+  download_url: "https://assets.cms.plateau.reearth.io/assets/ab/da35f0-8c55-43d1-ad9e-1689bbc084a8/01205_muroran-shi_city_2022_citygml_4_op.zip"
   # Archive file name
-  archive_name: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # Archive checksum (SHA-256)
-  archive_sha256: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # Archive file size (bytes)
-  archive_size_bytes: "TBD_VERIFIED_SOURCE_REQUIRED"
-  # License
+  archive_name: "01205_muroran-shi_city_2022_citygml_4_op.zip"
+  # Archive checksum (SHA-256), computed after download on 2026-08-25
+  archive_sha256: "1ed95f59d5374cc809999fc57ac18501f667fef2b32af0f4a104de44422600a9"
+  # Archive file size (bytes), confirmed via HTTP Content-Length and local file size
+  archive_size_bytes: "238403688"
+  # License (one of several options offered by PLATEAU Site Policy; this
+  # project uses CC BY 4.0)
   license: "CC BY 4.0"
   # Attribution
   attribution: "国土交通省 Project PLATEAU"
 
 source:
-  # Paths within the archive to building CityGML files
-  # Populated after Phase 0 inspection
-  building_files: []
-  # Selected file for small (Phase 5) experiment
-  small_file: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # Paths (relative to udx/bldg/) of all building CityGML mesh files in the
+  # archive, from `unzip -l`. 100 files total.
+  building_files:
+    - "63403767_bldg_6697_op.gml"
+    - "63403768_bldg_6697_op.gml"
+    - "63403769_bldg_6697_op.gml"
+    - "63403776_bldg_6697_op.gml"
+    - "63403777_bldg_6697_op.gml"
+    - "63403778_bldg_6697_op.gml"
+    - "63403779_bldg_6697_op.gml"
+    - "63403785_bldg_6697_op.gml"
+    - "63403786_bldg_6697_op.gml"
+    - "63403787_bldg_6697_op.gml"
+    - "63403788_bldg_6697_op.gml"
+    - "63403789_bldg_6697_op.gml"
+    - "63403794_bldg_6697_op.gml"
+    - "63403795_bldg_6697_op.gml"
+    - "63403796_bldg_6697_op.gml"
+    - "63403797_bldg_6697_op.gml"
+    - "63403798_bldg_6697_op.gml"
+    - "63403799_bldg_6697_op.gml"
+    - "63404704_bldg_6697_op.gml"
+    - "63404705_bldg_6697_op.gml"
+    - "63404706_bldg_6697_op.gml"
+    - "63404707_bldg_6697_op.gml"
+    - "63404708_bldg_6697_op.gml"
+    - "63404709_bldg_6697_op.gml"
+    - "63404715_bldg_6697_op.gml"
+    - "63404716_bldg_6697_op.gml"
+    - "63404718_bldg_6697_op.gml"
+    - "63404719_bldg_6697_op.gml"
+    - "63404727_bldg_6697_op.gml"
+    - "63404728_bldg_6697_op.gml"
+    - "63404729_bldg_6697_op.gml"
+    - "63404734_bldg_6697_op.gml"
+    - "63404735_bldg_6697_op.gml"
+    - "63404736_bldg_6697_op.gml"
+    - "63404737_bldg_6697_op.gml"
+    - "63404738_bldg_6697_op.gml"
+    - "63404739_bldg_6697_op.gml"
+    - "63404743_bldg_6697_op.gml"
+    - "63404744_bldg_6697_op.gml"
+    - "63404745_bldg_6697_op.gml"
+    - "63404746_bldg_6697_op.gml"
+    - "63404747_bldg_6697_op.gml"
+    - "63404748_bldg_6697_op.gml"
+    - "63404749_bldg_6697_op.gml"
+    - "63404752_bldg_6697_op.gml"
+    - "63404753_bldg_6697_op.gml"
+    - "63404754_bldg_6697_op.gml"
+    - "63404755_bldg_6697_op.gml"
+    - "63404756_bldg_6697_op.gml"
+    - "63404757_bldg_6697_op.gml"
+    - "63404758_bldg_6697_op.gml"
+    - "63404759_bldg_6697_op.gml"
+    - "63404763_bldg_6697_op.gml"
+    - "63404764_bldg_6697_op.gml"
+    - "63404765_bldg_6697_op.gml"
+    - "63404766_bldg_6697_op.gml"
+    - "63404767_bldg_6697_op.gml"
+    - "63404768_bldg_6697_op.gml"
+    - "63404769_bldg_6697_op.gml"
+    - "63404777_bldg_6697_op.gml"
+    - "63404778_bldg_6697_op.gml"
+    - "63404779_bldg_6697_op.gml"
+    - "63404787_bldg_6697_op.gml"
+    - "63404788_bldg_6697_op.gml"
+    - "63404789_bldg_6697_op.gml"
+    - "63413060_bldg_6697_op.gml"
+    - "63413070_bldg_6697_op.gml"
+    - "63413080_bldg_6697_op.gml"
+    - "63413090_bldg_6697_op.gml"
+    - "63413091_bldg_6697_op.gml"
+    - "63414000_bldg_6697_op.gml"
+    - "63414001_bldg_6697_op.gml"
+    - "63414002_bldg_6697_op.gml"
+    - "63414010_bldg_6697_op.gml"
+    - "63414011_bldg_6697_op.gml"
+    - "63414012_bldg_6697_op.gml"
+    - "63414013_bldg_6697_op.gml"
+    - "63414020_bldg_6697_op.gml"
+    - "63414021_bldg_6697_op.gml"
+    - "63414022_bldg_6697_op.gml"
+    - "63414023_bldg_6697_op.gml"
+    - "63414030_bldg_6697_op.gml"
+    - "63414031_bldg_6697_op.gml"
+    - "63414032_bldg_6697_op.gml"
+    - "63414033_bldg_6697_op.gml"
+    - "63414040_bldg_6697_op.gml"
+    - "63414041_bldg_6697_op.gml"
+    - "63414042_bldg_6697_op.gml"
+    - "63414043_bldg_6697_op.gml"
+    - "63414050_bldg_6697_op.gml"
+    - "63414051_bldg_6697_op.gml"
+    - "63414052_bldg_6697_op.gml"
+    - "63414053_bldg_6697_op.gml"
+    - "63414060_bldg_6697_op.gml"
+    - "63414061_bldg_6697_op.gml"
+    - "63414062_bldg_6697_op.gml"
+    - "63414070_bldg_6697_op.gml"
+    - "63414072_bldg_6697_op.gml"
+    - "63414090_bldg_6697_op.gml"
+    - "63415000_bldg_6697_op.gml"
+  # Selected file for small (Phase 5) experiment: the smallest bldg mesh
+  # file by byte size (10,637 bytes), containing exactly one bldg:Building.
+  small_file: "udx/bldg/63403767_bldg_6697_op.gml"
   # Reason for selection
-  small_file_reason: "TBD_VERIFIED_SOURCE_REQUIRED"
+  small_file_reason: "Smallest available building mesh file by byte size; contains exactly one building, minimizing variables for the initial parse/coordinate/height baseline (Phase 5)."
 
-# Source statistics (populated after Phase 0 inspection)
+# Source statistics — real output of `make inspect DATASET=muroran`
+# (tools/inspect_citygml.py), run 2026-08-25 against the fully-extracted
+# archive (284 .gml/.xml files, 251 with a parsed bbox). Building count
+# (55906) matches the archive's own README.md exactly ("LOD1: 5.97km2
+# 55906棟"). Report: manifests/reports/inspect-muroran.json
 source_stats:
-  citygml_file_count: "TBD_VERIFIED_SOURCE_REQUIRED"
-  building_count: "TBD_VERIFIED_SOURCE_REQUIRED"
-  gml_id_count: "TBD_VERIFIED_SOURCE_REQUIRED"
-  lods_present: []
-  polygon_count: "TBD_VERIFIED_SOURCE_REQUIRED"
-  texture_references: "TBD_VERIFIED_SOURCE_REQUIRED"
-  crs: "TBD_VERIFIED_SOURCE_REQUIRED"
-  bbox_min_lat: "TBD_VERIFIED_SOURCE_REQUIRED"
-  bbox_max_lat: "TBD_VERIFIED_SOURCE_REQUIRED"
-  bbox_min_lon: "TBD_VERIFIED_SOURCE_REQUIRED"
-  bbox_max_lon: "TBD_VERIFIED_SOURCE_REQUIRED"
+  citygml_file_count: 284
+  building_count: 55906
+  gml_id_count: 114376
+  lods_present: [1]
+  polygon_count: 1192276
+  texture_references: 0
+  crs: "http://www.opengis.net/def/crs/EPSG/0/6697"
+  bbox_min_lat: 42.29705884131977
+  bbox_max_lat: 42.43779545373584
+  bbox_min_lon: 140.89958815430626
+  bbox_max_lon: 141.06542030178898
 
-# CRS observations
+# CRS observations — real, from inspection. Same CRS as Sarabetsu
+# (EPSG:6697, JGD2011 3D geographic) across every one of the 284 source files.
 crs:
-  srs_name: "TBD_VERIFIED_SOURCE_REQUIRED"
-  axis_order: "TBD_VERIFIED_SOURCE_REQUIRED"
-  epoch: "TBD_VERIFIED_SOURCE_REQUIRED"
-  notes: "Muroran has coastal and sloped terrain. Verify ellipsoidal height handling."
+  srs_name: "http://www.opengis.net/def/crs/EPSG/0/6697"
+  axis_order: "lat, lon, height (northing-first) — same convention as Sarabetsu"
+  epoch: "JGD2011 (static datum, no explicit epoch in the CityGML)"
+  # Verified 2026-08-25 against udx/bldg/63403767_bldg_6697_op.gml (the
+  # small_file): output matched the source envelope exactly
+  # (140.9694°E/42.3076°N). Same fix as Sarabetsu — see its crs.mago_proj
+  # comment for why --crs 6697/6668/4326 alone silently misplaces buildings.
+  mago_proj: "+proj=longlat +datum=WGS84 +axis=neu +no_defs"
+  notes: "Muroran has coastal and sloped terrain. Verify ellipsoidal height handling in Phase 5."
 
 # Predefined camera positions for CesiumJS viewer
 camera_positions:
@@ -76,9 +191,10 @@ camera_positions:
     pitch: -45
     roll: 0
   small_area:
-    name: "Small test area"
-    longitude: "TBD_VERIFIED_SOURCE_REQUIRED"
-    latitude: "TBD_VERIFIED_SOURCE_REQUIRED"
+    name: "Small test area (small_file building)"
+    # Midpoint of udx/bldg/63403767_bldg_6697_op.gml's envelope
+    longitude: 140.9694881
+    latitude: 42.3075806
     height: 1000
     heading: 0
     pitch: -45
