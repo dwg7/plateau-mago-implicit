@@ -64,17 +64,66 @@ get_config_field() {
     ' "$CONFIG_COMMON"
 }
 
-MAGO_IMAGE="$(get_config_field mago image)"
-MAGO_IMAGE_DIGEST="$(get_config_field mago image_digest)"
+# Same as get_config_field, but reads from the per-dataset config file.
+get_dataset_field() {
+    local section="$1"
+    local field="$2"
+    awk -v section="^${section}:" -v field="  ${field}:" '
+        $0 ~ section { in_section=1; next }
+        in_section && /^[^ ]/ { in_section=0 }
+        in_section && index($0, field) == 1 {
+            sub(field " *", "");
+            gsub(/"/, "");
+            print;
+            exit
+        }
+    ' "$CONFIG_DATASET"
+}
 
-check_tbd "$MAGO_IMAGE" "mago.image in config/common.yml"
-check_tbd "$MAGO_IMAGE_DIGEST" "mago.image_digest in config/common.yml"
+MAGO_VERSION="$(get_config_field mago version)"
+MAGO_JAR_URL="$(get_config_field mago jar_url)"
+MAGO_JAR_SHA256="$(get_config_field mago jar_sha256)"
+
+check_tbd "$MAGO_VERSION" "mago.version in config/common.yml"
+check_tbd "$MAGO_JAR_URL" "mago.jar_url in config/common.yml"
+check_tbd "$MAGO_JAR_SHA256" "mago.jar_sha256 in config/common.yml"
+
+# No public pre-built Docker image exists for Mago 3DTiler (verified
+# 2026-08-24), so build a local image from the pinned JAR. `docker build`
+# is cache-friendly: unless the build args change, this is a fast no-op
+# after the first run for a given version.
+MAGO_IMAGE_TAG="plateau-mago-implicit-tiler:${MAGO_VERSION}"
+echo "Building Mago 3DTiler image (cached if unchanged): $MAGO_IMAGE_TAG"
+docker build \
+    --build-arg "MAGO_VERSION=${MAGO_VERSION}" \
+    --build-arg "MAGO_JAR_URL=${MAGO_JAR_URL}" \
+    --build-arg "MAGO_JAR_SHA256=${MAGO_JAR_SHA256}" \
+    -t "$MAGO_IMAGE_TAG" \
+    -f "$REPO_ROOT/Dockerfile" \
+    "$REPO_ROOT"
+echo ""
 
 # Determine input files
 if [ "$PROFILE" = "small" ]; then
     SMALL_FILE="$(grep "^  small_file:" "$CONFIG_DATASET" | head -1 | sed 's/^  small_file: *//' | tr -d '"')"
     check_tbd "$SMALL_FILE" "source.small_file in config/${DATASET}.yml"
-    INPUT_FILES=("$SOURCE_DIR/$SMALL_FILE")
+    SMALL_FILE_PATH="$SOURCE_DIR/$SMALL_FILE"
+    if [ ! -f "$SMALL_FILE_PATH" ]; then
+        echo "ERROR: source.small_file not found: $SMALL_FILE_PATH" >&2
+        echo "  Run: make inspect DATASET=$DATASET (extracts the archive)" >&2
+        exit 1
+    fi
+    # mago-3d-tiler's --input takes a DIRECTORY and processes every CityGML
+    # file found in it — mounting $SOURCE_DIR/udx/bldg (the small_file's
+    # parent) would silently convert ALL ~100-200 building mesh files in
+    # that municipality's bldg/ directory, not just the one small_file
+    # (verified empirically: a "small" build of one file produced 202 tile
+    # contents). Stage just the single selected file in an isolated
+    # directory so "small" actually means small.
+    STAGING_DIR="$REPO_ROOT/data/.build-staging/${DATASET}/${BUILD_ID}"
+    mkdir -p "$STAGING_DIR"
+    cp "$SMALL_FILE_PATH" "$STAGING_DIR/"
+    INPUT_FILES=("$STAGING_DIR/$(basename "$SMALL_FILE_PATH")")
 else
     # Full profile: use all building files
     mapfile -t INPUT_FILES < <(find "$SOURCE_DIR" -name "*.gml" | sort)
@@ -92,14 +141,30 @@ echo "  Input:        $INPUT_DIR"
 echo "  Output:       $OUTPUT_DIR"
 echo "  Mode:         $MODE"
 echo "  Concurrency:  $CONCURRENCY"
-echo "  Mago image:   $MAGO_IMAGE@$MAGO_IMAGE_DIGEST"
+echo "  Mago image:   $MAGO_IMAGE_TAG (jar sha256: ${MAGO_JAR_SHA256:0:12}...)"
 echo ""
 
-# Set Mago options based on mode
+# Mago 3DTiler's CRS handling (--crs <EPSG code>) assumes (lon, lat) axis
+# order; PLATEAU CityGML's gml:pos/lowerCorner/upperCorner values are
+# (lat, lon, height) per their declared srsName (e.g. EPSG:6697's axis
+# order). Passing --crs 6697/6668/4326 directly silently produces WRONG
+# output coordinates (verified empirically: building placed off the coast
+# of California instead of Hokkaido). The fix is an explicit --proj string
+# with +axis=neu (north-east-up) to declare the source axis order, recorded
+# per-dataset in config/<dataset>.yml's crs.mago_proj field.
+MAGO_PROJ="$(get_dataset_field crs mago_proj)"
+check_tbd "$MAGO_PROJ" "crs.mago_proj in config/${DATASET}.yml"
+
+# --outputType and --tileType do not exist in mago-3d-tiler's actual CLI
+# (verified against v1.16.2 --help and MANUAL.md: real flags are
+# --inputType/--outputType [b3dm|i3dm|pnts] and --tilingMode
+# [explicit|implicit]). Passing the old, nonexistent flags made every
+# build fail immediately with UnrecognizedOptionException, for both modes.
+MAGO_OPTS=(--input /data/input --output /data/output --inputType citygml --proj "$MAGO_PROJ")
 if [ "$MODE" = "implicit" ]; then
-    MAGO_OPTS=(--input /data/input --output /data/output --outputType 3dtiles --tileType implicit)
+    MAGO_OPTS+=(--tilingMode implicit)
 elif [ "$MODE" = "explicit" ]; then
-    MAGO_OPTS=(--input /data/input --output /data/output --outputType 3dtiles)
+    : # explicit is mago-3d-tiler's default tilingMode; nothing to add
 else
     echo "ERROR: Unknown mode: $MODE (use explicit or implicit)" >&2
     exit 1
@@ -111,14 +176,19 @@ START_EPOCH="$(date +%s)"
 # Run Mago 3DTiler via Docker. Built as an array (not a string handed to
 # `eval`) so that a dataset/path value can never be interpreted as shell
 # syntax, regardless of what characters it contains.
+#
+# The input mount is NOT read-only: mago-3d-tiler itself requires the
+# input path to be writable (verified empirically — it throws
+# "IOException: /data/input path is not writable" under :ro). This means
+# a `full` profile build writes into $SOURCE_DIR itself, not just $OUTPUT_DIR.
 DOCKER_ARGS=(
     run --rm
-    -v "$INPUT_DIR:/data/input:ro"
+    -v "$INPUT_DIR:/data/input"
     -v "$OUTPUT_DIR:/data/output"
     -e "JAVA_OPTS=${JAVA_OPTS:--Xmx4g}"
-    "${MAGO_IMAGE}@${MAGO_IMAGE_DIGEST}"
+    "$MAGO_IMAGE_TAG"
     "${MAGO_OPTS[@]}"
-    --thread "$CONCURRENCY"
+    --multiThreadCount "$CONCURRENCY"
 )
 DOCKER_CMD="docker ${DOCKER_ARGS[*]}"
 
@@ -158,8 +228,10 @@ build_id: "${BUILD_ID}"
 municipality: "${DATASET}"
 mode: "${MODE}"
 profile: "${PROFILE}"
-mago_image: "${MAGO_IMAGE}"
-mago_image_digest: "${MAGO_IMAGE_DIGEST}"
+mago_version: "${MAGO_VERSION}"
+mago_image: "${MAGO_IMAGE_TAG}"
+mago_jar_url: "${MAGO_JAR_URL}"
+mago_jar_sha256: "${MAGO_JAR_SHA256}"
 concurrency: ${CONCURRENCY}
 input_dir: "${INPUT_DIR}"
 output_dir: "${OUTPUT_DIR}"

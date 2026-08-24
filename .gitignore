@@ -5,6 +5,7 @@ data/source/*
 !data/source/.gitkeep
 data/output/*
 !data/output/.gitkeep
+data/.build-staging/
 
 # Python
 __pycache__/
