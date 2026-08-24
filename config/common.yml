@@ -1,0 +1,54 @@
+# Common configuration for plateau-mago-implicit experiment
+# All tool versions are pinned. Resolve TBD_VERIFIED_SOURCE_REQUIRED values
+# before running experiments.
+
+schema_version: "1"
+
+mago:
+  # Mago 3DTiler version and immutable reference
+  # Resolve these before building the Docker image.
+  version: "TBD_VERIFIED_SOURCE_REQUIRED"
+  jar_url: "TBD_VERIFIED_SOURCE_REQUIRED"
+  jar_sha256: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # Docker image reference (alternative to building from JAR)
+  # Use digest for immutability.
+  image: "TBD_VERIFIED_SOURCE_REQUIRED"
+  image_digest: "TBD_VERIFIED_SOURCE_REQUIRED"
+
+java:
+  # Java version required by Mago
+  version: "21"
+  image: "eclipse-temurin:21-jre-jammy"
+
+validators:
+  # 3D Tiles validator
+  tiles_validator_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+  # glTF validator
+  gltf_validator_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+
+tiling:
+  # Implicit Tiling subtree levels
+  # Depth of each subtree. Mago default may differ; record actual value used.
+  subtree_levels: 3
+  # Maximum number of LODs to include
+  max_lod: 1
+  # Geometric error at the root (metres). Adjust after inspection.
+  root_geometric_error: 100.0
+  # Refinement: ADD or REPLACE
+  refinement: "ADD"
+
+conversion:
+  # Triangle count target per tile (adjust based on experiment)
+  max_triangles_per_tile: 65536
+  # Concurrency (number of threads)
+  concurrency: 1
+  # Memory limit for JVM
+  java_opts: "-Xmx4g"
+
+output:
+  # Output format
+  format: "3dtiles"
+  # 3D Tiles version
+  tiles_version: "1.1"
+  # CRS for output (ECEF/WGS84 assumed by 3D Tiles)
+  output_crs: "EPSG:4978"

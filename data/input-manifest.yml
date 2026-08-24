@@ -1,0 +1,44 @@
+# Input manifest — source dataset declarations
+# All TBD_VERIFIED_SOURCE_REQUIRED values must be resolved before fetch.sh will succeed.
+
+schema_version: "1"
+
+datasets:
+  sarabetsu:
+    municipality_name_en: "Sarabetsu Village"
+    municipality_name_ja: "更別村"
+    municipality_code: "01643"
+    plateau_identifier: "TBD_VERIFIED_SOURCE_REQUIRED"
+    catalog_url: "https://www.geospatial.jp/ckan/organization/mlit-plateau"
+    download_url: "TBD_VERIFIED_SOURCE_REQUIRED"
+    archive_name: "TBD_VERIFIED_SOURCE_REQUIRED"
+    archive_sha256: "TBD_VERIFIED_SOURCE_REQUIRED"
+    archive_size_bytes: "TBD_VERIFIED_SOURCE_REQUIRED"
+    dataset_year: "TBD_VERIFIED_SOURCE_REQUIRED"
+    plateau_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+    citygml_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+    license: "CC BY 4.0"
+    attribution: "国土交通省 Project PLATEAU"
+    notes: >
+      First and smaller target. Used to establish parsing, coordinates, heights,
+      Explicit versus Implicit comparison, validation, and repeated-build behavior.
+
+  muroran:
+    municipality_name_en: "Muroran City"
+    municipality_name_ja: "室蘭市"
+    municipality_code: "01205"
+    plateau_identifier: "TBD_VERIFIED_SOURCE_REQUIRED"
+    catalog_url: "https://www.geospatial.jp/ckan/organization/mlit-plateau"
+    download_url: "TBD_VERIFIED_SOURCE_REQUIRED"
+    archive_name: "TBD_VERIFIED_SOURCE_REQUIRED"
+    archive_sha256: "TBD_VERIFIED_SOURCE_REQUIRED"
+    archive_size_bytes: "TBD_VERIFIED_SOURCE_REQUIRED"
+    dataset_year: "TBD_VERIFIED_SOURCE_REQUIRED"
+    plateau_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+    citygml_version: "TBD_VERIFIED_SOURCE_REQUIRED"
+    license: "CC BY 4.0"
+    attribution: "国土交通省 Project PLATEAU"
+    notes: >
+      Second and more demanding target. Used to test denser urban distribution,
+      terrain variation, coastal and sloped areas, larger output volume,
+      subtree organization, and CesiumJS behavior.

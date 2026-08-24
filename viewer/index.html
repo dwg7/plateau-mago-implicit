@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>plateau-mago-implicit — 3D Tiles Viewer</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.117/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.117/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: sans-serif; background: #111; color: #eee; }
+    #cesiumContainer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+    #ui {
+      position: absolute; top: 10px; left: 10px; z-index: 100;
+      background: rgba(20,20,30,0.85); padding: 12px; border-radius: 6px;
+      min-width: 260px; max-width: 320px;
+    }
+    #ui h1 { font-size: 13px; margin-bottom: 8px; color: #adf; }
+    #ui label { display: block; font-size: 11px; color: #aaa; margin-top: 6px; }
+    #ui select, #ui button {
+      width: 100%; margin-top: 3px; padding: 5px 8px; font-size: 12px;
+      background: #222; color: #eee; border: 1px solid #555; border-radius: 3px;
+    }
+    #ui button { cursor: pointer; background: #334; }
+    #ui button:hover { background: #445; }
+    #diagnostics {
+      margin-top: 10px; font-size: 10px; color: #888;
+      border-top: 1px solid #333; padding-top: 8px;
+    }
+    #diagnostics span { display: block; line-height: 1.6; }
+    #status { color: #fa8; font-size: 11px; margin-top: 6px; min-height: 16px; }
+    #attribution {
+      position: absolute; bottom: 8px; left: 8px; z-index: 100;
+      font-size: 9px; color: #888; max-width: 60%;
+    }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <div id="ui">
+    <h1>plateau-mago-implicit viewer</h1>
+    <label>Dataset</label>
+    <select id="datasetSelect">
+      <option value="">— select dataset —</option>
+      <option value="sarabetsu_explicit_small">Sarabetsu Village — Explicit (small)</option>
+      <option value="sarabetsu_implicit_small">Sarabetsu Village — Implicit (small)</option>
+      <option value="muroran_explicit_small">Muroran City — Explicit (small)</option>
+      <option value="muroran_implicit_small">Muroran City — Implicit (small)</option>
+    </select>
+    <label>Custom tileset URL</label>
+    <input id="customUrl" type="text"
+      style="width:100%;margin-top:3px;padding:5px 8px;font-size:11px;background:#222;color:#eee;border:1px solid #555;border-radius:3px;"
+      placeholder="../data/output/…/tileset.json">
+    <button id="loadBtn" style="margin-top:4px;">Load tileset</button>
+    <div id="status">No tileset loaded.</div>
+    <div id="diagnostics">
+      <span id="d-dataset">Dataset: —</span>
+      <span id="d-cesium">CesiumJS: 1.117</span>
+      <span id="d-url">URL: —</span>
+      <span id="d-tiles-loaded">Tiles loaded: —</span>
+      <span id="d-tiles-pending">Tiles pending: —</span>
+      <span id="d-fps">FPS: —</span>
+      <span id="d-heap">Heap: —</span>
+      <span id="d-first-visible">First visible: —</span>
+      <span id="d-useful-view">Useful view: —</span>
+    </div>
+  </div>
+  <div id="attribution">
+    国土交通省 Project PLATEAU |
+    Viewer: CesiumJS 1.117 (Apache 2.0) |
+    Data: CC BY 4.0
+  </div>
+
+  <script src="viewer.js"></script>
+</body>
+</html>
