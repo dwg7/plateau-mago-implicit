@@ -18,6 +18,12 @@ if [ -z "$DATASET" ]; then
     exit 1
 fi
 
+if ! [[ "$DATASET" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "ERROR: Invalid dataset name: $DATASET" >&2
+    echo "  Dataset must match ^[a-zA-Z0-9_-]+\$ (no slashes, spaces, or shell metacharacters)." >&2
+    exit 1
+fi
+
 CONFIG_COMMON="$REPO_ROOT/config/common.yml"
 CONFIG_DATASET="$REPO_ROOT/config/${DATASET}.yml"
 SOURCE_DIR="$REPO_ROOT/data/source/$DATASET"
@@ -40,9 +46,26 @@ check_tbd() {
     fi
 }
 
-# Read Mago image from config (simple grep, no yq required)
-MAGO_IMAGE="$(grep "^  image:" "$CONFIG_COMMON" | head -1 | sed 's/^  image: *//' | tr -d '"')"
-MAGO_IMAGE_DIGEST="$(grep "^  image_digest:" "$CONFIG_COMMON" | head -1 | sed 's/^  image_digest: *//' | tr -d '"')"
+# Read a field from a top-level YAML section without requiring yq.
+# Scoped to the named section only, since multiple sections can share a
+# sub-key name (e.g. both "mago:" and "java:" have an "image:" field).
+get_config_field() {
+    local section="$1"
+    local field="$2"
+    awk -v section="^${section}:" -v field="  ${field}:" '
+        $0 ~ section { in_section=1; next }
+        in_section && /^[^ ]/ { in_section=0 }
+        in_section && index($0, field) == 1 {
+            sub(field " *", "");
+            gsub(/"/, "");
+            print;
+            exit
+        }
+    ' "$CONFIG_COMMON"
+}
+
+MAGO_IMAGE="$(get_config_field mago image)"
+MAGO_IMAGE_DIGEST="$(get_config_field mago image_digest)"
 
 check_tbd "$MAGO_IMAGE" "mago.image in config/common.yml"
 check_tbd "$MAGO_IMAGE_DIGEST" "mago.image_digest in config/common.yml"
@@ -74,9 +97,9 @@ echo ""
 
 # Set Mago options based on mode
 if [ "$MODE" = "implicit" ]; then
-    MAGO_OPTS="--input /data/input --output /data/output --outputType 3dtiles --tileType implicit"
+    MAGO_OPTS=(--input /data/input --output /data/output --outputType 3dtiles --tileType implicit)
 elif [ "$MODE" = "explicit" ]; then
-    MAGO_OPTS="--input /data/input --output /data/output --outputType 3dtiles"
+    MAGO_OPTS=(--input /data/input --output /data/output --outputType 3dtiles)
 else
     echo "ERROR: Unknown mode: $MODE (use explicit or implicit)" >&2
     exit 1
@@ -85,20 +108,25 @@ fi
 START_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 START_EPOCH="$(date +%s)"
 
-# Run Mago 3DTiler via Docker
-DOCKER_CMD="docker run --rm \
-    -v '$INPUT_DIR:/data/input:ro' \
-    -v '$OUTPUT_DIR:/data/output' \
-    -e JAVA_OPTS='${JAVA_OPTS:--Xmx4g}' \
-    '${MAGO_IMAGE}@${MAGO_IMAGE_DIGEST}' \
-    $MAGO_OPTS \
-    --thread $CONCURRENCY"
+# Run Mago 3DTiler via Docker. Built as an array (not a string handed to
+# `eval`) so that a dataset/path value can never be interpreted as shell
+# syntax, regardless of what characters it contains.
+DOCKER_ARGS=(
+    run --rm
+    -v "$INPUT_DIR:/data/input:ro"
+    -v "$OUTPUT_DIR:/data/output"
+    -e "JAVA_OPTS=${JAVA_OPTS:--Xmx4g}"
+    "${MAGO_IMAGE}@${MAGO_IMAGE_DIGEST}"
+    "${MAGO_OPTS[@]}"
+    --thread "$CONCURRENCY"
+)
+DOCKER_CMD="docker ${DOCKER_ARGS[*]}"
 
 echo "Command: $DOCKER_CMD"
 echo ""
 
 RETURN_CODE=0
-eval "$DOCKER_CMD" || RETURN_CODE=$?
+docker "${DOCKER_ARGS[@]}" || RETURN_CODE=$?
 
 END_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 END_EPOCH="$(date +%s)"
