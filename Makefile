@@ -77,7 +77,7 @@ experiment:
 	@echo "--- Repeating implicit build for determinism check ---"
 	@$(MAKE) build DATASET=$(DATASET) MODE=implicit PROFILE=$(PROFILE) CONCURRENCY=$(CONCURRENCY)
 	@$(MAKE) compare DATASET=$(DATASET) MODE=implicit PROFILE=$(PROFILE)
-	@bash $(SCRIPTS)/generate-manifest.sh "$(DATASET)" "$(MODE)" "$(PROFILE)"
+	@bash $(SCRIPTS)/generate-manifest.sh "$(DATASET)" implicit "$(PROFILE)"
 	@echo ""
 	@echo "=== Experiment complete ==="
 	@echo "To view results, run: make serve"
