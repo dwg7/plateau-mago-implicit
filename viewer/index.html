@@ -39,7 +39,7 @@
   <div id="cesiumContainer"></div>
   <div id="ui">
     <h1>plateau-mago-implicit viewer</h1>
-    <label>Dataset</label>
+    <label>Dataset (requires tiles served at /tiles/ — see below)</label>
     <select id="datasetSelect">
       <option value="">— select dataset —</option>
       <option value="sarabetsu_explicit_small">Sarabetsu Village — Explicit (small)</option>
@@ -50,8 +50,15 @@
     <label>Custom tileset URL</label>
     <input id="customUrl" type="text"
       style="width:100%;margin-top:3px;padding:5px 8px;font-size:11px;background:#222;color:#eee;border:1px solid #555;border-radius:3px;"
-      placeholder="../data/output/…/tileset.json">
+      placeholder="https://your-host/tiles/…/tileset.json">
     <button id="loadBtn" style="margin-top:4px;">Load tileset</button>
+    <div style="font-size:10px;color:#888;margin-top:6px;line-height:1.4;">
+      This viewer is a static app — it ships with no tile data of its own.
+      The dataset dropdown expects tiles served at this same origin's
+      <code>/tiles/</code> path (run <code>make serve</code> locally, or
+      host the repo's nginx config). To view a tileset hosted anywhere
+      else, paste its URL above instead.
+    </div>
     <div id="status">No tileset loaded.</div>
     <div id="diagnostics">
       <span id="d-dataset">Dataset: —</span>
