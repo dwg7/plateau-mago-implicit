@@ -39,10 +39,10 @@ source:
   # Paths within the archive to building CityGML files
   # Populated after Phase 0 inspection
   building_files: []
-  # Selected file(s) for small (Phase 5) experiment
-  small_files: []
+  # Selected file for small (Phase 5) experiment
+  small_file: "TBD_VERIFIED_SOURCE_REQUIRED"
   # Reason for selection
-  small_files_reason: "TBD_VERIFIED_SOURCE_REQUIRED"
+  small_file_reason: "TBD_VERIFIED_SOURCE_REQUIRED"
 
 # Source statistics (populated after Phase 0 inspection)
 source_stats:
