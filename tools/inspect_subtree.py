@@ -2,9 +2,14 @@
 """
 inspect_subtree.py — Decode and validate 3D Tiles Implicit Tiling subtree files.
 
-Reads .subtree files and checks:
-- Magic bytes
-- JSON header validity
+Reads both subtree encodings legal under the 3D Tiles 1.1 spec:
+- The combined binary .subtree format (magic bytes, JSON header, binary chunk)
+- The JSON + external .bin form (what mago-3d-tiler 1.16.2 actually
+  produces — see docs/findings.md Phase 1/2; these files have no fixed
+  name, e.g. "0.json", so they're detected by content shape)
+
+Checks for both:
+- Header/magic validity (binary form only)
 - Binary buffer lengths
 - Tile availability bits
 - Content availability bits
@@ -165,6 +170,98 @@ def decode_subtree(subtree_path: Path) -> dict:
     return result
 
 
+SUBTREE_JSON_KEYS = {"tileAvailability", "contentAvailability", "childSubtreeAvailability"}
+
+
+def is_subtree_json(data) -> bool:
+    """Detect a real mago-3d-tiler-style subtree JSON by content shape —
+    these files have no fixed name. Duplicates tools/normalize.py's
+    identically-named function; not yet merged into a shared module (see
+    HANDOVER.md's tracked follow-ups)."""
+    return isinstance(data, dict) and bool(SUBTREE_JSON_KEYS & data.keys())
+
+
+def decode_subtree_json_bin(json_path: Path) -> dict:
+    """Decode a subtree delivered as JSON + external .bin buffer, in the
+    same result shape as decode_subtree() above so downstream consumers
+    don't need to special-case the encoding."""
+    result = {
+        "path": str(json_path),
+        "size_bytes": json_path.stat().st_size,
+        "valid": False,
+        "format": "json+bin",
+        "json_header": None,
+        "tile_availability_count": None,
+        "content_availability_count": None,
+        "child_subtree_availability_count": None,
+        "errors": [],
+        "warnings": [],
+    }
+    try:
+        header = json.loads(json_path.read_text(encoding="utf-8"))
+        result["json_header"] = header
+
+        binary_data = b""
+        buffers = header.get("buffers", [])
+        if buffers:
+            bin_path = json_path.parent / buffers[0].get("uri", "")
+            if bin_path.exists():
+                binary_data = bin_path.read_bytes()
+            else:
+                result["errors"].append(f"Referenced buffer not found: {bin_path}")
+
+        buffer_views = header.get("bufferViews", [])
+
+        def get_buffer_view_data(bv_index):
+            if bv_index is None or bv_index >= len(buffer_views):
+                return None
+            bv = buffer_views[bv_index]
+            off = bv.get("byteOffset", 0)
+            length = bv.get("byteLength", 0)
+            if len(binary_data) >= off + length:
+                return binary_data[off : off + length]
+            return None
+
+        def count_availability(availability_obj, max_tiles):
+            if availability_obj is None:
+                return None
+            constant = availability_obj.get("constant")
+            if constant is not None:
+                return max_tiles if constant == 1 else 0
+            bv_data = get_buffer_view_data(availability_obj.get("bitstream"))
+            if bv_data is None:
+                return None
+            return count_bits(bv_data, max_tiles)
+
+        subtree_levels = header.get("subtreeLevels", 1)
+        total_tiles = sum(4**i for i in range(subtree_levels))
+        child_subtree_count = 4**subtree_levels
+
+        result["tile_availability_count"] = count_availability(
+            header.get("tileAvailability", {}), total_tiles
+        )
+        content_avail = header.get("contentAvailability", {})
+        if isinstance(content_avail, list):
+            result["content_availability_count"] = sum(
+                count_availability(ca, total_tiles) or 0 for ca in content_avail
+            )
+        else:
+            result["content_availability_count"] = count_availability(
+                content_avail, total_tiles
+            )
+        result["child_subtree_availability_count"] = count_availability(
+            header.get("childSubtreeAvailability", {}), child_subtree_count
+        )
+
+        if not result["errors"]:
+            result["valid"] = True
+
+    except Exception as exc:  # noqa: BLE001
+        result["errors"].append(f"Unexpected error: {exc}")
+
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Inspect 3D Tiles Implicit subtree files")
     parser.add_argument(
@@ -178,17 +275,34 @@ def main() -> int:
         print(f"ERROR: Input directory not found: {input_dir}", file=sys.stderr)
         return 1
 
-    subtree_files = sorted(input_dir.rglob("*.subtree"))
-    if not subtree_files:
-        print(f"WARNING: No .subtree files found in {input_dir}", file=sys.stderr)
+    binary_subtree_files = sorted(input_dir.rglob("*.subtree"))
 
-    print(f"Inspecting {len(subtree_files)} subtree file(s)")
+    # Real mago-3d-tiler subtree JSON files have no fixed name (e.g.
+    # "0.json") — find candidates by extension, then confirm by content
+    # shape so tileset.json and other JSON output aren't misclassified.
+    json_subtree_files = []
+    for jf in sorted(input_dir.rglob("*.json")):
+        try:
+            parsed = json.loads(jf.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if is_subtree_json(parsed):
+            json_subtree_files.append(jf)
+
+    subtree_files = binary_subtree_files + json_subtree_files
+    if not subtree_files:
+        print(f"WARNING: No subtree files (binary or JSON+bin) found in {input_dir}", file=sys.stderr)
+
+    print(
+        f"Inspecting {len(subtree_files)} subtree file(s) "
+        f"({len(binary_subtree_files)} binary, {len(json_subtree_files)} json+bin)"
+    )
 
     results = []
     errors_total = 0
     for sf in subtree_files:
         print(f"  {sf.relative_to(input_dir)} ...", end="", flush=True)
-        res = decode_subtree(sf)
+        res = decode_subtree(sf) if sf in binary_subtree_files else decode_subtree_json_bin(sf)
         results.append(res)
         status = "ERRORS" if res["errors"] else ("warnings" if res["warnings"] else "ok")
         if res["errors"]:

@@ -74,8 +74,25 @@ if not it:
     fi
 fi
 
-# Count subtree files
-SUBTREE_COUNT="$(find "$LATEST_BUILD" -name "*.subtree" 2>/dev/null | wc -l | tr -d ' ')"
+# Count subtree files: both the combined-binary .subtree format and the
+# JSON+external-.bin form mago-3d-tiler actually produces (detected by
+# content shape, since those files have no fixed name — see
+# tools/inspect_subtree.py's is_subtree_json()).
+SUBTREE_COUNT="$(python3 -c "
+import json, sys
+from pathlib import Path
+d = Path('$LATEST_BUILD')
+keys = {'tileAvailability', 'contentAvailability', 'childSubtreeAvailability'}
+count = len(list(d.rglob('*.subtree')))
+for jf in d.rglob('*.json'):
+    try:
+        data = json.loads(jf.read_text(encoding='utf-8'))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        continue
+    if isinstance(data, dict) and keys & data.keys():
+        count += 1
+print(count)
+")"
 echo "  Subtree files: $SUBTREE_COUNT"
 
 # Count GLB files
@@ -101,6 +118,21 @@ if command -v npx &>/dev/null; then
         --tilesetFile "$TILESET" \
         2>&1 | tee "$VALIDATOR_LOG" | sed 's/^/    /' || WARNINGS=$((WARNINGS + 1))
     echo "  Validator log: $VALIDATOR_LOG"
+
+    # The validator CLI exits 0 even when it reports real errors in its own
+    # JSON result (numErrors > 0) — the `|| WARNINGS+=1` above only catches
+    # the tool failing to run at all. Parse its actual result so a report
+    # full of numErrors doesn't get printed as VALIDATION PASSED.
+    VALIDATOR_ERRORS="$(python3 -c "
+import re
+text = open('$VALIDATOR_LOG', encoding='utf-8', errors='replace').read()
+m = re.search(r'\"numErrors\":\s*(\d+)', text)
+print(m.group(1) if m else 0)
+")"
+    if [ "$VALIDATOR_ERRORS" -gt 0 ]; then
+        echo "  ✗ 3d-tiles-validator: $VALIDATOR_ERRORS error(s) in validation result"
+        ERRORS=$((ERRORS + VALIDATOR_ERRORS))
+    fi
 else
     echo "  ⚠ 3d-tiles-validator not available (npx not found)"
     echo "    Install with: npm install -g 3d-tiles-tools"

@@ -86,7 +86,10 @@ def compare_manifests(m1: dict, m2: dict) -> dict:
             else:
                 diff_entry["category"] = "structural"
 
-        elif path.endswith(".subtree"):
+        elif path.endswith(".subtree") or e1.get("subtree_counts") is not None:
+            # Combined-binary .subtree files match on extension; real
+            # mago-3d-tiler JSON+bin subtrees have no fixed name, so also
+            # catch them via the subtree_counts field normalize.py attaches.
             sc1 = e1.get("subtree_counts", {})
             sc2 = e2.get("subtree_counts", {})
             if sc1 == sc2:
@@ -97,7 +100,18 @@ def compare_manifests(m1: dict, m2: dict) -> dict:
                 diff_entry["subtree_counts_2"] = sc2
 
         elif path.endswith(".glb"):
-            diff_entry["category"] = "geometry"
+            # Raw bytes differing doesn't necessarily mean the geometry
+            # differs — mago-3d-tiler embeds a fresh random UUID in
+            # structural metadata on every run (see docs/findings.md
+            # Phase 3). normalize.py's glb_normalized.normalized_sha256
+            # redacts that before hashing; prefer it when available so a
+            # benign per-run ID doesn't register as a geometry difference.
+            gn1 = e1.get("glb_normalized", {}).get("normalized_sha256")
+            gn2 = e2.get("glb_normalized", {}).get("normalized_sha256")
+            if gn1 is not None and gn2 is not None:
+                diff_entry["category"] = "byte-only" if gn1 == gn2 else "geometry"
+            else:
+                diff_entry["category"] = "geometry"
 
         differences.append(diff_entry)
 
