@@ -1,4 +1,4 @@
-.PHONY: bootstrap fetch inspect build validate compare serve viewer test clean experiment help
+.PHONY: bootstrap fetch inspect build validate compare serve viewer publish test clean experiment help
 
 # Default target
 .DEFAULT_GOAL := help
@@ -53,6 +53,14 @@ serve:
 ## viewer: Open the CesiumJS viewer in a browser
 viewer:
 	@echo "Open viewer/index.html in a browser, or run: make serve"
+
+## publish: Publish the latest build to a remote static host (see docs/tile-hosting-plan.md)
+##   Usage: make publish DATASET=sarabetsu MODE=implicit PROFILE=small [EXECUTE=1]
+##   Requires PUBLISH_HOST and PUBLISH_PATH (see .env.example). Dry-run
+##   unless EXECUTE=1 is passed — never published as a side effect of
+##   any other target, including `experiment`.
+publish:
+	@bash $(SCRIPTS)/publish.sh "$(DATASET)" "$(MODE)" "$(PROFILE)" $(if $(EXECUTE),--execute,)
 
 ## test: Run fixture tests (no network access required)
 test:

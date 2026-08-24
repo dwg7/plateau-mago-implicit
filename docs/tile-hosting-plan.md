@@ -1,11 +1,14 @@
 # Tile hosting plan (draft — not executed)
 
-**Status: planning only.** Nothing in this document has been carried out.
-No files have been transferred to any external host, no remote
-configuration has been changed, and no DNS/tunnel settings have been
-touched. This is a design for review; execution requires the user's
-explicit go-ahead, action by action (per the project's action-permission
-rules — publishing to a public host is not something to do unprompted).
+**Status: scaffolding built, nothing executed.** The local-only pieces —
+`scripts/publish.sh` (defaults to a safe dry run) and the draft
+`config/tunnel-optgeo.Caddyfile` — now exist and are tested against the
+real local build output. **No files have been transferred to any external
+host, no remote configuration has been changed, and no DNS/tunnel
+settings have been touched.** Applying the Caddy config and running
+`scripts/publish.sh --execute` for real both require the user's explicit
+go-ahead (per the project's action-permission rules — publishing to a
+public host is not something to do unprompted).
 
 ## Why
 
@@ -67,75 +70,53 @@ things too (Martin's catalog, presumably other UN Smart Maps Group work).
 Final path is the user's call — this is just the proposed default,
 matching the repo name.
 
-## Proposed Caddy config addition (draft, not applied)
+## Caddy config addition — written, not applied: `config/tunnel-optgeo.Caddyfile`
 
-```caddyfile
-tunnel.optgeo.org {
-	# ... existing Martin / other routes unchanged ...
-
-	handle_path /plateau-mago-implicit/* {
-		root * /path/on/the/pi/plateau-mago-implicit-tiles
-		file_server {
-			precompressed gzip
-		}
-		header {
-			Access-Control-Allow-Origin "https://dwg7.github.io"
-			Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
-			Access-Control-Allow-Headers "Range"
-			Accept-Ranges "bytes"
-		}
-		@json path *.json
-		header @json Content-Type "application/json"
-		header @json Cache-Control "public, max-age=3600"
-
-		@bin path *.bin *.subtree
-		header @bin Content-Type "application/octet-stream"
-		header @bin Cache-Control "public, max-age=3600"
-
-		@glb path *.glb
-		header @glb Content-Type "model/gltf-binary"
-		header @glb Cache-Control "public, max-age=86400"
-	}
-}
-```
-
-Mirrors `config/nginx.conf`'s existing MIME/CORS design exactly (same
-Content-Types, same `.subtree`-is-binary fix from this project's own
-history) — no new policy invented, just the same rules on a different
-server. `Access-Control-Allow-Origin` is scoped to the GitHub Pages origin
-specifically rather than `*`, since this is someone's personal
-infrastructure, not a project-owned CDN — worth the user confirming that
-choice rather than defaulting to wide-open.
+The full draft config now lives in
+[`config/tunnel-optgeo.Caddyfile`](../config/tunnel-optgeo.Caddyfile) as a
+reviewable, standalone file (same treatment as `config/nginx.conf`) rather
+than only prose here. It mirrors `config/nginx.conf`'s existing MIME/CORS
+design exactly (same Content-Types, same `.subtree`/`.bin`-is-binary fix
+from this project's own history) — no new policy invented, just the same
+rules on a different server. `Access-Control-Allow-Origin` is scoped to
+the GitHub Pages origin specifically rather than `*`, since this is
+someone's personal infrastructure, not a project-owned CDN.
 
 **This file must be reviewed and applied by the user (or with the user's
 explicit go-ahead) directly on that machine — Claude has no access to it
 and won't attempt to.**
 
-## Proposed publish mechanism (draft — new script, not yet written)
+## Publish mechanism — written, not executed: `scripts/publish.sh`
 
-A `scripts/publish.sh <dataset> <mode> <profile>` that:
+`scripts/publish.sh <dataset> <mode> <profile> [--execute]` (also
+reachable as `make publish DATASET=... MODE=... PROFILE=... [EXECUTE=1]`)
+now exists and does what was planned:
 
 1. Resolves the local `latest` build under
    `data/output/<dataset>/<mode>/<profile>/`.
-2. `rsync`s that build's directory to the remote host, into both its
-   `<build-id>/` path and an updated `latest` symlink — target
-   host/path/user read from environment variables (e.g.
-   `PUBLISH_HOST`, `PUBLISH_PATH`), never hardcoded, so no credentials or
-   host details live in the repo.
-3. Writes a small `manifests/reports/published-<build-id>.json` record
-   (published URL, timestamp, SHA-256 of the root `tileset.json`, which
-   local build manifest it came from) — same "record everything"
-   discipline as the rest of this project's manifests.
+2. `rsync`s that build's directory to the remote host, then updates a
+   `latest` symlink on the remote side too via `ssh`. Target
+   host/path/user come from `PUBLISH_HOST`/`PUBLISH_PATH`/`PUBLISH_USER`
+   in the environment (see `.env.example`) — never hardcoded, so no
+   credentials or host details live in the repo. Auth is whatever the
+   invoking machine's own SSH config already provides; the script never
+   handles a password or key itself.
+3. Writes `manifests/reports/published-<build-id>.json` (published host,
+   remote path, timestamp, SHA-256 of the root `tileset.json`, which local
+   build manifest it came from) — same "record everything" discipline as
+   the rest of this project's manifests.
 
-**Requires:** SSH access to the Pi, which Claude does not have and will
-not ask the user to hand over (per this project's standing safety rules —
-credentials are handled by the user, never typed in by Claude). The
-script would be built and tested locally against a harmless dry-run
-target first; the actual first real publish is a manual step the user
-runs themselves, or explicitly asks Claude to run only once access is
-arranged in a way that doesn't involve sharing secrets with Claude (e.g.
-the user runs it, or a CI secret scoped to GitHub Actions rather than
-handed to Claude directly).
+**Safe by default:** without `--execute`, it only prints the exact `rsync`
+command it would run and exits — nothing is transferred. Verified
+2026-08-25 against the real Sarabetsu Implicit build: correctly refuses
+to run without `PUBLISH_HOST`/`PUBLISH_PATH` set, and correctly no-ops
+(dry run only) with a fake host until `--execute` is passed.
+
+**Still requires:** real SSH access to the Pi, which Claude does not have
+and will not ask the user to hand over. The actual first real publish
+(`--execute` against the real `tunnel.optgeo.org`) is a manual step the
+user runs themselves, or explicitly asks Claude to run only once access is
+arranged in a way that doesn't involve sharing secrets with Claude.
 
 ## Once real data is actually hosted (follow-up, separate step)
 

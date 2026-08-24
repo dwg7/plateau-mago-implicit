@@ -1,0 +1,55 @@
+# Proposed Caddy config addition for tunnel.optgeo.org, to serve
+# plateau-mago-implicit build output as static files.
+#
+# NOT YET APPLIED. This file is a reviewable draft for the user to check
+# and add to that host's actual Caddyfile themselves (or explicitly ask
+# for help doing so) — Claude has no access to that machine and has not
+# touched it. See docs/tile-hosting-plan.md for the full plan this
+# implements, and scripts/publish.sh for how a build gets here once this
+# route exists.
+#
+# Mirrors config/nginx.conf's MIME/CORS design (same Content-Types, same
+# "the .subtree/.bin buffer format is binary, not JSON" fix from this
+# project's own history) so the two static-hosting configs stay in sync.
+
+tunnel.optgeo.org {
+	# ... existing Martin / other routes on this host, unchanged ...
+
+	handle_path /plateau-mago-implicit/* {
+		# Adjust to wherever scripts/publish.sh's PUBLISH_PATH actually
+		# points on this host.
+		root * /srv/plateau-mago-implicit-tiles
+		file_server {
+			precompressed gzip
+		}
+
+		header {
+			# Scoped to the GitHub Pages viewer's origin specifically,
+			# not "*" — this is personal infrastructure shared with other
+			# projects, not a project-owned CDN. Widen only if there's a
+			# real need (e.g. another legitimate consumer origin).
+			Access-Control-Allow-Origin "https://dwg7.github.io"
+			Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+			Access-Control-Allow-Headers "Range"
+			Accept-Ranges "bytes"
+		}
+
+		@json path *.json
+		header @json Content-Type "application/json"
+		header @json Cache-Control "public, max-age=3600"
+
+		# Subtree buffer files (real mago-3d-tiler output) and the
+		# combined-binary .subtree format (spec-legal, not currently
+		# produced by mago-3d-tiler 1.16.2, but handled here too in case
+		# a future version or a different converter emits it) are both
+		# binary — not application/json. See docs/findings.md Phase 1/2
+		# for why this project cares about that distinction specifically.
+		@bin path *.bin *.subtree
+		header @bin Content-Type "application/octet-stream"
+		header @bin Cache-Control "public, max-age=3600"
+
+		@glb path *.glb
+		header @glb Content-Type "model/gltf-binary"
+		header @glb Cache-Control "public, max-age=86400"
+	}
+}
