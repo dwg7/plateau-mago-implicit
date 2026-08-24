@@ -225,12 +225,24 @@ data (not by reading Mago's docs alone):
 
 ### Upstream candidates
 
-- → The `METADATA_INVALID_LENGTH` errors above (`BatchId`/`FileName`
-  buffer-view length mismatches) are a plausible Mago 3DTiler bug, not a
-  PLATEAU data issue — they appear in Mago's own generated structural
-  metadata. Not yet prepared as a formal upstream report (needs a minimal
-  reproduction case per `CONTRIBUTING.md`'s process); flagged here as a
-  candidate.
+- → **`METADATA_INVALID_LENGTH` root-caused precisely (2026-08-25) — turns
+  out to be more ambiguous than "a Mago bug," not less interesting.**
+  Decoded the actual `stringOffsets`/`values` bufferViews by hand for both
+  Explicit and Implicit tiles: in every flagged property, the declared
+  `byteLength` exceeds the content the `stringOffsets` actually require by
+  exactly enough to round up to the next multiple of 4 bytes (e.g.
+  Implicit's `FileName`: offsets end at 50, declared byteLength 52;
+  Explicit's `BatchId`: offsets end at 1, declared byteLength 4). This is
+  the standard "pad binary buffer views to 4-byte alignment" pattern
+  common in glTF binary data — not obviously a content bug. Whether
+  `EXT_structural_metadata`'s spec requires exact-length bufferViews (in
+  which case Mago's alignment padding is non-conformant) or tolerates
+  trailing padding (in which case `3d-tiles-validator` is being overly
+  strict) has **not been checked against the normative spec text** — this
+  needs resolving before deciding which project (if either) to report to.
+  `scripts/validate.sh` correctly surfaces this as a failure either way
+  (per its job of not hiding real validator output), but "Mago has a
+  metadata bug" should not be asserted as fact until this is resolved.
 - → `--tilingMode implicit` is explicitly marked `[Experimental]` in Mago
   3DTiler's own `--help` output (v1.16.2). Per `docs/limitations.md`, this
   is stated here accurately and neutrally, not as a defect — but it means
@@ -282,9 +294,24 @@ day) — see the update at the end of this section.
   exits 0 even when it reports content errors). Fixed to parse
   `numErrors` from the validator's JSON output; re-running now correctly
   prints `VALIDATION FAILED: 1 error(s)` for the real
-  `METADATA_INVALID_LENGTH` bug in Mago's GLB metadata (see Phase 1
-  Unexpected findings) — this was a real defect being silently hidden by
-  our own tooling, not a false alarm.
+  `METADATA_INVALID_LENGTH` finding in Mago's GLB metadata (see Phase 1
+  Unexpected findings, and the Upstream candidates note below on why its
+  status is "ambiguous," not "confirmed Mago bug") — this was a real
+  finding being silently hidden by our own tooling, not a false alarm.
+- ✓ **(2026-08-25) Explicit-vs-Implicit comparison done by decoding both
+  outputs' `EXT_structural_metadata` directly.** No missing or duplicate
+  geometry: both represent the same single building's LOD0+LOD1 (1 mesh,
+  5 accessors per LOD, `FileName=63437290_bldg_6697_op.gml` in every
+  case). The two modes structure it differently, not incorrectly:
+  Explicit emits two separate `.glb` files (`RC0000.glb` LOD0,
+  `RC1000.glb` LOD1), each with a `propertyTable.count=1`; Implicit merges
+  both LODs into the single `data/R/3/4/2.glb` content tile, with
+  `propertyTable.count=2` (`BatchId` 0 and 1, both rows sharing the same
+  `FileName`). This — two batched rows in one Implicit content tile —
+  is also *why* the `METADATA_INVALID_LENGTH` alignment-padding pattern
+  was easier to spot in Implicit output than Explicit's (Explicit's
+  single-row tables have the same padding, just a smaller, easy-to-miss
+  offset).
 
 ### Partially confirmed
 
@@ -293,11 +320,10 @@ real output. See Confirmed above.)*
 
 ### Not confirmed
 
-- ✗ "No unexplained missing or duplicate geometry" — not yet checked
-  quantitatively (would require comparing feature counts between Explicit
-  and Implicit output, not yet done for this build pair).
-- ✗ Comparison-with-Explicit checklist items (docs/test-plan.md: hierarchy,
-  geometric error, feature identifiers) — not yet done.
+- ✗ Geometric error / hierarchy comparison against docs/test-plan.md's
+  full checklist (bounding volumes at each tree level, refinement
+  strategy differences) — feature-count/identity reconciliation above is
+  done, but the tree-structure-level comparison is not.
 - ✗ "Implicit output... validates independently" (docs/hypothesis.md Claim
   1) — now genuinely evaluable (tooling fixed), and the honest answer is
   **not yet**: `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH`
