@@ -18,8 +18,8 @@ NORM_DIR="$REPO_ROOT/manifests/normalized"
 REPORT_DIR="$REPO_ROOT/manifests/reports"
 mkdir -p "$NORM_DIR" "$REPORT_DIR"
 
-# Find two most recent builds
-mapfile -t BUILDS < <(find "$OUTPUT_BASE" -maxdepth 1 -type d | sort | tail -2)
+# Find two most recent builds (exclude $OUTPUT_BASE itself)
+mapfile -t BUILDS < <(find "$OUTPUT_BASE" -mindepth 1 -maxdepth 1 -type d | sort | tail -2)
 
 if [ "${#BUILDS[@]}" -lt 2 ]; then
     echo "ERROR: Need at least two builds to compare." >&2
