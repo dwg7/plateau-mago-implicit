@@ -5,7 +5,7 @@ summarize_metrics.py — Summarize experiment metrics from a build directory.
 Usage:
     python3 tools/summarize_metrics.py \
         --build-dir data/output/sarabetsu/implicit/small/<build-id> \
-        [--manifest manifests/builds/<build-id>.yml]
+        [--output manifests/reports/<build-id>-metrics.json]
 """
 
 import argparse
@@ -52,10 +52,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Summarize experiment metrics")
     parser.add_argument("--build-dir", required=True, type=Path)
     parser.add_argument(
-        "--manifest",
+        "--output",
         required=False,
         type=Path,
-        help="Optional path to write or append metrics summary (JSON Lines)",
+        help=(
+            "Optional path to write the metrics summary as a standalone JSON "
+            "file. This is separate from the build manifest (a YAML file) "
+            "written by scripts/build.sh — do not point this at that file."
+        ),
     )
     args = parser.parse_args()
 
@@ -80,17 +84,18 @@ def main() -> int:
             f"max={info['max_bytes']:8,}"
         )
 
-    # Write metrics to manifest file if requested
-    if args.manifest:
+    # Write metrics to a standalone JSON file if requested
+    if args.output:
         metrics_record = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "build_dir": str(build_dir),
             "file_stats": stats,
         }
-        args.manifest.parent.mkdir(parents=True, exist_ok=True)
-        with open(args.manifest, "a", encoding="utf-8") as f:
-            f.write(json.dumps(metrics_record, ensure_ascii=False) + "\n")
-        print(f"\nMetrics appended to: {args.manifest}")
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        with open(args.output, "w", encoding="utf-8") as f:
+            json.dump(metrics_record, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        print(f"\nMetrics written to: {args.output}")
 
     return 0
 
