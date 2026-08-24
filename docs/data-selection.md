@@ -12,7 +12,7 @@ Use `TBD_VERIFIED_SOURCE_REQUIRED` for unresolved values.
 |---|---|
 | Municipality name (English) | Sarabetsu Village |
 | Municipality name (Japanese) | 更別村 |
-| Municipality code | 01643 |
+| Municipality code | 01639 |
 | Prefecture | Hokkaido (北海道) |
 | PLATEAU dataset identifier | TBD_VERIFIED_SOURCE_REQUIRED |
 | Source catalog URL | https://www.geospatial.jp/ckan/organization/mlit-plateau |

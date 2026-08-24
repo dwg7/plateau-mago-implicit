@@ -7,7 +7,7 @@ datasets:
   sarabetsu:
     municipality_name_en: "Sarabetsu Village"
     municipality_name_ja: "更別村"
-    municipality_code: "01643"
+    municipality_code: "01639"
     plateau_identifier: "TBD_VERIFIED_SOURCE_REQUIRED"
     catalog_url: "https://www.geospatial.jp/ckan/organization/mlit-plateau"
     download_url: "TBD_VERIFIED_SOURCE_REQUIRED"

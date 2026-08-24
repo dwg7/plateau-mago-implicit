@@ -7,7 +7,7 @@ schema_version: "1"
 municipality:
   name_en: "Sarabetsu Village"
   name_ja: "更別村"
-  code: "01643"
+  code: "01639"
   prefecture_en: "Hokkaido"
   prefecture_ja: "北海道"
 
