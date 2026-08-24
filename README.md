@@ -104,6 +104,16 @@ make viewer
 make clean
 ```
 
+### Viewer
+
+The CesiumJS viewer (`viewer/`) is also deployed as a static app to
+**[GitHub Pages](https://dwg7.github.io/plateau-mago-implicit/)** on every
+push to `viewer/**`. It ships with no tile data — that's derived and
+regenerable, not committed (see [DECISIONS.md](DECISIONS.md) D8/D10) — so
+use its "Custom tileset URL" field to point it at a tileset you're hosting
+yourself, or run `make serve` locally for the predefined-viewpoint dropdown
+to resolve.
+
 ## Data licensing and attribution
 
 Source data is from Project PLATEAU (プロジェクト PLATEAU), provided by the Ministry of Land, Infrastructure, Transport and Tourism (国土交通省).

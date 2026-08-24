@@ -158,12 +158,17 @@ order:
    docs/determinism.md classification, a proper run log) — the current
    L2/PASS is a strong single-sample signal, not a substitute for the
    formal run.
-4. Actually load a real build in the CesiumJS viewer via `make serve` and
-   a real browser — not yet done. **Also: the viewer is being set up on
-   GitHub Pages** (static app only — no tile data, since that's derived
-   and regenerable; predefined viewpoints will only resolve for someone
-   also running `make serve` locally or hosting their own tiles — the
-   custom-URL field is the primary way to use the Pages-hosted viewer).
+4. **✅ (2026-08-25) Viewer deployed to GitHub Pages:**
+   https://dwg7.github.io/plateau-mago-implicit/ — `.github/workflows/deploy-pages.yml`
+   publishes `viewer/` on every push to `viewer/**`. Verified live in a
+   real browser (Cesium 1.117 loads, UI renders, no console errors). This
+   is the app only — no tile data (derived/regenerable, gitignored by
+   design); the dataset dropdown needs tiles served at the same origin's
+   `/tiles/` path (i.e. someone running `make serve`), so the practical
+   way to use the Pages-hosted viewer today is the "Custom tileset URL"
+   field pointed at a tileset hosted elsewhere. Still not done: loading an
+   actual real build through it end-to-end in a browser (verified the app
+   loads and runs, not yet verified against a live tileset).
 5. Only after Phase 1–4 fully complete for Sarabetsu: start Phase 5
    (Muroran) for real (a CRS spot-check was done during Phase 0 config
    setup, but that's not a Phase 5 run).
