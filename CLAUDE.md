@@ -105,29 +105,21 @@ guess from its `--help` text alone without testing (e.g. `--crs 6697`
 looks correct and runs without error, but silently produces wrong
 coordinates; the fix is `--proj` with an explicit `+axis=neu`).
 
-**What's still known-broken, not yet fixed** (see `HANDOVER.md` "Next
-concrete step" for priority order):
+**Update 2026-08-25: the three tooling gaps below are now fixed and
+re-verified against real data** (`tools/inspect_subtree.py`/
+`tools/normalize.py` now decode the real `.json`+`.bin` subtree pair;
+`tools/normalize.py` redacts mago-3d-tiler's per-run random UUID from GLB
+content before hashing; `scripts/validate.sh` now gates on the
+validator's `numErrors`). `make validate` and `make compare` now give
+trustworthy answers — re-running the earlier two-build comparison
+reclassified from L3/FAIL to L2/PASS, and `make validate` now correctly
+reports a real `METADATA_INVALID_LENGTH` failure that was previously
+silently hidden. Full detail: `docs/findings.md` Phase 2/3.
 
-- `tools/inspect_subtree.py`/`tools/normalize.py` only decode the
-  combined-binary `.subtree` format; real mago-3d-tiler 1.16.2 output is a
-  `.json`+`.bin` pair instead. `make validate` currently reports "Subtree
-  files: 0" against real Implicit output — this is not validating
-  anything right now, silently.
-- `tools/normalize.py` doesn't redact the random UUID mago-3d-tiler embeds
-  in every GLB's structural metadata on each run, so `make compare`
-  currently reports a false-negative (L3/FAIL) determinism result even
-  when the actual tileset/subtree/geometry are identical between builds.
-- `scripts/validate.sh` prints "VALIDATION PASSED" without checking the
-  validator's own `numErrors` field — real `METADATA_INVALID_LENGTH`
-  errors from `3d-tiles-validator` are currently silently ignored.
-- `validators.tiles_validator_version` in `config/common.yml` is not
-  actually read by `scripts/validate.sh`; the validator version is
-  whatever `npx` happens to install, unpinned.
-
-None of this blocks documentation-only work, and Phase 1's Explicit
-baseline is solid. Treat Phase 2's validation criteria and any Phase 3
-determinism claim as **not yet provable** until the subtree/UUID tooling
-gaps above are closed.
+**Still not pinned:** `validators.tiles_validator_version` in
+`config/common.yml` records the version observed (0.6.1) but
+`scripts/validate.sh` doesn't actually read it — `npx` resolves whatever's
+current at run time. Low priority, tracked in `HANDOVER.md`.
 
 ## Working conventions
 

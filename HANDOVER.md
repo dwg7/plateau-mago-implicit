@@ -37,11 +37,13 @@ and error messages, not just conclusions.
   correct, geographically-verified Implicit 3D Tiles (subtree available,
   content tile available) from the same building.
 - `make compare DATASET=sarabetsu MODE=implicit PROFILE=small` (after two
-  builds) — runs for real, produces a real (if currently misleading —
-  see below) determinism verdict.
+  builds) — runs for real and, as of the 2026-08-25 normalize.py fix,
+  produces a trustworthy verdict (L2/PASS for two real builds tested).
 - `make validate DATASET=sarabetsu MODE=implicit PROFILE=small` — runs the
-  real `3d-tiles-validator` via `npx` (auto-installs), which found real
-  errors in Mago's own GLB metadata.
+  real `3d-tiles-validator` via `npx` (auto-installs) and the real subtree
+  decoder; as of 2026-08-25 both correctly report a real
+  `METADATA_INVALID_LENGTH` failure in Mago's own GLB metadata (was
+  silently hidden by two separate tooling bugs before that date).
 - The `server` (nginx) compose service, started for real: a real build's
   `tileset.json` is reachable at exactly the URL `viewer/viewer.js`
   requests, and `.subtree`-path Content-Type is correct.
@@ -109,24 +111,30 @@ Wikipedia and the PLATEAU catalog itself).
 
 - **Both datasets use EPSG:6697 (JGD2011 geographic 3D)**, not the Plane
   Rectangular CS `docs/architecture.md` originally assumed (now corrected).
-- **Real Implicit subtree output is `.json`+`.bin`, not the combined
-  binary `.subtree` format** `tools/inspect_subtree.py`/`tools/normalize.py`
-  implement. Verified: `make validate` reports "Subtree files: 0" against
-  real output. **This is the single highest-priority tooling gap** —
-  Phase 2's validation criteria and all of Phase 3's determinism tooling
-  are currently running against zero real subtree data.
-- **A random UUID is embedded in every GLB's structural metadata** by Mago
-  on each run, causing a real, reproducible false-negative determinism
-  result (`compare-builds.sh` reported L3/FAIL between two builds whose
-  `tileset.json` and subtree were byte-identical — only this one embedded
-  string differed, confirmed via `cmp -l` + hex dump).
-  `docs/determinism.md` already anticipated this exact class of difference
-  as normalizable; `tools/normalize.py` doesn't yet redact it.
-- **`3d-tiles-validator` (unpinned, v0.6.1 as installed) found real
-  `METADATA_INVALID_LENGTH` errors** in Mago's GLB output
-  (`BatchId`/`FileName` properties) — `scripts/validate.sh` prints
-  "VALIDATION PASSED" regardless, since it doesn't gate on the validator's
-  own `numErrors` field (a real, minor, not-yet-fixed bug).
+- **✅ (2026-08-25, fixed) Real Implicit subtree output is `.json`+`.bin`,
+  not the combined binary `.subtree` format.** `tools/inspect_subtree.py`
+  and `tools/normalize.py` now detect and decode both encodings (the real
+  form by content shape — presence of `tileAvailability`/etc. keys, since
+  these files have no fixed name). `make validate` now correctly reports
+  `Subtree files: 1` (was 0) and decodes it.
+- **✅ (2026-08-25, fixed) A random UUID Mago embeds in every GLB's
+  structural metadata** was causing a real, reproducible false-negative
+  determinism result (`compare-builds.sh` reported L3/FAIL between two
+  builds whose `tileset.json` and subtree were byte-identical — only this
+  one embedded string differed). `tools/normalize.py` now redacts
+  UUID-shaped structural-metadata property values before hashing GLB
+  content (detected generically via the property table, not hardcoded to
+  a property name), and `tools/compare_manifests.py` prefers the
+  normalized hash when classifying `.glb` differences. Re-running the same
+  two-build comparison: **L2/PASS** (was L3/FAIL).
+- **✅ (2026-08-25, fixed) `scripts/validate.sh` now actually fails on real
+  validator errors** instead of printing "VALIDATION PASSED" regardless —
+  it previously didn't check the validator's own `numErrors` field. With
+  this fixed, `3d-tiles-validator` (unpinned, v0.6.1 as installed) still
+  finds a real `METADATA_INVALID_LENGTH` error in Mago's GLB output
+  (`BatchId`/`FileName` properties) — this is a genuine, validator-confirmed
+  Mago defect, not a tooling artifact; `validate.sh` now correctly reports
+  `VALIDATION FAILED` for it. Not yet reported upstream.
 - Sarabetsu's archive (1.1 GB) is bigger than Muroran's (238 MB) —
   contradicts `docs/data-selection.md`'s original size-based rationale for
   picking Sarabetsu first (building count is still smaller, which is what
@@ -135,39 +143,40 @@ Wikipedia and the PLATEAU catalog itself).
 
 ## Next concrete step
 
-Priority order:
+Both former top-priority tooling gaps (subtree format, GLB UUID) are
+fixed and verified against real data as of 2026-08-25. Remaining priority
+order:
 
-1. **↓ Fix `tools/normalize.py` to redact the embedded UUID from GLB
-   content before hashing** (same idea as its existing JSON timestamp
-   redaction), then re-run the two-build comparison. This is small,
-   well-understood (exact byte pattern already known — see
-   `docs/findings.md` Phase 3), and unblocks a trustworthy determinism
-   read.
-2. **↓ Extend `tools/inspect_subtree.py`/`tools/normalize.py` to handle the
-   real JSON+BIN subtree pair**, not just the combined binary format. This
-   is the bigger of the two tooling gaps.
-3. Complete Phase 2's remaining checklist items (Explicit-vs-Implicit
-   comparison: feature counts, hierarchy, `gml:id`s) once #2 unblocks real
-   subtree inspection.
-4. Run the formal Phase 3 procedure (two concurrency settings, full
-   docs/determinism.md classification) once #1 is done — the current L3
-   result is believed to be a tooling false-negative, not proof of real
-   Mago non-determinism, but that needs confirming properly.
-5. Actually load a real build in the CesiumJS viewer via `make serve` and
-   a real browser — not yet done.
-6. Only after Phase 1–4 fully complete for Sarabetsu: start Phase 5
+1. Prepare a minimal reproduction of the `METADATA_INVALID_LENGTH` error
+   and file it upstream per `CONTRIBUTING.md`'s process — now that
+   `scripts/validate.sh` correctly surfaces it as a real failure, it's a
+   confirmed Mago defect worth reporting, not a hypothesis.
+2. Complete Phase 2's remaining checklist items (Explicit-vs-Implicit
+   comparison: feature counts, hierarchy, `gml:id`s) — subtree inspection
+   is now real, so this is unblocked.
+3. Run the formal Phase 3 procedure (two concurrency settings, full
+   docs/determinism.md classification, a proper run log) — the current
+   L2/PASS is a strong single-sample signal, not a substitute for the
+   formal run.
+4. Actually load a real build in the CesiumJS viewer via `make serve` and
+   a real browser — not yet done. **Also: the viewer is being set up on
+   GitHub Pages** (static app only — no tile data, since that's derived
+   and regenerable; predefined viewpoints will only resolve for someone
+   also running `make serve` locally or hosting their own tiles — the
+   custom-URL field is the primary way to use the Pages-hosted viewer).
+5. Only after Phase 1–4 fully complete for Sarabetsu: start Phase 5
    (Muroran) for real (a CRS spot-check was done during Phase 0 config
    setup, but that's not a Phase 5 run).
 
 Lower-priority, tracked but not blocking:
 
-- `scripts/validate.sh` should fail (not print "VALIDATION PASSED") when
-  the validator's JSON has `numErrors > 0`.
 - Pin `validators.tiles_validator_version` for real — `scripts/validate.sh`
-  currently ignores that config field and lets `npx` install whatever's
-  current.
+  reads it nowhere; `config/common.yml` records the version observed
+  (0.6.1) but `npx` still resolves whatever's current at run time.
 - `tools/inspect_subtree.py` and `tools/normalize.py` still duplicate
-  subtree-parsing logic (PR #1 review finding, not yet addressed).
+  subtree-parsing logic across two files (including the new JSON+bin
+  decoder added today) — PR #1 review finding, not yet addressed. Worth a
+  shared `tools/subtree_common.py` if a third copy is ever needed.
 - `config/common.yml`'s `tiling.subtree_levels: 3` is not wired into
   `scripts/build.sh` (`--implicitSubtreeLevels` is never passed); Mago's
   default of 4 is used regardless of what's configured.

@@ -245,9 +245,10 @@ below) and prioritize the subtree-format tooling gap.
 
 ## Phase 2: Small Sarabetsu Village Implicit output
 
-**Status: Partially complete.** 2026-08-24/25. Implicit output was
-successfully generated and geographically verified; full validation is
-blocked by the tooling gap found in Phase 1.
+**Status: Partially complete, validation tooling gap closed.** 2026-08-25.
+Implicit output was successfully generated and geographically verified;
+the subtree-format tooling gap flagged below has since been fixed (same
+day) — see the update at the end of this section.
 
 ### Confirmed
 
@@ -266,18 +267,29 @@ blocked by the tooling gap found in Phase 1.
   `subtrees.uri` templates) are well-formed, standard 3D Tiles 1.1 JSON —
   not independently loaded in a browser yet (that's `make serve` + viewer,
   not yet exercised against this real build).
+- ✓ **(2026-08-25 update) Subtree validation now actually runs.**
+  `tools/inspect_subtree.py` and `tools/normalize.py` were extended to
+  detect and decode the real JSON+`.bin` subtree pair (by content shape —
+  presence of `tileAvailability`/`contentAvailability`/
+  `childSubtreeAvailability` keys — since these files have no fixed name).
+  Re-running `make validate`: `Subtree files: 1` (was 0), decoded
+  correctly (`tiles=1 content=0 children=0` for the one-building
+  small_file build), and the report is written to
+  `manifests/reports/subtree-validation-*.json` as designed.
+- ✓ **(2026-08-25 update) `scripts/validate.sh` now actually fails on real
+  validator errors.** It previously printed `VALIDATION PASSED`
+  regardless of the `3d-tiles-validator`'s own `numErrors` field (the CLI
+  exits 0 even when it reports content errors). Fixed to parse
+  `numErrors` from the validator's JSON output; re-running now correctly
+  prints `VALIDATION FAILED: 1 error(s)` for the real
+  `METADATA_INVALID_LENGTH` bug in Mago's GLB metadata (see Phase 1
+  Unexpected findings) — this was a real defect being silently hidden by
+  our own tooling, not a false alarm.
 
 ### Partially confirmed
 
-- ~ **`tools/inspect_subtree.py` / `scripts/validate.sh`'s subtree
-  validation reports "Subtree files: 0"** against this real output — not
-  because the subtree is invalid, but because the tool looks for a
-  `.subtree` extension that this Mago version doesn't produce (see Phase 1
-  Unexpected findings). The subtree's actual JSON content
-  (`{"buffers":[...],"bufferViews":[...],"tileAvailability":{...},
-  "contentAvailability":[...],"childSubtreeAvailability":{...}}`) looks
-  structurally sane on manual inspection but has not been run through any
-  automated validator.
+*(Resolved 2026-08-25 — was: subtree validation reporting "0" against
+real output. See Confirmed above.)*
 
 ### Not confirmed
 
@@ -286,12 +298,16 @@ blocked by the tooling gap found in Phase 1.
   and Implicit output, not yet done for this build pair).
 - ✗ Comparison-with-Explicit checklist items (docs/test-plan.md: hierarchy,
   geometric error, feature identifiers) — not yet done.
+- ✗ "Implicit output... validates independently" (docs/hypothesis.md Claim
+  1) — now genuinely evaluable (tooling fixed), and the honest answer is
+  **not yet**: `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH`
+  error against this build. Not a tooling false-negative this time.
 
 ### Unexpected findings
 
-*See Phase 1 — the subtree format and `--tilingMode implicit`
-[Experimental] findings both apply here since this is the Implicit output
-they describe.*
+*See Phase 1 for the subtree format and `--tilingMode implicit`
+[Experimental] findings (now fixed in tooling, see Confirmed above) and
+the `METADATA_INVALID_LENGTH` validator finding.*
 
 ### Upstream candidates
 
@@ -299,48 +315,50 @@ they describe.*
 
 ### Next smallest experiment
 
-↓ **Highest priority:** update `tools/inspect_subtree.py` and
-`tools/normalize.py` to also recognize the `.json`+`.bin` subtree pair
-Mago actually produces (in addition to, or instead of, the combined binary
-`.subtree` format they currently assume). Without this, Phase 2's
-validation pass criteria and all of Phase 3's determinism tooling are
-running against zero real subtree data.
-
 ↓ Wire `config/common.yml`'s `tiling.subtree_levels` into
 `scripts/build.sh`'s Mago invocation (`--implicitSubtreeLevels`) — currently
 unused, so Mago's default of 4 is used regardless of what's configured.
+
+↓ Prepare a minimal reproduction of the `METADATA_INVALID_LENGTH`
+error (`BatchId`/`FileName` buffer-view length mismatches) as a proper
+upstream report per `CONTRIBUTING.md`'s process, now that it's confirmed
+as a real, validator-detected defect rather than a hypothesis.
 
 ---
 
 ## Phase 3: Determinism
 
 **Status: Preliminary observation only — not formally started per
-docs/test-plan.md's procedure, but an early two-build comparison already
-surfaced a concrete, well-characterized finding worth recording now rather
-than losing.**
+docs/test-plan.md's procedure (two concurrency settings, full run log),
+but the tooling gap the preliminary check exposed has been fixed and
+re-verified.**
 
 ### Confirmed
 
-*None — formal Phase 3 (repeated builds at 2 concurrency settings, full
-classification per docs/determinism.md) has not been run.*
+- ✓ **(2026-08-25) With the GLB normalization fix in place, the same two
+  builds from the preliminary check now correctly classify as
+  Repeatability: L2, Determinism: PASS** — `tileset.json`, the subtree
+  JSON+bin, and now the GLB's normalized content (embedded random ID
+  redacted before hashing) are all either byte-identical or classified
+  `byte-only`. `manifests/reports/comparison-*.md` for this pair now
+  records `byte-only` for `data/R/3/4/2.glb`, not `geometry`.
+- ✓ This confirms the Phase 1/2 preliminary read was correct: the earlier
+  L3/FAIL was a tooling false-negative (a benign, non-geometric random ID
+  Mago embeds per-run), not evidence of real non-determinism in
+  mago-3d-tiler's actual conversion output.
 
 ### Partially confirmed
 
-- ~ Two consecutive `make build DATASET=sarabetsu MODE=implicit
-  PROFILE=small` runs (2026-08-24) produced:
-  - **Byte-identical `tileset.json`** (both runs) and **byte-identical
-    subtree `.json`+`.bin`** — 0 byte-only, 0 structural differences among
-    those 3 files.
-  - **Different `data/R/3/4/2.glb`** (same size, 4,804 bytes; different
-    SHA-256). `scripts/compare-builds.sh` classified this as `geometry`
-    (structural) and reported **Repeatability: L3, Determinism: FAIL**.
+- ~ Only one build pair, one profile (small), one concurrency setting
+  (1) has been checked. The formal Phase 3 procedure — two concurrency
+  settings, the full docs/determinism.md classification table, a proper
+  run log — has still not been executed. L2/PASS above should be treated
+  as a strong, evidence-based signal, not a substitute for that formal run.
 
 ### Not confirmed
 
-- ✗ Whether the GLB difference reflects genuine non-deterministic geometry,
-  or is purely a normalizable metadata artifact — **root-caused, see below,
-  but not yet fixed in tooling**, so the tool's own verdict (L3/FAIL)
-  should be treated as a *false negative* pending the fix.
+*None outstanding for this specific build pair — see Partially confirmed
+for what the formal procedure still needs to cover.*
 
 ### Unexpected findings
 
@@ -365,7 +383,8 @@ classification per docs/determinism.md) has not been run.*
   raw SHA-256 over the whole file (see the PR #1 code review finding on
   this, already tracked in `HANDOVER.md`). Once GLB-internal UUID
   normalization is implemented, this specific build pair would very likely
-  reclassify as Level 1 or Level 2, not L3/FAIL.
+  reclassify as Level 1 or Level 2, not L3/FAIL. **(2026-08-25: implemented
+  and confirmed — see Confirmed above.)**
 
 ### Upstream candidates
 
@@ -377,12 +396,10 @@ classification per docs/determinism.md) has not been run.*
 
 ### Next smallest experiment
 
-↓ Implement GLB-internal normalization in `tools/normalize.py`: parse the
-GLB's JSON chunk, redact values matching a UUID pattern (or, more
-precisely, redact known non-geometric metadata property values) before
-hashing, the same way JSON timestamp redaction already works for
-`tileset.json`. Then re-run the two-build comparison above and see whether
-it reclassifies as L1/L2.
+↓ Run the full formal Phase 3 procedure (two concurrency settings,
+docs/determinism.md's classification table, a proper run log) — the
+tooling now gives a trustworthy answer, so this is the remaining gap
+between "preliminary signal" and "Claim 2 formally evaluated."
 
 ↓ Once that's done, run the full formal Phase 3 procedure (two concurrency
 settings, docs/determinism.md's classification table) rather than this
@@ -428,8 +445,8 @@ complete.*
 
 | Claim | Status | Phase evaluated | Notes |
 |---|---|---|---|
-| Conversion feasibility | Partially confirmed | 1, 2 | Explicit fully confirmed for the small_file; Implicit generated and geographically correct, but full validation blocked by the subtree tooling gap (↓ Phase 2) |
-| Determinism | Not evaluated (preliminary signal only) | 3 (preliminary) | Real L3/FAIL result observed, but root-caused to a specific, likely-normalizable GLB metadata artifact (a random UUID) — formal Phase 3 not yet run |
+| Conversion feasibility | Partially confirmed | 1, 2 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, and now fully validatable (subtree tooling gap closed) — but validation surfaced a real Mago defect (`METADATA_INVALID_LENGTH`), so "validates independently" is currently ✗ |
+| Determinism | Partially confirmed (strong preliminary signal) | 3 (preliminary) | Initial L3/FAIL was a tooling false-negative (a benign per-run random ID in GLB metadata); after fixing `tools/normalize.py` to redact it, the same build pair reclassifies as L2/PASS. Formal Phase 3 (2 concurrency settings, full run log) not yet executed |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
 | Practical consumption | Not evaluated | — | `make serve` + CesiumJS viewer not yet exercised against real build output |
 

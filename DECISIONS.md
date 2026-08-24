@@ -282,3 +282,31 @@ result into a "probably fine." `docs/findings.md`'s own template already
 has "Not confirmed" and "Next smallest experiment" sections for exactly
 this situation — use them rather than inventing a workaround under time
 pressure.
+
+## D18 — Closed the D17 tooling gaps quickly, judged low-depth relative to their value
+
+**Status:** Accepted, 2026-08-25
+
+D17 flagged two tooling gaps (subtree format, GLB UUID) without fixing
+them, to avoid inventing a workaround under time pressure. Revisited the
+same day: the user's read was that the GLB-UUID fix specifically was
+solving a problem that barely existed in substance — `tileset.json` and
+the subtree were already byte-identical between builds; only a benign,
+non-geometric per-run identifier differed, which `docs/determinism.md`
+had already pre-classified as normalizable. The decision was still to fix
+it (not skip it), on the reasoning that whether or not the *underlying*
+non-determinism is "real," the *tooling's* job is to give a trustworthy
+verdict — and while unfixed, every future build comparison would report
+FAIL regardless of whether a real regression occurred, making the
+determinism tooling useless for its actual purpose. Implemented both
+fixes compactly (detect UUID-shaped property values generically via the
+property table rather than hardcoding a property name; detect subtree
+JSON by content shape rather than filename) and re-verified against the
+same real build pair: L3/FAIL → L2/PASS, and `make validate` went from
+silently passing a real Mago defect to correctly failing on it. Also
+fixed while in the area: `scripts/validate.sh` wasn't gating on the
+validator's own `numErrors` field, printing "VALIDATION PASSED" over a
+real `METADATA_INVALID_LENGTH` error. Consequence: when a "is this worth
+fixing" doubt comes up again, the standard to apply is whether leaving it
+unfixed corrupts the *tooling's* verdicts going forward, not just whether
+the underlying issue is severe in isolation.
