@@ -169,20 +169,26 @@ PR #1 review — see HANDOVER.md) are invisible to CI by design. Don't treat
 "CI is green" as equivalent to "the pipeline works" when reviewing future PRs
 against this repo.
 
-## D13 — PR #1 (bootstrap scaffold) merged with known pipeline bugs tracked, not fixed inline
+## D13 — PR #1 (bootstrap scaffold) merged first, pipeline bugs fixed immediately after on `main`
 
-**Status:** Accepted, 2026-08-25
+**Status:** Accepted, 2026-08-24/25
 
 PR #1 added the entire experiment scaffold to what was previously an empty
 stub repo. A review surfaced 6 confirmed and 4 plausible bugs in the
-pipeline scripts/tools (see HANDOVER.md for the full list — e.g. a
-Muroran config key mismatch that breaks its small-profile build, and an
-`eval`-based Docker command construction with unsanitized `$DATASET`). Because
-this PR only adds scaffolding to an otherwise-empty repo (no risk to any
-running system) and CI passes, the decision was to merge it and track the
-known bugs as the first work item rather than block the merge on fixing them
-inline. Consequence: **Phase 0 must not start** (no real `make fetch`/`make
-build` run against real data) until at minimum the Muroran key-mismatch and
-the `eval`/unsanitized-`DATASET` bugs are fixed — see HANDOVER.md's "Known
-bugs" section for the full list and "Next concrete step" for the order to
-address them in.
+pipeline scripts/tools (a Muroran config key mismatch that broke its
+small-profile build, an `eval`-based Docker command construction with
+unsanitized `$DATASET`, a viewer that 404'd against any real build, a
+YAML/JSON manifest corruption bug, an off-by-one in the build-comparison
+script, and an ambiguous config grep — plus two lower-severity issues).
+Because this PR only added scaffolding to an otherwise-empty repo (no risk to
+any running system) and CI passed, the decision was to merge it first and
+fix the known bugs immediately afterward as direct commits to `main`
+(commits `a046e8c`..`e07f092`, same day), rather than block the merge on
+fixing them inline or route the fixes through a separate PR. All 6 confirmed
+bugs and 2 of the plausible ones are fixed as of that push; see HANDOVER.md's
+"Bugs fixed after PR #1" section for the itemized list and what's still
+outstanding. Consequence: this repo's convention for a solo-maintainer
+experiment is direct-to-`main` commits with clear, atomic commit messages
+(one bug per commit) rather than a PR-per-fix workflow — reserve PRs for
+larger or externally-contributed changes (see `CONTRIBUTING.md`'s
+fork/branch/PR flow, which still applies to outside contributors).

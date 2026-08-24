@@ -18,53 +18,61 @@ is still `TBD_VERIFIED_SOURCE_REQUIRED`. `docs/findings.md` correctly shows
 every phase as "Not started" — trust that file's status markers over anything
 else when checking what's actually been done versus merely scaffolded.
 
-CI is green (fixture tests, shellcheck, flake8, YAML validation, doc checks —
-all pass on `main`). Green CI here means the *scaffolding* is sound; it does
-**not** mean the pipeline works end-to-end, because none of the CI jobs
-actually run `make build`/`make experiment` against real data (that needs
-Docker + network access CI doesn't have).
+Immediately after merging PR #1, all 6 confirmed pipeline bugs from the merge
+review were fixed directly on `main` (commits `a046e8c`..`e07f092`, 2026-08-24),
+along with two lower-severity issues. See "Bugs fixed after PR #1" below.
+`make test` and CI are green as of that push. **This still does not mean the
+pipeline works end-to-end** — CI has no Docker/network access, so `make build`,
+`make experiment`, and the viewer have still never been exercised against a
+real Mago 3DTiler run. Treat them as fixed-on-paper, not proven, until Phase 0
+actually runs them.
 
-## Known bugs to fix before trusting the pipeline
+## Bugs fixed after PR #1 (2026-08-24, commits a046e8c..e07f092)
 
-Found during review of PR #1 (see that PR's review comments, or re-run
-`/code-review` against the merge commit for full detail). Fix at least the
-first two before starting Phase 0 for Muroran or before running anything
-through `eval`-based `build.sh`:
+All 6 bugs confirmed during the PR #1 review, plus 2 of the lower-severity
+ones, were fixed directly on `main`:
 
-1. **Muroran's small-profile build is broken.** `config/muroran.yml` defines
-   `small_files:` (plural) but `scripts/build.sh` looks for `small_file:`
-   (singular). Fix the key name mismatch in one of the two places before
-   running `make build DATASET=muroran PROFILE=small`.
-2. **`scripts/build.sh` uses `eval` on a Docker command string built from
-   unsanitized `$DATASET`.** Add a `DATASET` allowlist check
-   (`sarabetsu|muroran`, or read valid names from `config/`) near the top of
-   every script that accepts it as an argument, and consider replacing the
-   `eval "$DOCKER_CMD"` pattern with a plain array-based `docker run "${ARGS[@]}"`
-   invocation so quoting can't be broken.
-3. **The CesiumJS viewer's hardcoded tileset URLs don't match real build
-   output** (missing the timestamped `BUILD_ID` path segment; also doesn't
-   match nginx's `/tiles/` serving path). Fix `viewer/viewer.js` — or better,
-   generate `VIEWPOINTS` from a manifest/config file instead of hand-coding
-   URLs — before relying on `make serve` + the dropdown to view anything.
-4. **`scripts/generate-manifest.sh` corrupts the build manifest.** It appends
-   raw JSON (via `tools/summarize_metrics.py --manifest`) onto a file that
-   `scripts/build.sh` already wrote as YAML. Either write metrics to a
-   separate file, or make `summarize_metrics.py` merge into valid YAML.
-5. **`scripts/compare-builds.sh` can silently compare a directory against
-   itself** when only one real build exists, because its `find -maxdepth 1`
-   listing includes the parent output directory. Exclude the base directory
-   explicitly (e.g. `-mindepth 1 -maxdepth 1`).
-6. **`scripts/build.sh`'s `grep "^  image:"` is ambiguous** — it matches both
-   `mago.image:` and `java.image:` in `config/common.yml` and only picks the
-   right one because of section ordering. Make the grep pattern more specific
-   (e.g. grep within the `mago:` block only) before reordering that file.
+1. ✅ `config/muroran.yml`'s `small_files:` (plural) renamed to `small_file:`
+   (singular) to match what `scripts/build.sh` reads — Muroran's small-profile
+   build no longer fails outright.
+2. ✅ `scripts/build.sh`'s Docker invocation no longer goes through `eval`
+   (replaced with an array-based `docker "${ARGS[@]}"` call), and every
+   script that accepts `$DATASET` now validates it against
+   `^[a-zA-Z0-9_-]+$` before it reaches any path construction.
+3. ✅ `viewer/viewer.js`'s tileset URLs now point at
+   `/tiles/<dataset>/<mode>/small/latest/tileset.json` (matching nginx's
+   actual `/tiles/` alias), and `scripts/build.sh` maintains a `latest`
+   symlink to the most recent successful build. The no-op `resolveTilesetUrl()`
+   was removed.
+4. ✅ `scripts/generate-manifest.sh` now writes metrics to a standalone
+   `manifests/reports/<build-id>-metrics.json` file instead of appending JSON
+   onto the YAML build manifest. `tools/summarize_metrics.py`'s `--manifest`
+   flag was renamed to `--output` and no longer opens in append mode.
+5. ✅ `scripts/compare-builds.sh` (and `validate.sh`, for consistency) now use
+   `find -mindepth 1 -maxdepth 1` so the parent output directory is never
+   counted as a build.
+6. ✅ `scripts/build.sh`'s config lookup no longer does an ambiguous
+   `grep "^  image:"`; `get_config_field()` scopes the lookup to a named
+   top-level YAML section (`mago:` vs `java:`).
+7. ✅ (plausible-severity) `Makefile`'s `experiment` target now hardcodes
+   `implicit` for the final `generate-manifest.sh` call instead of passing
+   the overridable `$(MODE)`, matching the steps actually run.
+8. ✅ (plausible-severity) `config/nginx.conf` now serves `.subtree` files as
+   `application/octet-stream` instead of `application/json` (they're a
+   binary format per `tools/inspect_subtree.py`'s decoder).
 
-Lower-priority, worth fixing but not blocking: `tools/normalize.py`'s
-docstring overstates GLB normalization (it only hashes GLB files today, no
-mesh/accessor-level comparison) — this matters for the Phase 3 determinism
-claim specifically, since a byte-identical-but-differently-serialized GLB
-would currently register as a false structural difference. `config/nginx.conf`
-labels `.subtree` files (a binary format) as `application/json`.
+**Not yet addressed** (tracked, not blocking, lower severity — see DECISIONS.md D7):
+
+- `tools/normalize.py`'s docstring overstates GLB normalization (it only
+  hashes GLB files today, no mesh/accessor-level comparison) — matters for
+  the Phase 3 determinism claim, since a byte-identical-but-differently-
+  serialized GLB would currently register as a false structural difference.
+  `tests/run-tests.sh` only exercises `normalize.py` against an empty
+  directory, so a regression here wouldn't be caught by CI either.
+- `tools/inspect_subtree.py` and `tools/normalize.py` independently
+  reimplement the same subtree magic/header parsing and bit-counting logic —
+  a fix to one won't propagate to the other. Worth extracting to a shared
+  module if it causes an actual divergence, per DECISIONS.md D11.
 
 ## Next concrete step
 
@@ -82,12 +90,10 @@ Phase 0 per `docs/test-plan.md`:
    or `image`/`image_digest`) — check the
    [Mago 3DTiler releases](https://github.com/Gaia3D/mago-3d-tiler) for a
    specific tagged version and pin by digest, not `latest`.
-3. Fix bug #1 and #2 above (they block Muroran and are a correctness/security
-   issue respectively even for Sarabetsu-only work).
-4. `make fetch DATASET=sarabetsu` → `make inspect DATASET=sarabetsu`, then
+3. `make fetch DATASET=sarabetsu` → `make inspect DATASET=sarabetsu`, then
    record source statistics into `config/sarabetsu.yml`'s `source_stats`
    block.
-5. Only after that: `make build DATASET=sarabetsu MODE=explicit PROFILE=small`
+4. Only after that: `make build DATASET=sarabetsu MODE=explicit PROFILE=small`
    (Phase 1, the Explicit baseline) before touching Implicit tiling.
 
 Do not skip ahead to Muroran, to Implicit tiling, or to the "full" profile
@@ -115,5 +121,3 @@ produced recorded findings in `docs/findings.md`.
   and Muroran? (Not yet chosen — this is the actual blocker for Phase 0.)
 - Which Mago 3DTiler version should be pinned? `Dockerfile` currently defaults
   `MAGO_VERSION=1.0.0` as an `ARG` but the digest/checksum are still TBD.
-- Should the 6 known bugs above be fixed in one follow-up PR before Phase 0
-  starts, or fixed incrementally as each one is actually hit?
