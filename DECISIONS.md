@@ -192,3 +192,93 @@ experiment is direct-to-`main` commits with clear, atomic commit messages
 (one bug per commit) rather than a PR-per-fix workflow — reserve PRs for
 larger or externally-contributed changes (see `CONTRIBUTING.md`'s
 fork/branch/PR flow, which still applies to outside contributors).
+
+## D14 — Mago 3DTiler CLI invocation corrected against the real tool, not just its docs
+
+**Status:** Accepted, 2026-08-25
+
+The pipeline as merged in PR #1 used CLI flags (`--outputType 3dtiles`,
+`--tileType implicit`, `--thread`) that do not exist in mago-3d-tiler's
+actual command line (confirmed by triggering
+`UnrecognizedOptionException` and cross-checking `--help`/`MANUAL.md`) —
+every `make build` invocation crashed immediately, in both modes, before
+this was found and fixed. The real flags are `--tilingMode
+explicit|implicit` (no flag needed for explicit, it's the default) and
+`--multiThreadCount`; no `--outputType` is needed for CityGML input
+(defaults to `b3dm`). Separately, `--input` must be a *writable* directory
+(Mago throws `IOException` under a read-only mount) and PLATEAU's
+`gml:pos` axis order (lat, lon, height) is incompatible with Mago's
+`--crs <EPSG code>` path (silently produces wrong coordinates) — an
+explicit `--proj "+proj=longlat +datum=WGS84 +axis=neu +no_defs"` is
+required instead, recorded per-dataset in `config/*.yml`'s `crs.mago_proj`
+field. Consequence: **trust nothing about a third-party CLI tool's flags
+from documentation alone once real usage is possible** — this project's
+own `docs/test-plan.md` Phase 1 exists specifically to catch exactly this
+class of assumption before it propagates further; the fixes here are the
+direct product of actually running Phase 1, not of re-reading the code
+more carefully. See `docs/findings.md` Phase 1 for exact error text and
+verification commands.
+
+## D15 — "small" profile builds a single isolated file, staged outside the source tree
+
+**Status:** Accepted, 2026-08-25
+
+mago-3d-tiler's `--input` takes a directory and converts every CityGML
+file found in it — there is no single-file input mode. `scripts/build.sh`
+originally mounted the selected `small_file`'s *parent directory*
+(`udx/bldg/`, containing all ~100–190 of that municipality's building mesh
+files) directly, so every "small" build actually converted the entire
+municipality (confirmed: 202 tile contents from a "one file" build).
+Fixed by copying just the selected file into an isolated
+`data/.build-staging/<dataset>/<build-id>/` directory before mounting it —
+gitignored, since it's derived/regenerable. Consequence: if a future
+change needs multiple (but not all) input files for a build profile, reuse
+this staging-directory pattern rather than mounting a shared directory and
+hoping Mago only picks up the intended subset.
+
+## D16 — Pin Mago 3DTiler via JAR SHA-256 + local Docker build, not a pulled image
+
+**Status:** Accepted, 2026-08-25 (supersedes an earlier same-session
+mistake — see below)
+
+No public Docker image exists on GHCR for mago-3d-tiler (confirmed:
+`ghcr.io/gaia3d/mago-3d-tiler` → not found), so `config/common.yml`'s
+original `mago.image`/`image_digest` fields were unfillable without
+fabricating a value. `scripts/build.sh` was changed to build a local image
+from the pinned JAR (`mago.version`/`jar_url`/`jar_sha256`) via the
+existing `Dockerfile`, which independently re-verifies the JAR's SHA-256
+at build time (`sha256sum --check --strict`) — this ran for real and
+passed, so the pinned checksum is doubly confirmed, not just
+self-reported. **Correction:** during this same investigation, a public
+image was found to exist after all, but on **Docker Hub**
+(`docker.io/gaia3d/mago-3d-tiler`, both `:latest` and `:1.16.2` tags,
+multi-arch) — GHCR was checked, not Docker Hub, and that gap produced an
+incorrect statement to the user mid-session. Decision: keep the JAR-based
+local build rather than switching, since it was already implemented and
+verified end-to-end, and per D2 either pinning mechanism is equally valid.
+Revisit only if the local build step becomes an actual bottleneck (it
+currently isn't — Docker layer caching makes repeat builds near-instant).
+
+## D17 — Determinism/validation tooling gaps are tracked, not silently worked around
+
+**Status:** Accepted, 2026-08-25
+
+Running the real pipeline surfaced two tooling gaps that could have been
+quietly papered over but weren't: (1) `tools/inspect_subtree.py` and
+`tools/normalize.py` only decode the combined-binary `.subtree` format,
+while mago-3d-tiler 1.16.2 actually emits a `.json`+`.bin` pair — both are
+3D Tiles 1.1-legal, but this project's tooling only handles one, so
+`make validate` currently reports "Subtree files: 0" against real output
+rather than actually validating anything; and (2) `tools/normalize.py`
+doesn't redact the random UUID mago-3d-tiler embeds in every GLB's
+structural metadata, so a real two-build comparison reported
+Repeatability L3/FAIL even though `tileset.json` and the subtree were
+byte-identical and only that one embedded string differed between builds.
+Decision: record both precisely in `docs/findings.md` and `HANDOVER.md`
+with exact reproduction steps, rather than either (a) declaring
+determinism/validation "passed" on the strength of a tool that isn't
+actually checking the real content, or (b) quietly hand-waving the L3
+result into a "probably fine." `docs/findings.md`'s own template already
+has "Not confirmed" and "Next smallest experiment" sections for exactly
+this situation — use them rather than inventing a workaround under time
+pressure.

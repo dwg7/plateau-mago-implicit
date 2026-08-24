@@ -89,44 +89,45 @@ Everything is driven through the `Makefile` (`bootstrap`, `fetch`, `inspect`,
 `docs/reproducibility.md` for what must be pinned (tool versions, Docker
 digests, checksums) versus what's allowed to vary.
 
-## Known issues in the current pipeline (read before running `make experiment`)
+## Known issues in the current pipeline
 
-A review of the bootstrap PR found several bugs that will surface the moment
-someone actually runs the pipeline end-to-end rather than just linting it.
-Check `docs/findings.md` / recent commits to see whether these have been fixed
-before assuming the pipeline works as documented:
+**Status as of 2026-08-25: Phase 1 (Sarabetsu Explicit + Implicit, small
+profile) is real and verified working** — the pipeline was actually run
+end-to-end against real PLATEAU data and real Mago 3DTiler, not just
+linted. That run found and fixed several bugs that meant the pipeline, as
+originally merged, crashed on *every single* `make build` invocation in
+*both* modes (wrong CLI flags, a read-only mount Mago rejects, wrong CRS
+handling, and a "small" profile that silently built the whole
+municipality). Full detail with exact error text: `docs/findings.md`
+Phase 1. Before touching `scripts/build.sh` or the Mago invocation again,
+read that section — several of Mago's actual CLI flags are not what you'd
+guess from its `--help` text alone without testing (e.g. `--crs 6697`
+looks correct and runs without error, but silently produces wrong
+coordinates; the fix is `--proj` with an explicit `+axis=neu`).
 
-- `config/muroran.yml` used `small_files:` (plural) while `scripts/build.sh`
-  looked for `small_file:` (singular) — Muroran's small-profile build failed
-  outright. Verify the key names in `config/*.yml` actually match what
-  `scripts/build.sh` greps for before trusting a `make build DATASET=muroran`
-  run.
-- `scripts/build.sh` builds its `docker run` invocation as a string and
-  executes it with `eval`, with `$DATASET` flowing unsanitized (and without an
-  allowlist) into the interpolated path. Treat `DATASET` as an untrusted input
-  boundary if you touch this script — validate it against `sarabetsu|muroran`
-  (or the current dataset list) before it reaches any path construction or
-  `eval`.
-- `viewer/viewer.js`'s hardcoded tileset URLs don't include the build's
-  timestamped `BUILD_ID` directory and don't match the `/tiles/` path nginx
-  actually serves — the viewer 404s against real build output. If you change
-  `scripts/build.sh`'s output path or `config/nginx.conf`'s serving path,
-  update `viewer/viewer.js` in the same change.
-- `scripts/generate-manifest.sh` → `tools/summarize_metrics.py --manifest`
-  appends a raw JSON line onto the `.yml` build manifest that
-  `scripts/build.sh` already wrote, corrupting it as YAML.
-- `scripts/compare-builds.sh`'s `find -maxdepth 1 -type d | sort | tail -2`
-  includes the parent output directory itself, so the "need at least two
-  builds" guard can be bypassed when only one real build exists.
-- `tools/normalize.py`'s docstring claims it records GLB mesh/accessor counts;
-  it currently only hashes GLB files. Since `tests/run-tests.sh` only exercises
-  `normalize.py` against an empty directory, this gap is invisible until a real
-  build's `.glb` output is normalized — be skeptical of "Level 2 determinism"
-  claims until this is either implemented or the claim is corrected.
+**What's still known-broken, not yet fixed** (see `HANDOVER.md` "Next
+concrete step" for priority order):
 
-None of this blocks documentation-only or scaffolding work, but treat
-`make build DATASET=muroran`, `make experiment`, and `make serve` + viewer as
-**not yet proven to work** until these are addressed.
+- `tools/inspect_subtree.py`/`tools/normalize.py` only decode the
+  combined-binary `.subtree` format; real mago-3d-tiler 1.16.2 output is a
+  `.json`+`.bin` pair instead. `make validate` currently reports "Subtree
+  files: 0" against real Implicit output — this is not validating
+  anything right now, silently.
+- `tools/normalize.py` doesn't redact the random UUID mago-3d-tiler embeds
+  in every GLB's structural metadata on each run, so `make compare`
+  currently reports a false-negative (L3/FAIL) determinism result even
+  when the actual tileset/subtree/geometry are identical between builds.
+- `scripts/validate.sh` prints "VALIDATION PASSED" without checking the
+  validator's own `numErrors` field — real `METADATA_INVALID_LENGTH`
+  errors from `3d-tiles-validator` are currently silently ignored.
+- `validators.tiles_validator_version` in `config/common.yml` is not
+  actually read by `scripts/validate.sh`; the validator version is
+  whatever `npx` happens to install, unpinned.
+
+None of this blocks documentation-only work, and Phase 1's Explicit
+baseline is solid. Treat Phase 2's validation criteria and any Phase 3
+determinism claim as **not yet provable** until the subtree/UUID tooling
+gaps above are closed.
 
 ## Working conventions
 

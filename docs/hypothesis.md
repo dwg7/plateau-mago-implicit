@@ -22,7 +22,14 @@ placement, bounding volumes, and heights.
 - Buildings appear in the expected geographic location
 - Vertical placement is reasonable or explained
 
-**Current status:** Not evaluated
+**Current status:** Partially confirmed (2026-08-25, Sarabetsu small_file
+only). CityGML parses without fatal loss; Explicit output fully verified
+(correct geographic placement and height, once a CRS/axis-order fix was
+applied). Implicit output generated and geographically correct, but
+"validates independently" is not yet provable — the project's own subtree
+validation tooling doesn't yet recognize the JSON+BIN subtree format Mago
+1.16.2 actually produces. CesiumJS loading not yet tested. See
+`docs/findings.md` Phase 1/2.
 
 ---
 
@@ -44,7 +51,13 @@ Non-semantic differences are separated from structural differences.
 - **Level 3:** Semantically equivalent but structurally different
 - A deterministic pass requires Level 2 or better
 
-**Current status:** Not evaluated
+**Current status:** Not evaluated formally — a preliminary, informal
+two-build comparison (2026-08-24) returned Level 3/FAIL, but was
+root-caused to a single non-semantic artifact (a random UUID Mago embeds
+in GLB metadata) that this project's own normalization tooling doesn't yet
+handle. Believed to be a tooling false-negative, not evidence of genuine
+non-determinism, but not yet confirmed by fixing the tooling and
+re-running the formal procedure. See `docs/findings.md` Phase 3.
 
 ---
 
@@ -60,7 +73,14 @@ logs, and manifests are recorded.
 - A clean environment can reproduce the build
 - Manifests and reports are generated automatically
 
-**Current status:** Not evaluated
+**Current status:** Partially confirmed (2026-08-25). Source archive
+checksums are independently re-verified by `scripts/fetch.sh` on every
+run (not just recorded); the Mago 3DTiler JAR's checksum is independently
+re-verified by `Dockerfile`'s own build-time check. Commands and output
+checksums are recorded in real build manifests under `manifests/builds/`.
+Not yet tested: reproducing this repo's Phase 1 build from a genuinely
+clean environment (all verification so far has been on the machine that
+also did the original fetch).
 
 ---
 

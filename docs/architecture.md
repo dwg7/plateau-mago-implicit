@@ -119,10 +119,19 @@ Build 2 output  ─┘
 
 ## CRS considerations
 
-PLATEAU CityGML uses Japan Plane Rectangular Coordinate System (平面直角座標系)
-with JGD2011 datum. 3D Tiles uses WGS84/ECEF.
+**Updated 2026-08-25 from Phase 0 inspection of real source data — see
+`docs/findings.md`.** This section originally assumed PLATEAU CityGML uses
+the Japan Plane Rectangular Coordinate System (平面直角座標系). That does not
+hold for the actual Sarabetsu Village (2023, V4) and Muroran City (2022, V4)
+releases used by this project: every source file in both datasets uses
+**EPSG:6697 (JGD2011, geographic 3D)** instead, with axis order
+(latitude, longitude, height) — northing-first, not the (lon, lat, height)
+order 3D Tiles/CesiumJS use internally. 3D Tiles itself uses WGS84/ECEF
+(EPSG:4978).
 
-Mago 3DTiler handles this transformation. Coordinate correctness is verified in
-Phase 1 (Explicit baseline) before testing Implicit output.
+Mago 3DTiler handles this transformation via its `--crs`/`--proj` options.
+Coordinate correctness is verified in Phase 1 (Explicit baseline) before
+testing Implicit output.
 
-Axis order and epoch handling are recorded in dataset configuration files.
+Axis order and epoch handling are recorded in dataset configuration files
+(`config/sarabetsu.yml`, `config/muroran.yml`, `crs:` block).

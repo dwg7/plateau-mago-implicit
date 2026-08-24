@@ -122,12 +122,12 @@ See [NOTICE](NOTICE) for full attribution.
 
 | Phase | Description | Status |
 |---|---|---|
-| 0 | Environment and source discovery | Not started |
-| 1 | Small Sarabetsu Explicit baseline | Not started |
-| 2 | Small Sarabetsu Implicit output | Not started |
-| 3 | Determinism testing | Not started |
+| 0 | Environment and source discovery | Complete (both municipalities) |
+| 1 | Small Sarabetsu Explicit baseline | Complete |
+| 2 | Small Sarabetsu Implicit output | Partially complete — generated and geographically verified; full validation blocked by a tooling gap (see findings) |
+| 3 | Determinism testing | Preliminary only — an early signal was found and root-caused, formal procedure not yet run |
 | 4 | Expanded Sarabetsu test | Not started |
-| 5 | Small Muroran test | Not started |
+| 5 | Small Muroran test | Not started (a config spot-check only, not a phase run) |
 | 6 | Expanded Muroran test | Not started |
 | 7 | Optional higher-detail tests | Not started |
 
@@ -144,9 +144,19 @@ See [docs/test-plan.md](docs/test-plan.md) for full criteria. Summary:
 
 ## Current status
 
-Experiment not yet begun. Infrastructure and documentation created. Source data checksums unresolved.
+Real PLATEAU data has been fetched and inspected for both municipalities,
+and Sarabetsu Village's small-profile Explicit and Implicit builds run
+successfully end to end against a real, pinned Mago 3DTiler 1.16.2. Getting
+here required fixing several pipeline bugs that only surfaced when the
+tool was actually run (wrong CLI flags, a CRS/axis-order mismatch, and a
+"small" profile that was silently building the whole municipality) — see
+[docs/findings.md](docs/findings.md) for the full, evidence-based record,
+including two known tooling gaps (Implicit subtree format handling, and a
+non-deterministic UUID mago-3d-tiler embeds in GLB output) that currently
+block a fully trustworthy Phase 2/3 verdict.
 
-See [docs/findings.md](docs/findings.md) for the experiment log.
+See [docs/findings.md](docs/findings.md) for the experiment log — the
+authoritative source for what's actually been verified, phase by phase.
 
 ## Limitations and non-goals
 

@@ -92,9 +92,17 @@ After normalization, differences are classified as:
 
 ## Results
 
-*Not yet evaluated. This section will be filled after Phase 3.*
+**Formal Phase 3 (this procedure, both concurrency settings) has not been
+run yet.** A preliminary, informal two-build comparison was done
+2026-08-24 while verifying Phase 1/2 worked at all, and is recorded here
+because it produced a concrete, root-caused finding worth keeping — full
+detail in `docs/findings.md` Phase 3:
 
 | Run | Build ID | Duration | Level | Notes |
 |---|---|---|---|---|
-| 1 | TBD | TBD | TBD | TBD |
+| 1 | `20260824T215746Z-sarabetsu-implicit-small` | 1s | — | `tileset.json` + subtree byte-identical to run 2 |
+| 2 | `20260824T215851Z-sarabetsu-implicit-small` | 2s | — | Same as above; `compare-builds.sh` verdict: **L3 / FAIL**, but root-caused to a random UUID mago-3d-tiler embeds in GLB metadata (`id` property) — not a difference in `tileset.json`, subtree structure, or actual geometry. Believed to be a tooling false-negative (`tools/normalize.py` doesn't yet redact GLB-internal UUIDs), not evidence of genuine Mago non-determinism, but that belief has not been confirmed by fixing the tooling and re-running. |
+
+Formal Phase 3 (concurrency=1 vs concurrency>1, full classification) is
+next after the GLB-UUID normalization gap is closed — see `HANDOVER.md`.
 | 2 | TBD | TBD | TBD | TBD |

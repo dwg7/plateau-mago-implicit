@@ -10,10 +10,12 @@ Record baseline values; label later thresholds as experiment-specific.
 
 ### Development profile
 
-- Hardware: local machine (record CPU, RAM, OS, browser)
+- Hardware: Apple M1 (arm64), 8 GB RAM, macOS 26.6.2 (build 25G83) —
+  recorded 2026-08-25 for the conversion-performance rows below
 - Server: local static HTTP server
 - Network: loopback only
-- Browser: record browser and version
+- Browser: not yet recorded — CesiumJS viewer not yet exercised in a real
+  browser against real build output
 
 ### Reference web profile
 
@@ -27,10 +29,17 @@ Record baseline values; label later thresholds as experiment-specific.
 
 Measurements for each build:
 
+Real values below are from a single MacBook (Apple Silicon, arm64) run,
+2026-08-25, `--multiThreadCount 1`, JAVA_OPTS default (`-Xmx4g`) — not a
+declared reference environment, and peak memory was not measured (would
+need `docker stats` or JVM flags not currently captured by
+`scripts/build.sh`). Full-profile rows are genuinely untested — Phase 4/6
+haven't started.
+
 | Dataset | Profile | Mode | Source size | Build time | Peak memory | Output size | File count |
 |---|---|---|---|---|---|---|---|
-| sarabetsu | small | explicit | TBD | TBD | TBD | TBD | TBD |
-| sarabetsu | small | implicit | TBD | TBD | TBD | TBD | TBD |
+| sarabetsu | small | explicit | 8,455 bytes | 2s | not measured | 10,353 bytes | 3 |
+| sarabetsu | small | implicit | 8,455 bytes | 1s | not measured | 5,671 bytes | 4 |
 | sarabetsu | full | implicit | TBD | TBD | TBD | TBD | TBD |
 | muroran | small | explicit | TBD | TBD | TBD | TBD | TBD |
 | muroran | small | implicit | TBD | TBD | TBD | TBD | TBD |

@@ -40,17 +40,39 @@ Expanding feature scope requires separate investigation.
 
 ## Mago 3DTiler limitations
 
-*To be populated after Phase 0 inspection.*
+**Populated from Phase 0/1 (2026-08-25), version 1.16.2.** See
+`docs/findings.md` for full detail and evidence.
 
-Potential areas for investigation:
-- PLATEAU CRS handling
-- Axis order assumptions
-- Height offset handling
-- PLATEAU extension attribute support
-- Implicit Tiling experimental status
-
-If Mago Implicit Tiling is marked experimental in the version tested, this
-will be stated accurately and neutrally.
+- **Implicit Tiling is marked `[Experimental]`** in mago-3d-tiler's own
+  `--help` output and `MANUAL.md`, stated here accurately and neutrally per
+  the note this section originally called for.
+- **CRS/axis-order handling requires a workaround.** Passing `--crs`
+  with PLATEAU's own EPSG code (6697) or common alternatives (6668, 4326)
+  silently produces geographically wrong output, because PLATEAU's
+  `gml:pos` axis order (lat, lon, height) doesn't match what `--crs`
+  assumes. An explicit `--proj "+proj=longlat +datum=WGS84 +axis=neu
+  +no_defs"` is required instead. This is a real limitation of the
+  `--crs` code path for this class of source data, not a PLATEAU data
+  defect.
+- **Implicit subtree output is JSON+BIN, not the combined binary
+  `.subtree` format.** Both are legal per the 3D Tiles 1.1 spec, but
+  this project's own `tools/inspect_subtree.py`/`tools/normalize.py` only
+  implement the binary form (a gap in this project's tooling, not a Mago
+  defect) — tracked as the top HANDOVER.md follow-up.
+- **A random UUID is embedded in generated GLB structural metadata** on
+  every conversion run, changing the file's raw bytes even for identical
+  input. This is the direct, confirmed cause of a false-negative
+  determinism result during a preliminary two-build comparison (see
+  `docs/findings.md` Phase 3). Not yet reported upstream (no minimal
+  reproduction case prepared); its purpose (feature ID? trace ID?) is not
+  yet understood.
+- **The independent `3d-tiles-validator` found real
+  `METADATA_INVALID_LENGTH` errors** in generated GLB structural metadata
+  (`BatchId`/`FileName` properties) — a plausible Mago 3DTiler bug, flagged
+  as an upstream candidate in `docs/findings.md` but not yet reported.
+- Height offset handling and PLATEAU URO extension attribute support have
+  not yet been specifically investigated (only geometry/coordinates so
+  far) — remains open for Phase 1–2 follow-up.
 
 ## Validation limitations
 
