@@ -225,7 +225,7 @@ annotation crashed at import time on this environment's Python 3.9 (no
 minimum Python version is pinned anywhere in this repo). Full detail:
 `docs/findings.md` Phase 2.
 
-## Fixed: viewer camera pointed 14km/2.7km away from the actual building
+## Fixed and user-confirmed: viewer camera pointed 14km/2.7km away from the actual building
 
 **Reported directly by the user** (2026-08-25, after the tunnel.optgeo.org
 push): the live GitHub Pages page loaded with no error, but no building
@@ -243,18 +243,13 @@ already confirmed working correctly earlier in this session (direct
 against the real host). Fixed by pointing `destination` at each dataset's
 real verified coordinates, 300 m altitude, straight nadir (`pitch: -90`,
 chosen specifically so the tiny building can't fall outside frame from a
-forward-look offset error like this one). **Not independently
-re-confirmed by live rendering in this session** — the same
-`document.visibilityState: "hidden"` testing-tool throttling documented
-above blocked tile selection in the automated browser pane even after the
-fix (confirmed via `Cesium3DTileset.statistics` staying at
-`visited:0` for a completely fresh tileset instance, correctly positioned
-camera, no errors). The coordinate fix itself is a straightforward,
-verifiable-by-inspection correction (destination now equals the building's
-already-established real coordinates), not something that depends on live
-pixels to validate — but genuinely confirming it fixed the user's
-symptom needs the user's own browser. Full detail: `docs/findings.md`
-Phase 2 Unexpected findings.
+forward-look offset error like this one). Not independently re-confirmed
+by live rendering in this session's automated browser tool (blocked by
+the same `document.visibilityState: "hidden"` throttling documented
+above), but **the user reloaded the live GitHub Pages page in their own
+browser and confirmed the single building is now visible** — real,
+human-verified confirmation, not just the coordinate-math argument. Full
+detail: `docs/findings.md` Phase 2 Unexpected findings.
 
 ## Tooling gaps closed this session
 

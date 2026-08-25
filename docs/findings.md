@@ -514,9 +514,10 @@ the `METADATA_INVALID_LENGTH` validator finding.*
   correctly in the GitHub Pages-hosted viewer (`https://dwg7.github.io/plateau-mago-implicit/`)
   over real HTTPS/CORS, in a real browser. `docs/hypothesis.md`'s Claim 4
   status updated accordingly.
-- ? **(2026-08-25, reported by the user directly) The GitHub Pages viewer
-  loaded successfully but showed no building — not a tileset or CesiumJS
-  defect, a wrong camera target in `viewer/viewer.js`.** `VIEWPOINTS`'
+- ✓ **(2026-08-25, reported by the user directly, fix confirmed by the
+  user in their own browser) The GitHub Pages viewer loaded successfully
+  but showed no building — not a tileset or CesiumJS defect, a wrong
+  camera target in `viewer/viewer.js`.** `VIEWPOINTS`'
   `destination` coordinates were a rough Sarabetsu/Muroran
   municipality-center guess ((143.1, 42.6) and (141.0, 42.3)) dating from
   before the small_file building's precise coordinates were established in
@@ -535,14 +536,14 @@ the `METADATA_INVALID_LENGTH` validator finding.*
   nadir (`pitch: -90`) orientation specifically to guarantee the tiny
   building stays centered in frame regardless of forward-look offset —
   the kind of framing math error that caused this bug in the first place.
-  **Not independently re-confirmed by pixel/screenshot rendering in this
-  session** — the same `document.visibilityState: "hidden"` testing-tool
-  artifact from the earlier CesiumJS-1.144 re-verification (see Phase 2
-  "post-push" note in `HANDOVER.md`) blocked live tile selection in this
-  automated browser pane even after the fix; the coordinate correction
-  itself is verified by direct computation against previously-confirmed
-  building locations, not by live pixels. Awaiting the user's own
-  confirmation from a real browser tab.
+  Not independently re-confirmed by pixel/screenshot rendering in this
+  session's automated browser tool — the same `document.visibilityState:
+  "hidden"` testing artifact from the earlier CesiumJS-1.144
+  re-verification (see Phase 2 "post-push" note in `HANDOVER.md`) blocked
+  live tile selection there even after the fix — but **the user reloaded
+  the live GitHub Pages page in their own browser and confirmed the single
+  building is now visible**, closing the loop with real, human-verified
+  evidence rather than just a coordinate-math argument.
 
 ### Upstream candidates
 

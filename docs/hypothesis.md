@@ -112,9 +112,14 @@ published to a real public static host (tunnel.optgeo.org, via Caddy +
 Cloudflare Tunnel) and loaded correctly over real HTTPS/CORS by the
 GitHub Pages-hosted viewer, in a real browser, with no console errors.
 Correct MIME types confirmed by `curl -I` (`.json`→application/json,
-`.glb`→model/gltf-binary). Only tested against the smallest possible
-dataset (one building) — navigation responsiveness, geographic jumps,
-long-session memory behavior, and "useful view" timing are all still
+`.glb`→model/gltf-binary). **"The viewer reaches a useful view" now has
+real, user-confirmed evidence**: an initial version of the predefined
+geographic-jump viewpoint was miscalibrated (14.2 km/2.7 km off the real
+building), so the page loaded but showed nothing — caught by the user
+directly, fixed, and re-confirmed by the user in their own browser
+(single building now visible). Only tested against the smallest possible
+dataset (one building) — navigation responsiveness beyond the initial
+jump, long-session memory behavior, and timing metrics are all still
 untested at any real scale. See `docs/findings.md` Phase 2.
 
 ---
