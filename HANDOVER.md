@@ -34,7 +34,17 @@ including this one until caught. Fixed (now uses
 own `kitaphoto` tiles (GSI aerial photography, no API key needed), and
 rebuilt the UI as a Japanese-language, consumer-facing panel with
 developer diagnostics collapsed by default — see "Viewer overhaul" below
-for the full account. This was a single long session that took the project
+for the full account. **The user then reported a visual artifact that led
+to a real scope-boundary finding**: full-profile builds had been feeding
+Mago LOD0 *and* LOD3 geometry alongside LOD1, contradicting CLAUDE.md's
+explicit LOD1-only baseline. Built and wired in
+`tools/strip_higher_lod.py`, verified it quantitatively, rebuilt and
+re-published all 4 full-profile combinations (Sarabetsu got 12-13%
+smaller; Muroran was already unaffected by this), and — as a useful
+negative result — confirmed this does *not* explain the Phase 4/6
+non-determinism (same failure, same tiles, before and after stripping).
+See "LOD1-baseline enforcement" below for the full account. This was a
+single long session that took the project
 from "merged scaffolding, never actually run" to "real PLATEAU data,
 real Mago 3DTiler output, rendering correctly in a real browser from a
 real public host." Almost everything that could plausibly be wrong with
@@ -533,6 +543,71 @@ Attribution for the terrain layer (Re:Earth Terrain / Mapterhorn) added
 to `viewer/index.html`'s attribution line, alongside PLATEAU and
 kitaphoto/GSI.
 
+## LOD1-baseline enforcement, 2026-08-26: a real scope-boundary gap, found via a UI bug report
+
+The user reported a visual artifact on a large Sarabetsu building —
+"texture pasting looks incomplete, competing with what's underneath."
+Investigating it surfaced something more consequential than a rendering
+bug: **every full-profile build up to this point had been feeding Mago
+LOD0 and LOD3 geometry alongside LOD1**, directly contradicting
+CLAUDE.md's explicit "baseline is LOD1 only, higher LOD is Phase 7
+territory" scope boundary. No real photo-textures were involved (checked:
+zero `app:ParameterizedTexture`/`app:Appearance` elements anywhere in
+either dataset) — the "torn texture" look was multiple full 3D geometric
+representations of the same building (LOD0 footprint + LOD1 solid + LOD3
+solid + LOD3 detailed multi-surface) all loaded together via `refine:
+ADD`, concentrated in 4 buildings inside `63437175_bldg_6697_op.gml` —
+the same file Phase 4 already flagged as the non-determinism source. One
+of those 4 buildings alone has 2,004 `lod3MultiSurface` elements and a
+5.5 MB XML footprint.
+
+**Ruled out Mago's own `--minLod`/`--maxLod` flags as a fix** by testing
+directly: they control Mago's own internal tiling-refinement depth (the
+RC0→RC00→RC000→RC0000 chain), not which PLATEAU LOD gets converted.
+`--minLod 1` against the small_file produced **zero** tile contents,
+confirming this isn't the right lever.
+
+**Built `tools/strip_higher_lod.py`** — parses a CityGML file
+(`xml.etree.ElementTree`, stdlib only), removes any `lod{N}`-prefixed
+element (N ≠ 1) that's a direct child of `bldg:Building`/`bldg:BuildingPart`,
+writes to a separate path (never touches `data/source/`). Wired into
+`scripts/build.sh` **unconditionally, for both profiles** — no bypass
+flag, since there's no legitimate baseline scenario for feeding Mago
+non-LOD1 geometry. Verified quantitatively before wiring it in: running
+Mago on the 15.3 MB problem file with/without stripping dropped the
+batched feature count by exactly 818 (matching the 818 `lod0FootPrint`
+elements removed) while total output size fell only ~6.5% despite 7,292
+`lod3MultiSurface` elements existing in the file — strong evidence Mago's
+mesh generation only uses the direct-child `Solid`/`MultiSurface`
+declarations, not the `bldg:boundedBy`-nested boundary-surface breakdown,
+so the script's narrower scope (direct children only, not a full
+CityGML-schema-aware cleanup) is empirically sufficient. Confirmed
+end-to-end on the small_file: 2 tile contents → 1 (Explicit),
+`propertyTable.count: 2` → `1` (Implicit) — the LOD0 sibling branch is
+gone entirely, not just resized.
+
+**Rebuilt and re-published all 4 full-profile combinations.** Sarabetsu
+Explicit: 202→198 tile contents, 15,958,768→13,820,511 bytes (13.4%
+smaller). Sarabetsu Implicit: 804→760 tile contents, 18,180,034→15,899,663
+bytes (12.5% smaller). **Muroran (both modes): byte-identical output
+before and after** — confirmed the stripper genuinely ran (checked the
+staged file directly: `lod0RoofEdge` gone, only `lod1Solid` remains), so
+this means Mago already produced identical geometry for Muroran's
+`lod0RoofEdge` and `lod1Solid` for every building — consistent with Phase
+5's earlier single-building finding. Muroran's already-published build
+needed no re-publish (nothing changed); Sarabetsu's two full-profile
+builds were re-published and verified reachable (200).
+
+**Useful negative result:** stripping LOD3 does **not** fix the Phase 4/6
+non-determinism. Built two post-stripping Sarabetsu Implicit full-profile
+runs and compared: still L3/FAIL, still 10 geometry-affected tiles, same
+tile coordinates as before stripping. Since the LOD3 content that
+coexisted in this exact file is now gone and the non-determinism is
+unchanged, this rules out LOD-complexity as the cause and sharpens Phase
+6's finding to "batch size/count is the driver, not geometry complexity
+within a batch." Full detail: `docs/findings.md`, new section
+"Cross-phase follow-up: LOD1-baseline enforcement."
+
 ## Tooling gaps closed this session
 
 Two gaps found while first trying to validate/compare real output, both
@@ -598,50 +673,55 @@ re-verified against real data:
 ## Next concrete step
 
 **Phases 0–6 are done for real, for both municipalities. The viewer went
-through a full round of user-driven cleanup and redesign 2026-08-26**
-(see "Viewer overhaul" above) — this is the freshest, least-settled part
-of the project right now, more than the experiment phases themselves.
+through a full round of user-driven cleanup, a real bug fix, and a
+redesign on 2026-08-26** (see "Viewer overhaul", "Real elevation added",
+and "LOD1-baseline enforcement" above) — this is the freshest,
+least-settled part of the project right now, more than the experiment
+phases themselves. **As of this update, everything described above is
+implemented, tested against real data, and committed+pushed+deployed
+(CI/Pages green) unless a section explicitly says otherwise.**
 
 The user explicitly said an upstream Mago 3DTiler report is not
 necessarily the goal, so that's optional future work only, not a next
 step.
 
-Immediate next steps, roughly in priority order (per explicit user
-direction this session):
+Immediate next steps, roughly in priority order:
 
-1. **Build the LOD0-footprint-stripping CityGML preprocessor** — the
-   user's chosen fix for the footprint/roof z-fighting they reported
-   (screenshot showed a torn-looking red roof with white diagonal
-   streaks, classic z-fighting from two near-coincident surfaces). Needs:
-   a script that strips `lod0FootPrint`/`lod0RoofEdge` (or equivalent)
-   elements from a *working copy* of the source CityGML before handing it
-   to Mago (never touch `data/source/` itself), wired into
-   `scripts/build.sh` as an optional/new step, then full-profile rebuilds
-   + re-publish + re-verify for all 4 combinations. Not started.
-2. **Investigate Mapterhorn elevation tiles for real terrain** — the user
-   asked for this alongside kitaphoto but only kitaphoto (imagery) got
-   done this round. `https://stars.optgeo.org/catalog` was checked for a
-   quantized-mesh/terrain entry and none was obviously present (the
-   Mapterhorn-processed entries found — `japan`, `freetown-mapterhorn` —
-   are `image/webp`, i.e. imagery, not elevation) — needs more digging,
-   possibly at mapterhorn.com directly rather than via stars.optgeo.org.
-3. Ask the user to spot-check the viewer live (kitaphoto rendering, the
-   Japanese redesign, the collapsible panels) in their own browser — this
-   session's automated tooling confirmed network/config correctness but
-   not actual on-screen pixels, per the recurring `document.visibilityState:
-   "hidden"` limitation.
-4. Only real remaining measurement gap from `docs/test-plan.md`'s Phase
+1. **Ask the user to spot-check the viewer live** — kitaphoto imagery,
+   Re:Earth Terrain elevation, the Japanese consumer-facing redesign, the
+   collapsible panels, and (the actual motivating question) whether the
+   LOD1-baseline fix resolved the "torn texture" look on the large
+   Sarabetsu building. This session's automated browser tooling confirmed
+   network/config correctness for all of these (right provider types,
+   real tile fetches succeeding, no console errors) but never got past
+   the recurring `document.visibilityState: "hidden"` limitation to
+   confirm actual on-screen pixels — every visual claim above is grounded
+   in network/data-level checks, not a screenshot.
+2. **Check whether real terrain (Re:Earth Terrain) creates a building/
+   ground mismatch** — flagged but not investigated: Mago's building
+   placement uses ellipsoid height by default (no terrain-clamping option
+   passed at build time), so in sloped areas — Muroran especially, a port
+   city, not flat — a building's base may not sit flush with the terrain
+   surface now rendered underneath it. Only checkable once the user can
+   see it live (point 1).
+3. Only real remaining measurement gap from `docs/test-plan.md`'s Phase
    4/6 lists: peak process memory, first-useful-render time, initial
    request count/bytes, navigation responsiveness, geographic-jump
    convergence, and browser long-session memory trend — none measured
    this session.
-5. If pursued further: check whether the concurrency=4 tile *set* is
+4. If pursued further: check whether the concurrency=4 tile *set* is
    stable run-to-run the way the concurrency=1 5-tile set turned out to
    be, and get a larger sample (5+ pairs per setting) for a firmer effect
-   size.
-6. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
+   size on Phase 4/6's determinism finding (LOD1-enforcement ruled out
+   LOD-complexity as the cause, but didn't change what's left to
+   investigate about the concurrency effect itself).
+5. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
    and explicitly optional per `docs/scope.md` — the only phase not yet
-   run in some form.
+   run in some form. Note: Phase 7, if ever pursued, would need to
+   deliberately *bypass* `tools/strip_higher_lod.py` (which now runs
+   unconditionally in `scripts/build.sh` for every Phase 1-6 build) since
+   Phase 7 is specifically about the higher-LOD content that script now
+   strips — that bypass doesn't exist yet.
 
 Lower-priority, tracked but not blocking:
 
@@ -667,6 +747,7 @@ Lower-priority, tracked but not blocking:
 | Tile hosting plan + real publish mechanism | `docs/tile-hosting-plan.md`, `scripts/publish.sh` |
 | Orchestration entry point | `Makefile` (`make help`) |
 | Real inspection/build/publish evidence | `manifests/{reports,builds}/*` |
+| LOD1-baseline enforcement (strips LOD0/LOD3 before Mago sees it) | `tools/strip_higher_lod.py` |
 | Architecture decisions and why (D1–D19+) | `DECISIONS.md` |
 | Agent working conventions | `CLAUDE.md` |
 | Live GitHub Pages viewer | https://dwg7.github.io/plateau-mago-implicit/ |

@@ -103,7 +103,7 @@ docker build \
     "$REPO_ROOT"
 echo ""
 
-# Determine input files
+# Determine source input files (pre-stripping)
 if [ "$PROFILE" = "small" ]; then
     SMALL_FILE="$(grep "^  small_file:" "$CONFIG_DATASET" | head -1 | sed 's/^  small_file: *//' | tr -d '"')"
     check_tbd "$SMALL_FILE" "source.small_file in config/${DATASET}.yml"
@@ -113,17 +113,7 @@ if [ "$PROFILE" = "small" ]; then
         echo "  Run: make inspect DATASET=$DATASET (extracts the archive)" >&2
         exit 1
     fi
-    # mago-3d-tiler's --input takes a DIRECTORY and processes every CityGML
-    # file found in it — mounting $SOURCE_DIR/udx/bldg (the small_file's
-    # parent) would silently convert ALL ~100-200 building mesh files in
-    # that municipality's bldg/ directory, not just the one small_file
-    # (verified empirically: a "small" build of one file produced 202 tile
-    # contents). Stage just the single selected file in an isolated
-    # directory so "small" actually means small.
-    STAGING_DIR="$REPO_ROOT/data/.build-staging/${DATASET}/${BUILD_ID}"
-    mkdir -p "$STAGING_DIR"
-    cp "$SMALL_FILE_PATH" "$STAGING_DIR/"
-    INPUT_FILES=("$STAGING_DIR/$(basename "$SMALL_FILE_PATH")")
+    SOURCE_FILES=("$SMALL_FILE_PATH")
 else
     # Full profile: use all building files.
     #
@@ -145,15 +135,38 @@ else
     # Avoids `mapfile`/`readarray` (bash 4+ only) — see compare-builds.sh
     # for why: macOS's default `/bin/bash` is 3.2 and `env bash` resolves
     # to it whenever nothing newer is earlier on PATH.
-    INPUT_FILES=()
+    SOURCE_FILES=()
     while IFS= read -r f; do
-        INPUT_FILES+=("$f")
+        SOURCE_FILES+=("$f")
     done < <(find "$BLDG_DIR" -name "*.gml" | sort)
-    if [ "${#INPUT_FILES[@]}" -eq 0 ]; then
+    if [ "${#SOURCE_FILES[@]}" -eq 0 ]; then
         echo "ERROR: No CityGML files found in $BLDG_DIR" >&2
         exit 1
     fi
 fi
+
+# Stage every source file through tools/strip_higher_lod.py before Mago
+# ever sees it — mago-3d-tiler converts every bldg:lod*Solid/MultiSurface/
+# FootPrint/RoofEdge element it finds, one sibling tile branch per LOD,
+# all loaded together via `refine: ADD` (verified empirically: up to 4
+# overlapping representations of the same building for the handful that
+# carry LOD0+LOD1+LOD3 simultaneously — see docs/findings.md). CLAUDE.md's
+# scope boundary is explicit that this project's baseline is LOD1 only;
+# this enforces that boundary at the source-data level, always, not as an
+# opt-in flag — there's no baseline scenario where feeding Mago non-LOD1
+# geometry is correct. Never touches data/source/ itself — always reads
+# from there and writes into a per-build staging directory.
+STAGING_DIR="$REPO_ROOT/data/.build-staging/${DATASET}/${BUILD_ID}"
+mkdir -p "$STAGING_DIR"
+INPUT_FILES=()
+for src in "${SOURCE_FILES[@]}"; do
+    dest="$STAGING_DIR/$(basename "$src")"
+    python3 "$REPO_ROOT/tools/strip_higher_lod.py" "$src" "$dest" || {
+        echo "ERROR: tools/strip_higher_lod.py failed on $src" >&2
+        exit 1
+    }
+    INPUT_FILES+=("$dest")
+done
 
 INPUT_DIR="$(dirname "${INPUT_FILES[0]}")"
 
@@ -201,8 +214,11 @@ START_EPOCH="$(date +%s)"
 #
 # The input mount is NOT read-only: mago-3d-tiler itself requires the
 # input path to be writable (verified empirically — it throws
-# "IOException: /data/input path is not writable" under :ro). This means
-# a `full` profile build writes into $SOURCE_DIR itself, not just $OUTPUT_DIR.
+# "IOException: /data/input path is not writable" under :ro). Since every
+# profile now stages through tools/strip_higher_lod.py first (see above),
+# $INPUT_DIR is always the per-build staging directory, never $SOURCE_DIR
+# itself — so whatever Mago writes into it doesn't touch the checksummed
+# source extraction.
 DOCKER_ARGS=(
     run --rm
     -v "$INPUT_DIR:/data/input"

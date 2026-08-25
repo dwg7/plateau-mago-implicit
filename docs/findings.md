@@ -1007,6 +1007,103 @@ geometry differences start appearing.
 
 ---
 
+## Cross-phase follow-up: LOD1-baseline enforcement (2026-08-26)
+
+**Status: Done, verified against real data.** Prompted by the user
+reporting a visual artifact in the viewer ("texture pasting looks
+incomplete/half-done, competing with what's underneath" on a large
+Sarabetsu building) — this turned out to be a real scope-boundary gap in
+every full-profile build up to this point, not a rendering bug.
+
+### Confirmed
+
+- ✓ **The already-published full-profile builds (Phase 4/6) contained
+  LOD3 geometry, crossing CLAUDE.md's explicit LOD1-baseline scope
+  boundary.** Checked directly: Sarabetsu's `udx/bldg/` has
+  `bldg:lod3Solid` (28), `bldg:lod3Geometry` (24), and `bldg:lod3MultiSurface`
+  (14,858) elements across the dataset, concentrated in 4 buildings inside
+  `63437175_bldg_6697_op.gml` — the same file Phase 4 already identified
+  as the source of full-profile non-determinism. One of those 4 buildings
+  alone has 2,004 `lod3MultiSurface` elements and a 5.5 MB XML footprint.
+  No `app:ParameterizedTexture`/`app:Appearance` elements exist anywhere
+  in the dataset (re-confirmed the Phase 0 "0 texture references"
+  finding), so the visual artifact isn't a real photo-texture — it's
+  multiple overlapping *geometric* representations of the same building
+  (LOD0 + LOD1 + LOD3, all loaded together via `refine: ADD`) that read
+  as a "torn"/competing texture from a distance.
+- ✓ **Confirmed empirically (not assumed) that Mago's own `--minLod`/`--maxLod`
+  flags don't help.** Tested `--minLod 1` directly against the small_file:
+  it controls Mago's *own* internal tiling-refinement depth (the
+  RC0→RC00→RC000→RC0000 chain), not which PLATEAU LOD gets converted —
+  setting it dropped the small_file's output to **zero** tile contents
+  rather than selecting LOD1. Ruled out as a fix path; the fix has to
+  happen at the source-data level, before Mago ever sees the file.
+- ✓ **Built and verified `tools/strip_higher_lod.py`** — parses a CityGML
+  file with `xml.etree.ElementTree`, removes any `lod{N}`-prefixed element
+  (N ≠ 1) that is a *direct child* of `bldg:Building`/`bldg:BuildingPart`,
+  writes to a separate output path (never touches `data/source/`). Wired
+  into `scripts/build.sh` unconditionally for both profiles (no bypass
+  flag — CLAUDE.md's LOD1-baseline scope has no legitimate exception for
+  Phase 1–6 builds), replacing the small-profile-only staging step with
+  one that always stages through the stripper first.
+- ✓ **Verified the fix works, quantitatively, on the exact building that
+  motivated it.** Ran Mago on `63437175_bldg_6697_op.gml` with and
+  without stripping: batched feature count dropped from 5,288 to 4,470 —
+  a reduction of exactly 818, matching the 818 `lod0FootPrint` elements
+  removed — and total output size fell only ~6.5% despite the file
+  containing 7,292 `lod3MultiSurface` elements. That's strong evidence
+  Mago's mesh generation is driven by the direct-child `Solid`/`MultiSurface`
+  declarations only, not the `bldg:boundedBy`-nested boundary-surface
+  breakdown (`lod3MultiSurface` lives inside `WallSurface`, not directly
+  under `Building`) — so the script's narrower direct-children-only scope
+  is empirically sufficient, not just a shortcut. Documented as an
+  assumption to re-check if a future dataset or Mago version behaves
+  differently, not asserted as universally true.
+- ✓ **End-to-end confirmation on the small_file**: before stripping,
+  Sarabetsu's small_file (LOD0+LOD1) produced 2 tile contents (Explicit)
+  / `propertyTable.count: 2` (Implicit). After: exactly 1 tile content /
+  `propertyTable.count: 1` — the LOD0 sibling branch is gone entirely,
+  not just resized.
+- ✓ **Rebuilt and re-published all 4 full-profile combinations.**
+  Sarabetsu Explicit: 202→198 tile contents, 15,958,768→13,820,511 bytes
+  (13.4% smaller). Sarabetsu Implicit: 804→760 tile contents,
+  18,180,034→15,899,663 bytes (12.5% smaller). **Muroran (both modes):
+  byte-identical output before and after** (same root `tileset.json`
+  SHA-256 in both cases) — confirmed the stripper genuinely removed
+  `lod0RoofEdge` from the staged files (checked directly), so this isn't
+  a no-op bug; it means Mago already produced identical geometry for
+  Muroran's `lod0RoofEdge` and `lod1Solid` for every building, consistent
+  with Phase 5's earlier single-building finding that Muroran's LOD0/LOD1
+  outputs were byte-identical. Muroran's already-published build needed
+  no re-publish (nothing to change); Sarabetsu's two full-profile builds
+  were re-published.
+
+### Unexpected findings
+
+- ? **Stripping LOD3 does *not* fix the Phase 4/6 non-determinism** — a
+  useful negative result that refines rather than weakens that finding.
+  Built two post-stripping Sarabetsu Implicit full-profile runs
+  (`20260825T204728Z`, `20260825T205302Z`) and compared: still **L3/FAIL**,
+  still 10 `geometry`-classified tiles, and **the same tile coordinates**
+  as the original (pre-stripping) comparison (`R/3/3/2`, `R/4/6/6`,
+  `R/5/13/12`, etc., plus one new one, `R/5/14/12`). Since the LOD3
+  content that previously coexisted in this exact file is now gone and
+  the non-determinism persists unchanged, the cause is conclusively *not*
+  LOD-complexity-related — it's specifically about processing many
+  buildings (826, in this file) as one batch, independent of what LOD
+  those buildings are declared at. This sharpens Phase 6's "batching
+  drives non-determinism" hypothesis: batch size/count is the driver, not
+  geometry complexity within a batch.
+
+### Next smallest experiment
+
+Phase 4/6's open items (repeated concurrency trials for a firmer effect
+size, checking whether the concurrency=4 tile set is stable run-to-run)
+still stand — LOD stripping didn't change what's left to investigate
+there, only ruled out one candidate explanation.
+
+---
+
 ## Phase 7: Optional higher-detail tests
 
 *Not started. Phase 7 is optional and separate.*
@@ -1017,8 +1114,8 @@ geometry differences start appearing.
 
 | Claim | Status | Phase evaluated | Notes |
 |---|---|---|---|
-| Conversion feasibility | Partially confirmed | 1, 2, 4, 5, 6 | Explicit fully confirmed for both municipalities' small_files; Implicit generated, geographically correct for both, fully validatable and fully compared against Explicit — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text), so "validates independently" is currently ✗. Both modes also convert both municipalities' full profiles (6,795 and 55,906 buildings) without crashing, and the METADATA_INVALID_LENGTH pattern holds consistently across both municipalities and both scales (4097 combined instances, 100% within the 4-byte-alignment-padding range) |
-| Determinism | **Fails at full scale for both municipalities (L3/FAIL); Level 2 holds only for the single-building small profile** | 3, 4, 5, 6 | Phase 3/5 (single-building small profile, Sarabetsu and Muroran, 2 concurrency settings each) confirm L2/PASS after fixing a GLB-UUID tooling false-negative. Phase 4/6 (full municipality, same procedure, both municipalities) contradict this: L3/FAIL at both concurrency settings for both. Sarabetsu's failure traced to one dominant 826-building source file; Muroran's showed no single common file, refining the hypothesis to "batching multiple buildings into one content tile carries non-determinism risk in general," not a one-file defect. Small-profile results were correct but never generalizable; full-scale is the honest answer for this claim, for both municipalities |
+| Conversion feasibility | Partially confirmed | 1, 2, 4, 5, 6 | Explicit fully confirmed for both municipalities' small_files; Implicit generated, geographically correct for both, fully validatable and fully compared against Explicit — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text), so "validates independently" is currently ✗. Both modes also convert both municipalities' full profiles (6,795 and 55,906 buildings) without crashing, and the METADATA_INVALID_LENGTH pattern holds consistently across both municipalities and both scales (4097 combined instances, 100% within the 4-byte-alignment-padding range). **(2026-08-26)** Discovered and fixed a real scope-boundary gap: full-profile builds were feeding Mago LOD0+LOD3 geometry alongside LOD1, contradicting CLAUDE.md's LOD1-only baseline — `tools/strip_higher_lod.py` now enforces this at the source-data level for every build, verified to shrink Sarabetsu's full-profile output 12-13% with no loss of LOD1 content (Muroran's output was already LOD0/LOD1-identical, so unaffected) |
+| Determinism | **Fails at full scale for both municipalities (L3/FAIL); Level 2 holds only for the single-building small profile** | 3, 4, 5, 6 | Phase 3/5 (single-building small profile, Sarabetsu and Muroran, 2 concurrency settings each) confirm L2/PASS after fixing a GLB-UUID tooling false-negative. Phase 4/6 (full municipality, same procedure, both municipalities) contradict this: L3/FAIL at both concurrency settings for both. Sarabetsu's failure traced to one dominant 826-building source file; Muroran's showed no single common file, refining the hypothesis to "batching multiple buildings into one content tile carries non-determinism risk in general," not a one-file defect. **(2026-08-26)** Stripping that same file's LOD3 geometry (a plausible alternate explanation) left the non-determinism completely unchanged — same tile count, same coordinates — ruling out LOD-complexity as the cause and further confirming batch size/count is the real driver. Small-profile results were correct but never generalizable; full-scale is the honest answer for this claim, for both municipalities |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
 | Practical consumption | Partially confirmed | 2 | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but only tested with the tiniest possible dataset (1 building); navigation/memory/long-session behavior at any real scale is still untested |
 

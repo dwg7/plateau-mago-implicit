@@ -1,0 +1,24 @@
+schema_version: "1"
+build_id: "20260825T205302Z-sarabetsu-implicit-full"
+municipality: "sarabetsu"
+mode: "implicit"
+profile: "full"
+mago_version: "1.16.2"
+mago_image: "plateau-mago-implicit-tiler:1.16.2"
+mago_jar_url: "https://github.com/Gaia3D/mago-3d-tiler/releases/download/v1.16.2/mago-3d-tiler-1.16.2.jar"
+mago_jar_sha256: "d37e58b634e91d7ce7ca046168b1db2cf950cd9b2ffacb826fd3b10a8d31f7e2"
+concurrency: 1
+input_dir: "/Users/hfu/plateau-mago-implicit/data/.build-staging/sarabetsu/20260825T205302Z-sarabetsu-implicit-full"
+output_dir: "/Users/hfu/plateau-mago-implicit/data/output/sarabetsu/implicit/full/20260825T205302Z-sarabetsu-implicit-full"
+command: "docker run --rm -v /Users/hfu/plateau-mago-implicit/data/.build-staging/sarabetsu/20260825T205302Z-sarabetsu-implicit-full:/data/input -v /Users/hfu/plateau-mago-implicit/data/output/sarabetsu/implicit/full/20260825T205302Z-sarabetsu-implicit-full:/data/output -e JAVA_OPTS=-Xmx4g plateau-mago-implicit-tiler:1.16.2 --input /data/input --output /data/output --inputType citygml --proj +proj=longlat +datum=WGS84 +axis=neu +no_defs --tilingMode implicit --multiThreadCount 1"
+started_at: "2026-08-25T20:53:14Z"
+ended_at: "2026-08-25T20:53:49Z"
+duration_seconds: 35
+return_code: 0
+output_file_count: 1017
+output_total_bytes: 15899623
+root_tileset_sha256: "0340dfde456e87879c122164f8569a771041c000cd33e33c28a5c68b4bec16a1"
+root_tileset_bytes:      427
+validation_status: "not-run"
+git_commit: "bd9cf044e834c95f2e84a8aadd06afa132f6227f"
+git_dirty: true
