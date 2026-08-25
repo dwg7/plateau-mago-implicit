@@ -25,11 +25,15 @@ placement, bounding volumes, and heights.
 **Current status:** Partially confirmed (2026-08-25, Sarabetsu small_file
 only). CityGML parses without fatal loss; Explicit output fully verified
 (correct geographic placement and height, once a CRS/axis-order fix was
-applied). Implicit output generated and geographically correct, but
-"validates independently" is not yet provable — the project's own subtree
-validation tooling doesn't yet recognize the JSON+BIN subtree format Mago
-1.16.2 actually produces. CesiumJS loading not yet tested. See
-`docs/findings.md` Phase 1/2.
+applied). Implicit output generated and geographically correct.
+**CesiumJS loads and renders it correctly** — but only after upgrading
+the viewer from CesiumJS 1.117 to 1.144, since 1.117 has an implicit-tiling
+traversal bug reproduced with both this project's own data and the
+official CesiumGS sample tileset (see `docs/findings.md` Phase 2). The one
+still-unmet criterion is "validates independently": `3d-tiles-validator`
+reports a real `METADATA_INVALID_LENGTH` finding whose severity is itself
+ambiguous pending a spec-conformance check (see Phase 1/2). See
+`docs/findings.md` Phase 1/2 for full detail.
 
 ---
 
@@ -102,7 +106,16 @@ environment.
 - Long-session test completes without browser failure
 - Metrics and observations are recorded
 
-**Current status:** Not evaluated
+**Current status:** Partially confirmed (2026-08-25). Static HTTP delivery
+works without a custom backend: a real Explicit+Implicit build was
+published to a real public static host (tunnel.optgeo.org, via Caddy +
+Cloudflare Tunnel) and loaded correctly over real HTTPS/CORS by the
+GitHub Pages-hosted viewer, in a real browser, with no console errors.
+Correct MIME types confirmed by `curl -I` (`.json`→application/json,
+`.glb`→model/gltf-binary). Only tested against the smallest possible
+dataset (one building) — navigation responsiveness, geographic jumps,
+long-session memory behavior, and "useful view" timing are all still
+untested at any real scale. See `docs/findings.md` Phase 2.
 
 ---
 

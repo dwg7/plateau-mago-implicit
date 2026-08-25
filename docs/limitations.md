@@ -30,6 +30,16 @@ Expanding feature scope requires separate investigation.
 - No spatial database or dynamic tile server
 - No production reliability, SLA, or scale testing
 - No network shape testing (local loopback only in development profile)
+- **CesiumJS version matters a great deal for Implicit Tiling specifically.**
+  CesiumJS 1.117 (this project's originally pinned version) never renders
+  Implicit Tiling content at all — its tile traversal never visits even
+  the root tile, so the subtree file is never requested. Confirmed with
+  both this project's own Mago output and the official
+  `CesiumGS/3d-tiles-samples` implicit-tiling reference tileset, so it's a
+  CesiumJS defect, not a PLATEAU/Mago data issue. **Fixed as of CesiumJS
+  1.144** (current latest as of 2026-08-25) — `viewer/index.html` now
+  pins that version. Which exact release in between fixed it hasn't been
+  bisected. See `docs/findings.md` Phase 2.
 
 ## Data limitations
 

@@ -105,6 +105,9 @@ if [ "$EXECUTE" -ne 1 ]; then
 fi
 
 echo ""
+echo "Ensuring remote directory exists..."
+ssh "$REMOTE_TARGET" "mkdir -p '${REMOTE_BUILD_DIR}'"
+
 echo "Publishing..."
 "${RSYNC_CMD[@]}"
 

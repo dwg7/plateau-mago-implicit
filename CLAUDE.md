@@ -121,6 +121,31 @@ silently hidden. Full detail: `docs/findings.md` Phase 2/3.
 `scripts/validate.sh` doesn't actually read it — `npx` resolves whatever's
 current at run time. Low priority, tracked in `HANDOVER.md`.
 
+**Update 2026-08-25: real end-to-end browser rendering confirmed, but only
+after fixing a CesiumJS version bug.** `viewer/index.html` originally
+pinned CesiumJS 1.117, which has an implicit-tiling bug where the tile
+traversal never visits the root tile — reproduced identically with the
+official `CesiumGS/3d-tiles-samples` reference tileset, so it's a CesiumJS
+defect, not anything about Mago's or this project's output. Fixed by
+bumping to 1.144 (current latest). **Keep both CesiumJS and Mago 3DTiler
+pinned to their latest releases** — re-check at the start of any session
+that touches the viewer or the conversion pipeline (`gh api
+repos/CesiumGS/cesium/releases/latest`, `gh api
+repos/Gaia3D/mago-3d-tiler/releases/latest`; Mago's `main` branch and its
+latest tag were confirmed to be the exact same commit, so no unreleased
+snapshot is being missed as of this writing). Full detail: `docs/findings.md`
+Phase 2, `DECISIONS.md` D20.
+
+**A real build is now published to a real public host:**
+`https://tunnel.optgeo.org/plateau-mago-implicit/` (via `scripts/publish.sh`
+/ `make publish`, safe-by-default dry run unless `--execute`; SSH target
+is `jaxa.optgeo.org`, distinct from the public HTTPS host — a Cloudflare
+Tunnel detail, see `HANDOVER.md`). The live GitHub Pages viewer
+(`https://dwg7.github.io/plateau-mago-implicit/`) loads and renders it
+correctly. `viewer/viewer.js`'s predefined `VIEWPOINTS` still point at
+same-origin `/tiles/...` paths, not yet repointed at the real hosted URLs
+— see `HANDOVER.md`'s next step.
+
 ## Working conventions
 
 - Shell scripts: POSIX-ish Bash, always `set -euo pipefail` (see

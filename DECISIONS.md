@@ -310,3 +310,54 @@ real `METADATA_INVALID_LENGTH` error. Consequence: when a "is this worth
 fixing" doubt comes up again, the standard to apply is whether leaving it
 unfixed corrupts the *tooling's* verdicts going forward, not just whether
 the underlying issue is severe in isolation.
+
+## D19 — Publish real build output to tunnel.optgeo.org (Caddy static hosting), no config changes needed
+
+**Status:** Accepted and executed, 2026-08-25
+
+Practical consumption (Claim 4) couldn't be tested at all without a real
+public host to load tiles from — `make serve` only proves same-machine
+delivery. The user's own infrastructure (`tunnel.optgeo.org`: Raspberry
+Pi 4B, Cloudflare Tunnel, Caddy, Martin) was offered for this. Investigated
+first (`docs/tile-hosting-plan.md`) assuming Caddy config changes would be
+needed; the user then supplied the actual running Caddyfile, which turned
+out to already do open static file serving (`root * ./data`,
+`Access-Control-Allow-Origin: *`) — no changes needed, so the drafted
+`config/tunnel-optgeo.Caddyfile` was never applied. Two real,
+infrastructure-specific facts had to be learned before publishing could
+work: the SSH/rsync target (`jaxa.optgeo.org`) differs from the public
+HTTPS host (`tunnel.optgeo.org` — a Cloudflare Tunnel detail), and files
+must land under a `plateau-mago-implicit/` subdirectory of the shared
+`data/` folder to avoid colliding with the many other large datasets
+already there (verified read-only via `ssh`/`ls` before any write).
+`scripts/publish.sh` (`PUBLISH_HOST`/`PUBLISH_URL_BASE` as separate env
+vars for exactly this SSH-vs-public-host split) was built safe-by-default
+(dry run unless `--execute`), verified end-to-end, then actually run for
+both Sarabetsu small-profile builds — both are live and were confirmed
+rendering correctly in the real GitHub Pages viewer. Consequence: treat
+`PUBLISH_HOST` (SSH) and `PUBLISH_URL_BASE` (public) as independently
+necessary for any future publish target with a similar tunnel/CDN front —
+don't assume they're always the same hostname.
+
+## D20 — CesiumJS pinned to latest (1.144), not the version originally shipped in the scaffold
+
+**Status:** Accepted, 2026-08-25
+
+`viewer/index.html` originally pinned CesiumJS 1.117 (whatever the
+original PR #1 scaffold happened to use). Live debugging of "the real
+published build loads but never renders" traced to CesiumJS 1.117's
+implicit-tiling tile traversal never visiting the root tile — reproduced
+identically with the official `CesiumGS/3d-tiles-samples` reference
+tileset, confirming it's a CesiumJS defect rather than something about
+Mago's output. Rather than work around it (e.g. special-casing something
+in `tools/`/`scripts/` to accommodate an old, buggy viewer), the fix was
+to bump to 1.144 (current latest, confirmed via the CesiumGS releases
+API) — real fix, not a workaround, and directly requested by the user
+("CesiumJSもMago 3DTilerも最新版を使いましょう"). Also confirmed Mago
+3DTiler needed no such bump: `main` branch HEAD and the `v1.16.2` tag are
+the exact same commit (`ahead_by: 0, behind_by: 0`), so v1.16.2 already is
+the latest possible code, not behind an unreleased snapshot. Consequence:
+default to pinning the latest release of both the viewer library and the
+converter for this project, not "whatever the scaffold happened to ship
+with" — re-verify both are still current at the start of any future
+session that touches the viewer or the conversion pipeline.

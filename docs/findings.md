@@ -275,10 +275,15 @@ day) — see the update at the end of this section.
 - ✓ Same geographic placement fix (`--proj` with `+axis=neu`) applies
   identically to Implicit mode — verified by decoding the output region
   back to degrees.
-- ✓ CesiumJS-facing pieces (`tileset.json`'s `content.uri` and
-  `subtrees.uri` templates) are well-formed, standard 3D Tiles 1.1 JSON —
-  not independently loaded in a browser yet (that's `make serve` + viewer,
-  not yet exercised against this real build).
+- ✓ **(2026-08-25 update) Actually loaded and rendered in a real browser,
+  from a real public host — not just structurally well-formed.** Full
+  detail and the CesiumJS version bug this uncovered: see Phase 4 below
+  (Claim 4, practical consumption). Short version: CesiumJS 1.117 (the
+  version originally pinned in `viewer/index.html`) never renders this
+  output — confirmed the exact same failure with the official
+  `CesiumGS/3d-tiles-samples` implicit-tiling sample too, so it's a
+  CesiumJS bug, not a defect in Mago's output. CesiumJS 1.144 (latest)
+  renders it correctly. `viewer/index.html` now pins 1.144.
 - ✓ **(2026-08-25 update) Subtree validation now actually runs.**
   `tools/inspect_subtree.py` and `tools/normalize.py` were extended to
   detect and decode the real JSON+`.bin` subtree pair (by content shape —
@@ -335,11 +340,46 @@ real output. See Confirmed above.)*
 [Experimental] findings (now fixed in tooling, see Confirmed above) and
 the `METADATA_INVALID_LENGTH` validator finding.*
 
+- ? **CesiumJS 1.117 never renders Implicit Tiling content — reproduced
+  with two completely independent tilesets, so it's a CesiumJS bug, not a
+  data problem.** Found while actually loading the real, published
+  Sarabetsu Implicit build in the GitHub Pages viewer
+  (`viewer/index.html`, which pinned CesiumJS 1.117). Symptom, confirmed
+  by direct inspection of `Cesium3DTileset` internals in the browser
+  console: `tileset.statistics.visited` stays `0` forever — the traversal
+  never visits even the root tile, so the subtree file is never requested
+  (confirmed via `performance.getEntriesByType('resource')`: only
+  `tileset.json` was ever fetched, never the subtree). This reproduced
+  identically with the **official `CesiumGS/3d-tiles-samples`
+  `1.1/SparseImplicitQuadtree` sample tileset** (combined-binary
+  `.subtree` format — ruling out our JSON+bin format as the cause) loaded
+  through the same viewer code. **Upgrading to CesiumJS 1.144 (current
+  latest) fixed it immediately** — `tileset.statistics` went from
+  `{visited:0, selected:0}` to `{visited:5, selected:1,
+  numberOfFeaturesSelected:2, numberOfTrianglesSelected:14}`, matching our
+  known "1 building, LOD0+LOD1" test data exactly. `viewer/index.html` now
+  pins 1.144. **Not bisected** to find which exact version between 1.117
+  and 1.144 (27 releases) fixed it — see ↓.
+- ✓ **Claim 4 (practical consumption) has real, positive first evidence**:
+  a real build, published to a real public host
+  (`tunnel.optgeo.org`, via `scripts/publish.sh`), loaded and rendered
+  correctly in the GitHub Pages-hosted viewer (`https://dwg7.github.io/plateau-mago-implicit/`)
+  over real HTTPS/CORS, in a real browser. `docs/hypothesis.md`'s Claim 4
+  status updated accordingly.
+
 ### Upstream candidates
 
-*See Phase 1.*
+*See Phase 1.* The CesiumJS 1.117 implicit-tiling traversal bug above is
+**not** an upstream candidate — it's already fixed as of 1.144 (current
+latest), so there's nothing to report; noted here purely as a warning for
+anyone still pinned to an old CesiumJS release.
 
 ### Next smallest experiment
+
+↓ Optionally bisect which CesiumJS release between 1.117 and 1.144 fixed
+the implicit-tiling traversal bug, by checking that version's CHANGES.md
+— useful context (not blocking) if this project ever needs to state a
+minimum supported CesiumJS version precisely.
 
 ↓ Wire `config/common.yml`'s `tiling.subtree_levels` into
 `scripts/build.sh`'s Mago invocation (`--implicitSubtreeLevels`) — currently
@@ -471,9 +511,9 @@ complete.*
 
 | Claim | Status | Phase evaluated | Notes |
 |---|---|---|---|
-| Conversion feasibility | Partially confirmed | 1, 2 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, and now fully validatable (subtree tooling gap closed) — but validation surfaced a real Mago defect (`METADATA_INVALID_LENGTH`), so "validates independently" is currently ✗ |
+| Conversion feasibility | Partially confirmed | 1, 2 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, now fully validatable (subtree tooling gap closed), AND confirmed rendering correctly in a real browser (CesiumJS 1.144) — but validation surfaced a real Mago defect (`METADATA_INVALID_LENGTH`), so "validates independently" is currently ✗ |
 | Determinism | Partially confirmed (strong preliminary signal) | 3 (preliminary) | Initial L3/FAIL was a tooling false-negative (a benign per-run random ID in GLB metadata); after fixing `tools/normalize.py` to redact it, the same build pair reclassifies as L2/PASS. Formal Phase 3 (2 concurrency settings, full run log) not yet executed |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
-| Practical consumption | Not evaluated | — | `make serve` + CesiumJS viewer not yet exercised against real build output |
+| Practical consumption | Partially confirmed | 2 | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but only tested with the tiniest possible dataset (1 building); navigation/memory/long-session behavior at any real scale is still untested |
 
 Do not pre-fill conclusions. Record only evidence-based findings.
