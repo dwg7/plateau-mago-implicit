@@ -257,10 +257,14 @@ below) and prioritize the subtree-format tooling gap.
 
 ## Phase 2: Small Sarabetsu Village Implicit output
 
-**Status: Partially complete, validation tooling gap closed.** 2026-08-25.
-Implicit output was successfully generated and geographically verified;
-the subtree-format tooling gap flagged below has since been fixed (same
-day) — see the update at the end of this section.
+**Status: All docs/test-plan.md comparison items complete; one pass
+criterion still failing for a real, root-caused reason.** 2026-08-25.
+Implicit output was successfully generated, geographically verified, and
+now fully compared against Explicit (including the hierarchy/geometric
+error item, completed last). The one remaining gap is a pass criterion,
+not a comparison item: "validates independently" is currently ✗ because
+of the real `METADATA_INVALID_LENGTH` finding (status: ambiguous, not yet
+resolved against the spec — see Upstream candidates).
 
 ### Confirmed
 
@@ -308,15 +312,126 @@ day) — see the update at the end of this section.
   geometry: both represent the same single building's LOD0+LOD1 (1 mesh,
   5 accessors per LOD, `FileName=63437290_bldg_6697_op.gml` in every
   case). The two modes structure it differently, not incorrectly:
-  Explicit emits two separate `.glb` files (`RC0000.glb` LOD0,
-  `RC1000.glb` LOD1), each with a `propertyTable.count=1`; Implicit merges
-  both LODs into the single `data/R/3/4/2.glb` content tile, with
-  `propertyTable.count=2` (`BatchId` 0 and 1, both rows sharing the same
-  `FileName`). This — two batched rows in one Implicit content tile —
-  is also *why* the `METADATA_INVALID_LENGTH` alignment-padding pattern
-  was easier to spot in Implicit output than Explicit's (Explicit's
-  single-row tables have the same padding, just a smaller, easy-to-miss
-  offset).
+  Explicit emits two separate `.glb` files, each with a
+  `propertyTable.count=1`; Implicit merges both LODs into the single
+  `data/R/3/4/2.glb` content tile, with `propertyTable.count=2` (`BatchId`
+  0 and 1, both rows sharing the same `FileName`). This — two batched
+  rows in one Implicit content tile — is also *why* the
+  `METADATA_INVALID_LENGTH` alignment-padding pattern was easier to spot
+  in Implicit output than Explicit's (Explicit's single-row tables have
+  the same padding, just a smaller, easy-to-miss offset).
+- ? **(2026-08-25) Correction: the Explicit LOD↔filename mapping stated
+  above in an earlier version of this entry was backwards.** It previously
+  claimed `RC0000.glb` = LOD0, `RC1000.glb` = LOD1 — a guess from the
+  numeric filename prefix that was never actually checked against the
+  mesh geometry. Decoding both GLBs' `POSITION` accessor bounds directly:
+  `RC0000.glb`'s mesh spans a real Z range (`min=[-2.20, -1.95, -1.00]`,
+  `max=[2.20, 1.95, 1.00]` — 2 local units of vertical extent), while
+  `RC1000.glb`'s spans essentially zero Z (`min`/`max` both
+  ≈ `-6.8e-7`). Both files share the same rotation quaternion (their
+  local axes are oriented identically), so this isn't an artifact of
+  differing transforms. Cross-checked against
+  `docs/information-retention.md`, independently recorded the same day:
+  the source building's `bldg:measuredHeight` is `2` (metres), and that
+  value is "used-for-geometry," i.e. baked into a mesh rather than kept as
+  a named property — matching `RC0000.glb`'s 2-unit Z extent exactly.
+  **Corrected mapping: `RC0000.glb` = LOD1 (solid, ~2 m tall), `RC1000.glb`
+  = LOD0 (flat footprint).** Also structurally notable while checking
+  this: the Explicit tree does **not** encode LOD0→LOD1 as a
+  coarse-to-fine refinement chain in one branch — both LODs are separate
+  sibling branches under the root, refined independently down through 4
+  levels each to their own single content leaf (root `refine: REPLACE`,
+  every other node `refine: ADD`), so a client always loads both LODs
+  together rather than refining from one into the other. See "Hierarchy
+  and geometric error comparison" below for the full tree structure.
+- ✓ **(2026-08-25) Hierarchy and geometric error comparison** — the
+  remaining `docs/test-plan.md` Phase 2 comparison item. Both
+  `tileset.json` files fetched directly from the published build and
+  decoded by hand:
+
+  **Explicit** (`data/output/sarabetsu/explicit/small/latest/tileset.json`):
+  tileset-level `geometricError: 16.0`; root has no content, `refine:
+  REPLACE`, `geometricError: 120.01`, and 2 children — one per LOD (see
+  the LOD↔filename correction above). Each branch independently refines
+  through 4 levels (`refine: ADD` throughout) with an identical
+  geometricError sequence **120.01 → 50.01 → 8.01 → 0.01**, terminating in
+  a single content leaf (`RC0000.glb` or `RC1000.glb`). 9 tiles total (1
+  root + 2 branches × 4 levels). Each branch's bounding volume is tightly
+  fit to *that LOD's own real extent*: the LOD1 branch's region spans a
+  ~2 m height band matching its solid geometry; the LOD0 branch's region
+  is a near-zero-height band matching its flat footprint. Root `refine:
+  REPLACE` with two always-loaded `ADD` children means both LODs load
+  together — there's no single-branch coarse-to-fine LOD0→LOD1 refinement
+  here, structurally unlike a typical progressive-LOD tileset.
+
+  **Implicit** (`.../implicit/small/latest/tileset.json`): tileset-level
+  `geometricError: 154.376`; root has `refine: ADD`, `geometricError:
+  64.0`, content is a URI template (`data/R/{level}/{x}/{y}.glb`), and an
+  `implicitTiling` block declaring `subdivisionScheme: QUADTREE`,
+  `availableLevels: 4`, `subtreeLevels: 4`. Only the root's geometricError
+  is stored explicitly — per-level values for descendant tiles are
+  computed by the client from the quadtree subdivision (architecturally
+  different from Explicit's approach of storing every level's value, not
+  just numerically different; the exact client-side formula wasn't
+  independently verified here). One subtree file
+  (`subtrees/R/0/0/0.json`), decoded with the now-fixed
+  `tools/inspect_subtree.py` (see "Two real bugs" below):
+  `tileAvailability=4`, `contentAvailability=1`,
+  `childSubtreeAvailability=0`. The known single content tile is
+  `data/R/3/4/2.glb` (level 3, x=4, y=2); a quadtree's minimum
+  ancestor-to-leaf chain for one level-3 tile is exactly 4 tiles (levels
+  0, 1, 2, 3), matching `tileAvailability=4` exactly — consistent with
+  "this subtree marks only the ancestor path to its one populated leaf as
+  available," though the individual bit positions in the availability
+  bitstream weren't decoded to confirm this beyond the count match. Unlike
+  Explicit, tile bounding volumes here come from the quadtree's uniform
+  spatial subdivision of the tileset's overall region, not from
+  per-LOD-fitted geometry.
+
+  **Net comparison:** both trees reach the same single building with no
+  missing/duplicate geometry (already confirmed above), but express
+  LOD and spatial subdivision through structurally different mechanisms —
+  Explicit: geometry-fitted bounding volumes, explicit per-level
+  geometricError, independent sibling LOD branches; Implicit:
+  spec-uniform quadtree bounding volumes, client-computed per-level
+  geometricError, both LODs merged into one content tile at the
+  deepest available level. Neither is more "correct"; this is the two
+  modes' designed structural difference, per `docs/test-plan.md`'s
+  framing of this as a comparison item, not a pass/fail check.
+
+- ? **(2026-08-25) Two real bugs found in `tools/inspect_subtree.py` and
+  `tools/normalize.py` while doing the hierarchy comparison above — both
+  fixed.** (1) Both tools read `subtreeLevels` from the *subtree file's
+  own* JSON header (`header.get("subtreeLevels", 1)`), but real
+  mago-3d-tiler subtree files never declare this key — per the 3D Tiles
+  1.1 spec it's inherited from the tileset's `implicitTiling` block, not
+  the subtree. This silently defaulted `subtree_levels` to 1 for every
+  real build, undercounting `total_tiles` and misreporting availability:
+  the earlier-recorded "tiles=1 content=0 children=0" (see Phase 2
+  Confirmed above, subtree tooling gap) was **wrong** — hand-decoding the
+  raw bitstream (`cmp`/`xxd` against the subtree's own declared
+  `availableCount` fields) confirms the correct values are **tiles=4,
+  content=1, children=0**. Fixed by reading `subtreeLevels` from the
+  sibling `tileset.json` instead (new `find_subtree_levels()` helper in
+  both tools). (2) `tools/normalize.py`'s `_subtree_availability()` never
+  handled `contentAvailability` being a JSON array (real mago output uses
+  a one-element list, per spec, for multi-content support) — it always
+  crashed with `'list' object has no attribute 'get'`, silently caught by
+  an outer `try/except` and recorded as an opaque `"error"` string in
+  *every* normalized manifest generated so far (`inspect_subtree.py`
+  already handled this correctly; `normalize.py` did not). Fixed to match
+  `inspect_subtree.py`'s existing list-handling logic. Re-verified: both
+  tools now report tiles=4/content=1/children=0 for the same real build;
+  all four Phase 3 normalized manifests regenerated with the fix; the
+  three Phase 3 comparison reports re-run and unchanged (still L2/PASS —
+  these counts weren't used in the hash-based comparison itself, only in
+  informational reporting). Also had to add `from __future__ import
+  annotations` to both files: a new top-level helper function used
+  `int | None`-style annotations (already present, but dormant, elsewhere
+  in `inspect_subtree.py`), which crashes at import time on this
+  environment's Python 3.9 without that import — a latent version-
+  compatibility gap, not previously exercised because the affected code
+  paths had never actually run.
 
 ### Partially confirmed
 
@@ -325,10 +440,6 @@ real output. See Confirmed above.)*
 
 ### Not confirmed
 
-- ✗ Geometric error / hierarchy comparison against docs/test-plan.md's
-  full checklist (bounding volumes at each tree level, refinement
-  strategy differences) — feature-count/identity reconciliation above is
-  done, but the tree-structure-level comparison is not.
 - ✗ "Implicit output... validates independently" (docs/hypothesis.md Claim
   1) — now genuinely evaluable (tooling fixed), and the honest answer is
   **not yet**: `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH`
@@ -520,7 +631,7 @@ complete.*
 
 | Claim | Status | Phase evaluated | Notes |
 |---|---|---|---|
-| Conversion feasibility | Partially confirmed | 1, 2 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, now fully validatable (subtree tooling gap closed), AND confirmed rendering correctly in a real browser (CesiumJS 1.144) — but validation surfaced a real Mago defect (`METADATA_INVALID_LENGTH`), so "validates independently" is currently ✗ |
+| Conversion feasibility | Partially confirmed | 1, 2 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, now fully validatable (subtree tooling gap closed) and fully compared against Explicit (feature identity, no missing/duplicate geometry, hierarchy/geometric error), AND confirmed rendering correctly in a real browser (CesiumJS 1.144) — but validation surfaced a real Mago defect (`METADATA_INVALID_LENGTH`), so "validates independently" is currently ✗ |
 | Determinism | Confirmed (Level 2) for small profile | 3 (formal) | Initial L3/FAIL was a tooling false-negative (a benign per-run random ID in GLB metadata); after fixing `tools/normalize.py` to redact it, formal Phase 3 (4 builds, concurrency=1 and concurrency=4, 3 pairwise comparisons) confirms L2/PASS in every comparison, with byte-identical `tileset.json` across all 4 builds. Not yet re-checked at Phase 4 (multi-building) scale |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
 | Practical consumption | Partially confirmed | 2 | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but only tested with the tiniest possible dataset (1 building); navigation/memory/long-session behavior at any real scale is still untested |

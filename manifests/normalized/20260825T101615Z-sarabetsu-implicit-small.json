@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-08-25T10:17:04.160708+00:00",
+  "generated_at": "2026-08-25T10:27:59.073202+00:00",
   "input_dir": "/Users/hfu/plateau-mago-implicit/data/output/sarabetsu/implicit/small/20260825T101615Z-sarabetsu-implicit-small",
   "file_count": 4,
   "normalized_tileset": {
@@ -54,7 +54,11 @@
       "size_bytes": 370,
       "sha256": "242bf7fd6e9381bf1b7573dd5675241783b618207ad1a64c62309e2c28be0c6a",
       "subtree_counts": {
-        "error": "'list' object has no attribute 'get'"
+        "subtree_levels": 4,
+        "tile_availability": 4,
+        "content_availability": 1,
+        "child_subtree_availability": 0,
+        "format": "json+bin"
       }
     },
     {

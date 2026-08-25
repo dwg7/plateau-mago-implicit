@@ -21,6 +21,8 @@ Usage:
         --output manifests/reports/subtree-validation-<build-id>.json
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 
@@ -45,7 +47,42 @@ def count_bits(data: bytes, bit_count: int) -> int:
     return count
 
 
-def decode_subtree(subtree_path: Path) -> dict:
+def find_subtree_levels(input_dir: Path) -> int | None:
+    """Read implicitTiling.subtreeLevels from the build's tileset.json.
+
+    Subtree files themselves never declare this field — per the 3D Tiles
+    1.1 spec it's inherited from the tileset's implicitTiling block, not
+    encoded in the subtree JSON/binary header. A previous version of this
+    tool read `header.get("subtreeLevels", 1)` on the *subtree* file,
+    which silently defaulted to 1 for every real mago-3d-tiler subtree
+    (verified: none embed this key) — undercounting total_tiles and, by
+    extension, tile/content availability counts. See docs/findings.md
+    Phase 2 for the concrete before/after (tiles=1/content=0 vs the
+    correct tiles=4/content=1 for the Sarabetsu small_file build)."""
+    tileset_path = input_dir / "tileset.json"
+    if not tileset_path.exists():
+        return None
+    try:
+        data = json.loads(tileset_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+
+    def _search(tile):
+        if not isinstance(tile, dict):
+            return None
+        implicit = tile.get("implicitTiling")
+        if implicit and "subtreeLevels" in implicit:
+            return implicit["subtreeLevels"]
+        for child in tile.get("children", []) or []:
+            found = _search(child)
+            if found is not None:
+                return found
+        return None
+
+    return _search(data.get("root", {}))
+
+
+def decode_subtree(subtree_path: Path, subtree_levels: int) -> dict:
     """Decode a single .subtree file."""
     result = {
         "path": str(subtree_path),
@@ -138,7 +175,6 @@ def decode_subtree(subtree_path: Path) -> dict:
                 return None
             return count_bits(bv_data, max_tiles)
 
-        subtree_levels = header.get("subtreeLevels", 1)
         # Total tiles in subtree: sum of 4^i for i in range(subtreeLevels)
         total_tiles = sum(4**i for i in range(subtree_levels))
         # Child subtrees: 4^subtreeLevels
@@ -181,7 +217,7 @@ def is_subtree_json(data) -> bool:
     return isinstance(data, dict) and bool(SUBTREE_JSON_KEYS & data.keys())
 
 
-def decode_subtree_json_bin(json_path: Path) -> dict:
+def decode_subtree_json_bin(json_path: Path, subtree_levels: int) -> dict:
     """Decode a subtree delivered as JSON + external .bin buffer, in the
     same result shape as decode_subtree() above so downstream consumers
     don't need to special-case the encoding."""
@@ -233,7 +269,6 @@ def decode_subtree_json_bin(json_path: Path) -> dict:
                 return None
             return count_bits(bv_data, max_tiles)
 
-        subtree_levels = header.get("subtreeLevels", 1)
         total_tiles = sum(4**i for i in range(subtree_levels))
         child_subtree_count = 4**subtree_levels
 
@@ -298,11 +333,24 @@ def main() -> int:
         f"({len(binary_subtree_files)} binary, {len(json_subtree_files)} json+bin)"
     )
 
+    subtree_levels = find_subtree_levels(input_dir)
+    if subtree_files and subtree_levels is None:
+        print(
+            f"WARNING: Could not determine implicitTiling.subtreeLevels from "
+            f"{input_dir}/tileset.json — availability counts will be unreliable.",
+            file=sys.stderr,
+        )
+        subtree_levels = 1
+
     results = []
     errors_total = 0
     for sf in subtree_files:
         print(f"  {sf.relative_to(input_dir)} ...", end="", flush=True)
-        res = decode_subtree(sf) if sf in binary_subtree_files else decode_subtree_json_bin(sf)
+        res = (
+            decode_subtree(sf, subtree_levels)
+            if sf in binary_subtree_files
+            else decode_subtree_json_bin(sf, subtree_levels)
+        )
         results.append(res)
         status = "ERRORS" if res["errors"] else ("warnings" if res["warnings"] else "ok")
         if res["errors"]:

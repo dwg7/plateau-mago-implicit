@@ -1,8 +1,8 @@
 # Build comparison report
 
-- **Build 1:** `/Users/hfu/plateau-mago-implicit/manifests/normalized/20260825T101519Z-sarabetsu-implicit-small.json`
-- **Build 2:** `/Users/hfu/plateau-mago-implicit/manifests/normalized/20260825T101534Z-sarabetsu-implicit-small.json`
-- **Generated:** 2026-08-25T10:16:00.232866+00:00
+- **Build 1:** `manifests/normalized/20260825T101519Z-sarabetsu-implicit-small.json`
+- **Build 2:** `manifests/normalized/20260825T101534Z-sarabetsu-implicit-small.json`
+- **Generated:** 2026-08-25T10:28:06.543455+00:00
 
 ## Repeatability
 

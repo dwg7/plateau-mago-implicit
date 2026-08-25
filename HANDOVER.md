@@ -8,9 +8,10 @@ the next concrete step," not narrate history (that's what git log and
 
 ## Status as of 2026-08-25
 
-**Phase 0 complete, Phase 1 complete, Phase 2 substantially complete
-(including real browser rendering + real public hosting), Phase 3 formally
-complete for the small profile.** This was a single long session that took the project
+**Phase 0 complete, Phase 1 complete, Phase 2 complete for all comparison
+items (one pass criterion still failing for a real reason — see below),
+Phase 3 formally complete for the small profile.** This was a single long
+session that took the project
 from "merged scaffolding, never actually run" to "real PLATEAU data,
 real Mago 3DTiler output, rendering correctly in a real browser from a
 real public host." Almost everything that could plausibly be wrong with
@@ -150,6 +151,51 @@ a portable `while IFS= read -r; do …; done` loop; re-verified `make
 compare` succeeds under both plain `/bin/bash` (3.2) and Homebrew's bash 5,
 and `make test` still passes.
 
+## Phase 2's remaining comparison item (hierarchy/geometric error) is done
+
+Completed the last open `docs/test-plan.md` Phase 2 comparison item.
+Explicit's tree: root has no content, 2 sibling LOD branches (not a
+coarse-to-fine chain), each refining through 4 levels with an identical
+`120.01 → 50.01 → 8.01 → 0.01` geometricError sequence, bounding volumes
+tightly fit to each LOD's real geometry. Implicit's tree: only root
+geometricError (`64.0`) is stored; per-level values are client-computed;
+one subtree file marks exactly the 4-tile ancestor path to its single
+populated leaf as available; bounding volumes come from uniform quadtree
+subdivision, not per-LOD geometry fitting. Full writeup:
+`docs/findings.md` Phase 2 Confirmed.
+
+**Found and corrected while doing this:** `docs/findings.md` and (by
+inference) the RC0000/RC1000 LOD labeling had the mapping backwards —
+`RC0000.glb` was documented as LOD0, `RC1000.glb` as LOD1, a guess from
+the numeric filename prefix that was never checked against the mesh
+itself. Decoding both GLBs' `POSITION` accessor bounds: `RC0000.glb` has
+real vertical extent (2 local units), `RC1000.glb` is flat (Z ≈ 0).
+Cross-checked against `docs/information-retention.md`'s independent
+`bldg:measuredHeight = 2` (metres) finding — matches `RC0000.glb` exactly.
+**Corrected: `RC0000.glb` = LOD1 (solid), `RC1000.glb` = LOD0 (footprint).**
+
+**Also found and fixed:** two real bugs in `tools/inspect_subtree.py` and
+`tools/normalize.py`, surfaced while decoding the Implicit subtree for
+this comparison. Both tools read `subtreeLevels` from the *subtree file's
+own* JSON header, but real mago-3d-tiler subtree files never declare that
+key (it's inherited from tileset.json's `implicitTiling` block per spec)
+— this silently defaulted to 1, undercounting availability. The earlier
+session's "tiles=1 content=0 children=0" claim (see "Tooling gaps closed"
+below) was **wrong**; hand-decoded against the raw bitstream, the correct
+values are **tiles=4, content=1, children=0**. `tools/normalize.py` had a
+second bug: it never handled `contentAvailability` as a JSON array (real
+mago output uses a one-element list), crashing and silently recording an
+opaque `"error"` string in every normalized manifest generated so far.
+Both fixed (new shared `find_subtree_levels()` helper reads from
+tileset.json instead; list-handling copied from `inspect_subtree.py`,
+which already had it right). All four Phase 3 normalized manifests and
+their 3 comparison reports regenerated — determinism verdict unchanged
+(still L2/PASS in all three). Also had to add `from __future__ import
+annotations` to both files: a new top-level function's `int | None`
+annotation crashed at import time on this environment's Python 3.9 (no
+minimum Python version is pinned anywhere in this repo). Full detail:
+`docs/findings.md` Phase 2.
+
 ## Tooling gaps closed this session
 
 Two gaps found while first trying to validate/compare real output, both
@@ -215,30 +261,33 @@ re-verified against real data:
 ## Next concrete step
 
 1. ~~Point `viewer/viewer.js`'s `VIEWPOINTS` at the real
-   `https://tunnel.optgeo.org/plateau-mago-implicit/...` URLs~~ **Done
-   2026-08-25** — see "Real public hosting" above for verification detail.
-   Not yet committed/pushed, so the live GitHub Pages page doesn't have
-   this change yet.
+   `https://tunnel.optgeo.org/plateau-mago-implicit/...` URLs~~ **Done and
+   committed 2026-08-25** (commit `53075b4`) — see "Real public hosting"
+   above for verification detail. Not yet pushed, so the live GitHub Pages
+   page doesn't have this change yet.
 2. ~~Run the formal Phase 3 procedure (two concurrency settings, full
-   `docs/determinism.md` classification, a proper run log)~~ **Done
-   2026-08-25** — see "Phase 3 (determinism) is now formally complete"
-   above. L2/PASS confirmed at both concurrency settings and across them,
-   for the single-building small profile.
-3. Complete Phase 2's remaining checklist items: geometric-error/hierarchy
-   comparison against `docs/test-plan.md`'s full checklist (feature-count
-   reconciliation is already done).
+   `docs/determinism.md` classification, a proper run log)~~ **Done and
+   committed 2026-08-25** (commit `53075b4`) — see "Phase 3 (determinism)
+   is now formally complete" above. L2/PASS confirmed at both concurrency
+   settings and across them, for the single-building small profile.
+3. ~~Complete Phase 2's remaining checklist items: geometric-error/hierarchy
+   comparison against `docs/test-plan.md`'s full checklist~~ **Done
+   2026-08-25** — see "Phase 2's remaining comparison item (hierarchy/geometric
+   error) is done" above. Also corrected a backwards LOD↔filename mapping
+   and fixed two real bugs in `tools/inspect_subtree.py`/`tools/normalize.py`
+   found along the way. Not yet committed.
 4. Resolve the `METADATA_INVALID_LENGTH` ambiguity against
    `EXT_structural_metadata`'s actual spec text before deciding whether
    to report it upstream.
 5. Only after Phase 1–4 fully complete for Sarabetsu: start Phase 5
    (Muroran) for real.
 
-Uncommitted local changes this session: `viewer/viewer.js`,
-`viewer/index.html` (Sarabetsu VIEWPOINTS → real tunnel.optgeo.org URLs),
-`scripts/compare-builds.sh`, `scripts/build.sh` (mapfile → portable loop),
-`docs/determinism.md`, `docs/findings.md`, this file. Not committed yet —
-ask the user before committing/pushing (pushing is what makes the GitHub
-Pages viewer pick up the VIEWPOINTS change).
+Uncommitted local changes this session (step 3 above): `tools/inspect_subtree.py`,
+`tools/normalize.py`, `docs/findings.md`, this file, plus regenerated
+`manifests/normalized/*.json` and `manifests/reports/comparison-*.{json,md}`
+and two new `manifests/reports/{3dtiles-validator,subtree-validation}-*`
+files from re-running `make validate`. Not committed yet — ask the user
+before committing/pushing.
 
 Lower-priority, tracked but not blocking:
 

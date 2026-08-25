@@ -18,6 +18,8 @@ Usage:
         --output manifests/normalized/<build-id>.json
 """
 
+from __future__ import annotations
+
 import argparse
 import hashlib
 import json
@@ -77,9 +79,41 @@ def count_subtree_bits(data: bytes, max_bits: int) -> int:
     return count
 
 
-def _subtree_availability(header: dict, binary: bytes) -> dict:
+def find_subtree_levels(input_dir: Path) -> int | None:
+    """Read implicitTiling.subtreeLevels from the build's tileset.json.
+
+    Subtree files themselves never declare this field — per the 3D Tiles
+    1.1 spec it's inherited from the tileset's implicitTiling block, not
+    encoded in the subtree JSON/binary header. Previously this looked for
+    `header.get("subtreeLevels", 1)` on the *subtree* file itself, which
+    silently defaulted to 1 for every real mago-3d-tiler subtree (verified:
+    none embed this key) — undercounting total_tiles and, by extension,
+    tile/content availability counts. See docs/findings.md Phase 2."""
+    tileset_path = input_dir / "tileset.json"
+    if not tileset_path.exists():
+        return None
+    try:
+        data = json.loads(tileset_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+
+    def _search(tile):
+        if not isinstance(tile, dict):
+            return None
+        implicit = tile.get("implicitTiling")
+        if implicit and "subtreeLevels" in implicit:
+            return implicit["subtreeLevels"]
+        for child in tile.get("children", []) or []:
+            found = _search(child)
+            if found is not None:
+                return found
+        return None
+
+    return _search(data.get("root", {}))
+
+
+def _subtree_availability(header: dict, binary: bytes, subtree_levels: int) -> dict:
     """Shared availability-decoding logic for both subtree encodings."""
-    subtree_levels = header.get("subtreeLevels", 1)
     total_tiles = sum(4**i for i in range(subtree_levels))
 
     def get_bv_data(bv_index):
@@ -102,17 +136,32 @@ def _subtree_availability(header: dict, binary: bytes) -> dict:
             return None
         return count_subtree_bits(bv_data, max_bits)
 
+    def avail_count_multi(avail_obj, max_bits):
+        # contentAvailability is an array (one entry per content per tile,
+        # e.g. multiple LODs) per the 3D Tiles 1.1 spec — mago-3d-tiler
+        # emits it as a one-element list even for a single content slot.
+        # Treating it like tileAvailability/childSubtreeAvailability's
+        # single-object shape previously crashed with 'list' object has no
+        # attribute 'get', silently caught and recorded as an opaque
+        # "error" string in every normalized manifest. See
+        # docs/findings.md Phase 2.
+        if isinstance(avail_obj, list):
+            return sum(avail_count(a, max_bits) or 0 for a in avail_obj)
+        return avail_count(avail_obj, max_bits)
+
     return {
         "subtree_levels": subtree_levels,
         "tile_availability": avail_count(header.get("tileAvailability", {}), total_tiles),
-        "content_availability": avail_count(header.get("contentAvailability", {}), total_tiles),
+        "content_availability": avail_count_multi(
+            header.get("contentAvailability", {}), total_tiles
+        ),
         "child_subtree_availability": avail_count(
             header.get("childSubtreeAvailability", {}), 4**subtree_levels
         ),
     }
 
 
-def inspect_subtree_counts(subtree_path: Path) -> dict:
+def inspect_subtree_counts(subtree_path: Path, subtree_levels: int) -> dict:
     """Decode the combined-binary .subtree format (magic 'subt' + header)."""
     try:
         raw = subtree_path.read_bytes()
@@ -125,7 +174,7 @@ def inspect_subtree_counts(subtree_path: Path) -> dict:
         json_str = raw[24 : 24 + json_len].rstrip(b"\x00").decode("utf-8")
         header = json.loads(json_str)
         binary = raw[24 + json_len : 24 + json_len + bin_len]
-        result = _subtree_availability(header, binary)
+        result = _subtree_availability(header, binary, subtree_levels)
         result["format"] = "binary"
         return result
     except Exception as exc:  # noqa: BLE001
@@ -145,7 +194,7 @@ def is_subtree_json(data) -> bool:
     return isinstance(data, dict) and bool(SUBTREE_JSON_KEYS & data.keys())
 
 
-def inspect_subtree_json_bin(json_path: Path) -> dict:
+def inspect_subtree_json_bin(json_path: Path, subtree_levels: int) -> dict:
     """Decode a subtree delivered as JSON + external .bin buffer."""
     try:
         header = json.loads(json_path.read_text(encoding="utf-8"))
@@ -155,7 +204,7 @@ def inspect_subtree_json_bin(json_path: Path) -> dict:
             bin_path = json_path.parent / buffers[0].get("uri", "")
             if bin_path.exists():
                 binary = bin_path.read_bytes()
-        result = _subtree_availability(header, binary)
+        result = _subtree_availability(header, binary, subtree_levels)
         result["format"] = "json+bin"
         return result
     except Exception as exc:  # noqa: BLE001
@@ -247,6 +296,12 @@ def main() -> int:
         p.relative_to(input_dir) for p in input_dir.rglob("*") if p.is_file()
     )
 
+    # Resolved once upfront (not discovered mid-loop): subtree files never
+    # declare their own subtreeLevels, so it must come from tileset.json.
+    # None (Explicit mode, or missing tileset.json) is fine as long as no
+    # subtree files are actually present to decode.
+    subtree_levels = find_subtree_levels(input_dir)
+
     file_entries = []
     normalized_tileset = None
 
@@ -270,10 +325,18 @@ def main() -> int:
             except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 parsed = None
             if is_subtree_json(parsed):
-                entry["subtree_counts"] = inspect_subtree_json_bin(abs_path)
+                entry["subtree_counts"] = (
+                    inspect_subtree_json_bin(abs_path, subtree_levels)
+                    if subtree_levels is not None
+                    else {"error": "tileset.json implicitTiling.subtreeLevels not found"}
+                )
 
         if rel_path.suffix == ".subtree":
-            entry["subtree_counts"] = inspect_subtree_counts(abs_path)
+            entry["subtree_counts"] = (
+                inspect_subtree_counts(abs_path, subtree_levels)
+                if subtree_levels is not None
+                else {"error": "tileset.json implicitTiling.subtreeLevels not found"}
+            )
 
         if rel_path.suffix == ".glb":
             entry["glb_normalized"] = normalize_glb(abs_path)

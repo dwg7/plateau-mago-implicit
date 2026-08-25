@@ -2,7 +2,7 @@
 
 - **Build 1:** `manifests/normalized/20260825T101519Z-sarabetsu-implicit-small.json`
 - **Build 2:** `manifests/normalized/20260825T101608Z-sarabetsu-implicit-small.json`
-- **Generated:** 2026-08-25T10:16:30.196321+00:00
+- **Generated:** 2026-08-25T10:28:06.585092+00:00
 
 ## Repeatability
 

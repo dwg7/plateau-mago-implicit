@@ -1,0 +1,98 @@
+Validating tileset /Users/hfu/plateau-mago-implicit/data/output/sarabetsu/implicit/small/20260825T101615Z-sarabetsu-implicit-small/tileset.json
+Validation result:
+{
+  "date": "2026-08-25T10:28:20.085Z",
+  "numErrors": 1,
+  "numWarnings": 0,
+  "numInfos": 0,
+  "issues": [
+    {
+      "type": "CONTENT_VALIDATION_ERROR",
+      "path": "data/R/3/4/2.glb",
+      "message": "data/R/3/4/2.glb caused validation errors",
+      "severity": "ERROR",
+      "causes": [
+        {
+          "type": "CONTENT_VALIDATION_INFO",
+          "path": "data/R/3/4/2.glb",
+          "message": "Content data/R/3/4/2.glb caused validation infos",
+          "severity": "INFO",
+          "causes": [
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/0",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_mesh_features'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/1",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_structural_metadata'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/5",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/6",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/7",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/8",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/9",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/10",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/11",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/12",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            }
+          ]
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/R/3/4/2.glb/properties/BatchId/values",
+          "message": "The 'values' buffer view of property 'BatchId' stores the values of strings. The last 'stringOffsets' value indicates that there should be 2 bytes in these strings. But the buffer view with index 7 has a byteLength of 4.",
+          "severity": "ERROR"
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/R/3/4/2.glb/properties/FileName/values",
+          "message": "The 'values' buffer view of property 'FileName' stores the values of strings. The last 'stringOffsets' value indicates that there should be 50 bytes in these strings. But the buffer view with index 9 has a byteLength of 52.",
+          "severity": "ERROR"
+        }
+      ]
+    }
+  ]
+}
