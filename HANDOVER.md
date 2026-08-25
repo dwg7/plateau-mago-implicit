@@ -10,8 +10,11 @@ the next concrete step," not narrate history (that's what git log and
 
 **Phase 0 complete, Phase 1 complete, Phase 2 complete for all comparison
 items (one pass criterion still failing for a real reason — see below),
-Phase 3 formally complete for the small profile.** This was a single long
-session that took the project
+Phase 3 formally complete for the small profile, Phase 4 (full-profile
+Sarabetsu) run for real with a major finding: determinism fails at full
+scale even though it holds at small scale — see below, this is the
+single most important finding since the CesiumJS 1.117 bug.** This was a
+single long session that took the project
 from "merged scaffolding, never actually run" to "real PLATEAU data,
 real Mago 3DTiler output, rendering correctly in a real browser from a
 real public host." Almost everything that could plausibly be wrong with
@@ -251,6 +254,41 @@ browser and confirmed the single building is now visible** — real,
 human-verified confirmation, not just the coordinate-math argument. Full
 detail: `docs/findings.md` Phase 2 Unexpected findings.
 
+## Phase 4 (full-profile Sarabetsu): determinism fails at scale — the session's biggest finding
+
+Ran the full formal `docs/determinism.md` procedure again, this time at
+full profile (all 187 building files, 6,795 buildings) instead of the
+single-building small_file. **Result flips from L2/PASS to L3/FAIL at
+both concurrency settings tested (1 and 4).** Two builds of byte-identical
+input produced real geometry (vertex/index) differences in specific
+content tiles, and one comparison found a content tile
+(`data/R/5/13/12.glb`) present in one build and completely missing from
+the other. Not diffuse noise: every affected tile across both comparisons
+shares one common source file — `63437175_bldg_6697_op.gml`, 15.3 MB, 826
+buildings in one file (the small_file used for Phase 1–3 was 8,455 bytes,
+1 building). This is a real, reproducible, root-caused non-determinism in
+Mago 3DTiler 1.16.2 — a much stronger upstream candidate than
+`METADATA_INVALID_LENGTH`'s spec ambiguity, since this one isn't a
+validator-strictness question: the same input produced different output.
+
+**Also fixed before running any full-profile build:**
+`scripts/build.sh`'s full-profile branch searched `find $SOURCE_DIR -name
+"*.gml"` across the *whole* source tree, not `udx/bldg/` specifically. A
+real PLATEAU package also has `udx/dem`/`frn`/`luse`/`tran`/`veg`
+(terrain, street furniture, land use, roads, vegetation) — unscoped, this
+would have fed ~1,123 non-building files into Mago, directly crossing
+CLAUDE.md's buildings-only scope boundary. Caught by inspecting the
+extracted source tree before running anything; fixed to scope to
+`udx/bldg/`.
+
+Both full-profile builds (Explicit: 202 tile contents, 31s; Implicit: 804
+tile contents, 31s) otherwise succeeded structurally, and the
+`METADATA_INVALID_LENGTH` alignment-padding pattern (see above) holds
+consistently across 1439 combined instances at full scale — strengthening
+that finding's "benign padding" reading. Full detail, exact byte offsets,
+and the source-file isolation method: `docs/findings.md` Phase 4,
+`docs/determinism.md` Results.
+
 ## Tooling gaps closed this session
 
 Two gaps found while first trying to validate/compare real output, both
@@ -315,37 +353,39 @@ re-verified against real data:
 
 ## Next concrete step
 
-All five original items are now done. Summary (commits, in order):
-1. Viewer `VIEWPOINTS` repointed at real `tunnel.optgeo.org` URLs — `53075b4`.
-2. Formal Phase 3 determinism procedure (2 concurrency settings) — `53075b4`.
-3. Phase 2 hierarchy/geometric-error comparison, plus a corrected
-   LOD↔filename mapping and two real subtree-tooling bugfixes found along
-   the way — `92c9f7d`.
-4. ~~Resolve the `METADATA_INVALID_LENGTH` ambiguity against
-   `EXT_structural_metadata`'s actual spec text~~ **Done 2026-08-25** — read
-   the spec text (`CesiumGS/glTF` `3d-tiles-next` branch), the
-   `propertyTable.property.schema.json`, and the validator's own source
-   (`BinaryPropertyTableValidator.ts`) directly. Conclusion: the spec is
-   genuinely silent on whether a property-table `values` buffer view's
-   `byteLength` must exactly equal the `stringOffsets`-derived content
-   length or may include alignment padding — the validator enforces exact
-   equality by a deliberate but spec-uncited design choice. Neither "Mago
-   has a bug" nor "the validator is wrong" is assertable as fact. If
-   pursued further, the right move is a clarification *question* upstream,
-   not a bug report. Full detail: `docs/findings.md` Phase 1 Upstream
-   candidates. Not yet committed (see below).
-5. Only after Phase 1–4 fully complete for Sarabetsu: start Phase 5
-   (Muroran) for real. **This is the actual next open item.**
+This session's work, roughly in order (commits): viewer VIEWPOINTS
+repointed at real `tunnel.optgeo.org` URLs + formal Phase 3 small-profile
+determinism (`53075b4`); Phase 2 hierarchy/geometric-error comparison +
+LOD↔filename correction + subtree-tooling bugfixes (`92c9f7d`); GitHub
+Pages re-verification notes (`77a0c01`); `METADATA_INVALID_LENGTH` spec
+check + the 14km/2.7km viewer camera-target bug fix
+(`1817ddc`); user-confirmed the camera fix actually works (`d0eee89`).
+**Phase 4 (full-profile Sarabetsu, this session's biggest finding —
+determinism fails at scale) is done but not yet committed** — see above
+for the finding itself.
 
-A GitHub Pages re-verification after pushing steps 1–3 found no site
-errors — see "Real public hosting" above for detail (including a
-browser-tool-specific testing caveat, not a site issue) — recorded and
-pushed as `77a0c01`.
+Immediate next steps:
 
-Uncommitted local changes this session (step 4 above): `docs/findings.md`,
-this file. No code changes for step 4 — it was pure spec research, no
-tooling/manifest changes to regenerate. Not committed yet — ask the user
-before committing/pushing.
+1. Commit and push Phase 4's work: `scripts/build.sh` (full-profile
+   scoping fix), `docs/findings.md`/`docs/determinism.md`/
+   `docs/hypothesis.md` (Phase 4 findings + Claim 2 status flip), this
+   file, plus the new build/normalized/comparison/validation manifests
+   under `manifests/`.
+2. Decide whether to pursue minimizing `63437175_bldg_6697_op.gml` to a
+   small standalone reproduction for an upstream Mago 3DTiler report — not
+   attempted this session (see `docs/findings.md` Phase 4 "Next smallest
+   experiment").
+3. Only after Sarabetsu Phase 1–4 are genuinely settled (they now are,
+   modulo the upstream-report decision above): start Phase 5 (Muroran)
+   for real — still not begun as a formal phase run, only a Phase 0
+   config-verification spot check exists.
+4. Phase 4's measurement list has real gaps: peak process memory,
+   first-useful-render time, initial request count/bytes, navigation
+   responsiveness, geographic-jump convergence, and browser long-session
+   memory trend were not measured this session (see `docs/findings.md`
+   Phase 4 "Next smallest experiment" for why — needs either `docker
+   stats` monitoring during a build or live interactive browser testing
+   this session's automated tooling couldn't reliably do).
 
 Lower-priority, tracked but not blocking:
 

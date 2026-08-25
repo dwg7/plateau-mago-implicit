@@ -55,13 +55,20 @@ Non-semantic differences are separated from structural differences.
 - **Level 3:** Semantically equivalent but structurally different
 - A deterministic pass requires Level 2 or better
 
-**Current status:** Not evaluated formally — a preliminary, informal
-two-build comparison (2026-08-24) returned Level 3/FAIL, but was
-root-caused to a single non-semantic artifact (a random UUID Mago embeds
-in GLB metadata) that this project's own normalization tooling doesn't yet
-handle. Believed to be a tooling false-negative, not evidence of genuine
-non-determinism, but not yet confirmed by fixing the tooling and
-re-running the formal procedure. See `docs/findings.md` Phase 3.
+**Current status:** Formally evaluated at two scales (2026-08-25), with
+opposite results. **Small profile (single building): Level 2/PASS.** The
+earlier preliminary Level 3/FAIL was root-caused to a single non-semantic
+artifact (a random UUID Mago embeds in GLB metadata); after fixing
+`tools/normalize.py` to redact it, the formal procedure (4 builds, 2
+concurrency settings) confirms L2/PASS in every comparison. **Full
+profile (6,795 buildings): Level 3/FAIL.** The same formal procedure at
+full scale found real geometry (vertex/index) differences between builds
+of identical input, and in one comparison a content tile present in one
+build and entirely missing from the other — root-caused to one specific
+15.3 MB, 826-building source file, not diffuse noise across the dataset.
+**The claim does not hold in general** — it holds only for the
+single-building case, which is not representative of real usage. See
+`docs/findings.md` Phase 3 and Phase 4.
 
 ---
 

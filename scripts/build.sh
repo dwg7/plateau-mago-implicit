@@ -126,15 +126,31 @@ if [ "$PROFILE" = "small" ]; then
     INPUT_FILES=("$STAGING_DIR/$(basename "$SMALL_FILE_PATH")")
 else
     # Full profile: use all building files.
+    #
+    # Scoped to udx/bldg/ specifically, not the whole $SOURCE_DIR: a real
+    # PLATEAU package also contains udx/dem, udx/frn, udx/luse, udx/tran,
+    # udx/veg (terrain, street furniture, land use, roads, vegetation).
+    # CLAUDE.md's scope boundary is explicit that this project is
+    # buildings-only for the baseline (Phase 7 is the only place higher
+    # detail/other feature types are allowed, and it must stay separate).
+    # An earlier version of this branch searched $SOURCE_DIR unscoped,
+    # which would have fed all ~1100 non-building files into Mago too —
+    # caught before ever actually running a full-profile build.
+    BLDG_DIR="$SOURCE_DIR/udx/bldg"
+    if [ ! -d "$BLDG_DIR" ]; then
+        echo "ERROR: $BLDG_DIR not found" >&2
+        echo "  Run: make inspect DATASET=$DATASET (extracts the archive)" >&2
+        exit 1
+    fi
     # Avoids `mapfile`/`readarray` (bash 4+ only) — see compare-builds.sh
     # for why: macOS's default `/bin/bash` is 3.2 and `env bash` resolves
     # to it whenever nothing newer is earlier on PATH.
     INPUT_FILES=()
     while IFS= read -r f; do
         INPUT_FILES+=("$f")
-    done < <(find "$SOURCE_DIR" -name "*.gml" | sort)
+    done < <(find "$BLDG_DIR" -name "*.gml" | sort)
     if [ "${#INPUT_FILES[@]}" -eq 0 ]; then
-        echo "ERROR: No CityGML files found in $SOURCE_DIR" >&2
+        echo "ERROR: No CityGML files found in $BLDG_DIR" >&2
         exit 1
     fi
 fi

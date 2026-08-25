@@ -666,8 +666,139 @@ once.
 
 ## Phase 4: Expanded Sarabetsu Village test
 
-*Not started. Blocked on Phase 3 completing formally (docs/scope.md: do not
-skip ahead of the corresponding smaller phase).*
+**Status: Run for real, 2026-08-25.** Full-profile builds (all 187 real
+building mesh files, 6,795 buildings, 61 MB under `udx/bldg/`) for both
+modes, plus a formal multi-build determinism check at two concurrency
+settings — the honest result is that **Claim 2 (determinism) fails at
+full scale**, contradicting the Level 2/PASS Phase 3 established for the
+single-building small profile. This is the single most important finding
+of Phase 4.
+
+### Confirmed
+
+- ✓ Both modes convert the full municipality without crashing.
+  `make build DATASET=sarabetsu MODE=explicit PROFILE=full`:
+  build `20260825T134334Z-sarabetsu-explicit-full`, 31s, 202 tile
+  contents, 203 output files, 15,958,768 bytes.
+  `make build DATASET=sarabetsu MODE=implicit PROFILE=full`: build
+  `20260825T134415Z-sarabetsu-implicit-full`, 31s, 804 tile contents,
+  1061 output files, 18,180,034 bytes, 128 subtree files (1 root +
+  127 children — the municipality's spatial extent needs more than one
+  subtree's worth of quadtree depth, unlike the single-building
+  small-profile case which fit in one). Root subtree:
+  `tiles=54 content=6 children=127` (decoded with the `subtreeLevels`
+  fix from Phase 2 — this is the first real test of that fix generalizing
+  beyond the single-subtree small-profile case, and it does).
+- ✓ **`find $SOURCE_DIR -name "*.gml"` in `scripts/build.sh`'s full-profile
+  branch was scoped to the whole source tree, not `udx/bldg/`** — caught
+  and fixed *before* ever running a full-profile build. A real PLATEAU
+  package also contains `udx/dem`, `udx/frn`, `udx/luse`, `udx/tran`,
+  `udx/veg` (terrain, street furniture, land use, roads, vegetation);
+  unscoped, this would have fed all ~1,123 non-building-inclusive files
+  into Mago, directly crossing CLAUDE.md's buildings-only scope boundary
+  for the baseline. Fixed to search `$SOURCE_DIR/udx/bldg` specifically.
+- ✓ **The `METADATA_INVALID_LENGTH` alignment-padding pattern holds
+  consistently at full scale, strengthening the "benign padding, not
+  content corruption" reading from Phase 1.** `3d-tiles-validator` against
+  the full Explicit build: 169 affected content files, 263
+  `METADATA_INVALID_LENGTH` leaf issues; against full Implicit: 679
+  affected files, 1176 leaf issues. Computed the declared-vs-required byte
+  delta for every single one of the 1439 combined instances: **100% are
+  1, 2, or 3 bytes** — exactly the range needed to round up to a 4-byte
+  boundary, zero outliers. If this were genuine content corruption rather
+  than systematic alignment padding, a sample this large would be very
+  unlikely to show zero deltas outside [1,3].
+- ✓ **Content-size distribution for the full Implicit build** (804 tile
+  contents): min 3,876 bytes, median 8,252 bytes, p90 31,556 bytes, max
+  1,315,588 bytes (one content tile batching many buildings from a dense
+  cluster), total 18,123,996 bytes.
+
+### Not confirmed
+
+- ✗ **Claim 2 (determinism): fails at full-profile scale.** Ran the exact
+  `docs/determinism.md` procedure again, this time at full profile: 2
+  builds at `CONCURRENCY=1` (`20260825T134415Z`, `20260825T134614Z`) and 2
+  at `CONCURRENCY=4` (`20260825T134848Z`, `20260825T134925Z`). All four
+  root `tileset.json` are byte-identical (same SHA-256,
+  `016c449d47be9a1502a2f6f8170e241da76136f1da21322385f22a6b7f5da011`), but
+  both same-concurrency pairs classify **L3 / FAIL**:
+  - Concurrency=1 vs 1: 804/1061 common files differ; 794 `byte-only`
+    (the known benign per-run UUID, same as Phase 3), but **10 files
+    classified `geometry`** — real vertex/index binary differences, not
+    metadata.
+  - Concurrency=4 vs 4: similar picture (790 `byte-only`, 13 `geometry`),
+    **plus one file, `data/R/5/13/12.glb`, present in one build and
+    completely absent from the other** — a missing content tile between
+    two builds of identical input, exactly the "missing or duplicate
+    geometry between builds" case `docs/determinism.md` lists as
+    operationally significant and "must not occur."
+  - Output file counts themselves varied run-to-run at the same
+    concurrency setting: 1061, 1061, 1060, 1061 across the four
+    full-profile implicit builds — the 1060 case is the same missing-tile
+    build.
+- ✗ **Root-caused to one specific source file, not random/diffuse
+  noise.** Every recurring `geometry`-classified content tile across both
+  comparisons (`R/3/3/2`, `R/4/6/6`, `R/4/7/5`, `R/5/13/12`, `R/5/14/11`,
+  `R/6/26/25`, `R/6/27/25`, `R/6/28/23`, `R/6/28/24`, `R/6/28/25`) was
+  decoded for its `FileName` property values, and **every single one
+  includes `63437175_bldg_6697_op.gml`** — a 15.3 MB source file
+  containing 826 separate `bldg:Building` features (versus the 8,455-byte,
+  1-building small_file used for Phase 1–3). Byte-diffing
+  `data/R/3/3/2.glb` between the two `CONCURRENCY=1` runs (same JSON
+  header, byte-identical apart from binary buffers): differences land in
+  the `indices` bufferView (448/4796 bytes) and `positions` bufferView
+  (1071/14532 bytes, concentrated in the last ~460 of 3633 floats — the
+  tail of the vertex buffer, not scattered throughout), plus the expected
+  `id_values` UUID bytes. This localizes cleanly to *this one source
+  file's* geometry (most plausibly its triangulation/tessellation step,
+  given the pattern — a large batch of buildings being non-deterministically
+  ordered or triangulated) rather than to concurrency, tile-grid
+  assignment, or any other file: no other source filename appears in any
+  affected tile that `63437175_bldg_6697_op.gml` doesn't also appear in.
+
+### Unexpected findings
+
+- ? **The Phase 3 small-profile L2/PASS result was correct as far as it
+  went, but was never a valid basis for a general determinism verdict** —
+  exactly the caveat already recorded in `HANDOVER.md` after Phase 3
+  ("one building processed on any thread count is not a strong test...").
+  That caveat is now confirmed, not merely theoretical: real geometric
+  non-determinism exists in Mago 3DTiler 1.16.2's output, but only
+  manifests with a large multi-building source file, invisible at
+  single-building scale regardless of how many times or at how many
+  concurrency settings that single building is rebuilt.
+
+### Upstream candidates
+
+- → **A strong, well-isolated candidate for Mago 3DTiler, unlike
+  `METADATA_INVALID_LENGTH`'s spec ambiguity — this one is unambiguous
+  non-determinism, not a validator-strictness question.** Two builds of
+  byte-identical input (same JAR, same Docker image, same CLI flags,
+  verified via `git_dirty: false` / matching manifests) produce different
+  mesh geometry and, in one observed case, a content tile that exists in
+  one build and not the other. Root-caused to one specific 15.3 MB, 826-building
+  source file (`63437175_bldg_6697_op.gml`); not yet minimized to a small
+  standalone reproduction (would need extracting a small subset of that
+  file's buildings that still reproduces the issue — not attempted this
+  session). Worth a proper upstream report once minimized, per
+  `CONTRIBUTING.md`'s process — this is exactly the kind of concrete,
+  version-pinned, reproducible finding the project is meant to surface.
+
+### Next smallest experiment
+
+↓ Minimize `63437175_bldg_6697_op.gml` to the smallest subset of its 826
+buildings that still reproduces a `geometry`-classified difference between
+two same-input builds — needed before an upstream report can include a
+practical reproduction case rather than a 15 MB file.
+
+↓ Peak process memory, first-useful-render time, initial request
+count/bytes, navigation responsiveness, geographic-jump convergence, and
+browser long-session memory trend from `docs/test-plan.md`'s Phase 4
+measurement list were **not measured this session** — they need either
+`docker stats` monitoring during the build or live, interactive browser
+testing beyond what this session's automated tooling could reliably do
+(see the `document.visibilityState: "hidden"` testing-tool caveat
+recorded earlier in this file and in `HANDOVER.md`).
 
 ---
 
@@ -702,8 +833,8 @@ complete.*
 
 | Claim | Status | Phase evaluated | Notes |
 |---|---|---|---|
-| Conversion feasibility | Partially confirmed | 1, 2 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, now fully validatable (subtree tooling gap closed) and fully compared against Explicit (feature identity, no missing/duplicate geometry, hierarchy/geometric error), AND confirmed rendering correctly in a real browser (CesiumJS 1.144) — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text — neither Mago nor the validator can be said to be "wrong" on current evidence), so "validates independently" is currently ✗ |
-| Determinism | Confirmed (Level 2) for small profile | 3 (formal) | Initial L3/FAIL was a tooling false-negative (a benign per-run random ID in GLB metadata); after fixing `tools/normalize.py` to redact it, formal Phase 3 (4 builds, concurrency=1 and concurrency=4, 3 pairwise comparisons) confirms L2/PASS in every comparison, with byte-identical `tileset.json` across all 4 builds. Not yet re-checked at Phase 4 (multi-building) scale |
+| Conversion feasibility | Partially confirmed | 1, 2, 4 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, now fully validatable (subtree tooling gap closed) and fully compared against Explicit (feature identity, no missing/duplicate geometry, hierarchy/geometric error), AND confirmed rendering correctly in a real browser (CesiumJS 1.144) — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text — neither Mago nor the validator can be said to be "wrong" on current evidence), so "validates independently" is currently ✗. Phase 4 confirms both modes also convert the full municipality (6,795 buildings) without crashing, and the METADATA_INVALID_LENGTH pattern holds consistently at scale (1439 instances, 100% within the 4-byte-alignment-padding range) |
+| Determinism | **Fails at full scale (L3/FAIL); Level 2 holds only for the single-building small profile** | 3, 4 | Phase 3 (single-building small profile, 4 builds, 2 concurrency settings) confirms L2/PASS after fixing a GLB-UUID tooling false-negative. Phase 4 (full municipality, same procedure) contradicts this: L3/FAIL at both concurrency settings, with real geometry (vertex/index) differences and one observed missing content tile between builds of identical input — root-caused to one specific 826-building source file, not diffuse noise. The small-profile result was correct but never generalizable; full-scale is the honest answer for this claim |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
 | Practical consumption | Partially confirmed | 2 | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but only tested with the tiniest possible dataset (1 building); navigation/memory/long-session behavior at any real scale is still untested |
 

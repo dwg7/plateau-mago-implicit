@@ -121,7 +121,37 @@ single-pair signal. Full reports:
 `manifests/reports/comparison-20260825T101608Z-...-vs-20260825T101615Z-...md`,
 `manifests/reports/comparison-20260825T101519Z-...-vs-20260825T101608Z-...-concurrency1v4.md`.
 
-**Caveat:** this is still the single-building small_file, not a
-multi-building/full-profile run — see Phase 4 for whether concurrency
-effects change at real scale (many buildings processed across threads is a
-materially different code path than one building on any thread count).
+**Caveat (resolved, see below): this was still the single-building
+small_file, not a multi-building/full-profile run** — the concurrency
+effects at real scale turned out to matter a great deal.
+
+**Formal Phase 4 (same procedure, full profile) run 2026-08-25** —
+Sarabetsu Village, implicit mode, **full profile** (all 187 building mesh
+files, 6,795 buildings), same environment, same procedure:
+
+| Run | Build ID | Concurrency | Duration | Output files | Root tileset.json SHA-256 |
+|---|---|---|---|---|---|
+| 1 | `20260825T134415Z-sarabetsu-implicit-full` | 1 | 31s | 1061 | `016c449...` |
+| 2 | `20260825T134614Z-sarabetsu-implicit-full` | 1 | 34s | 1061 | `016c449...` (identical) |
+| 3 | `20260825T134848Z-sarabetsu-implicit-full` | 4 | 27s | **1060** | `016c449...` (identical) |
+| 4 | `20260825T134925Z-sarabetsu-implicit-full` | 4 | 28s | 1061 | `016c449...` (identical) |
+
+| Comparison | Level | Determinism | Notes |
+|---|---|---|---|
+| Run 1 vs Run 2 (concurrency=1 vs 1) | **L3** | **✗ FAIL** | 804/1061 files differ; 794 `byte-only` (benign UUID, as expected), but **10 files classified `geometry`** — real vertex/index binary differences |
+| Run 3 vs Run 4 (concurrency=4 vs 4) | **L3** | **✗ FAIL** | 790 `byte-only`, 13 `geometry`, **plus `data/R/5/13/12.glb` present in run 4 and entirely absent from run 3** — a missing content tile, the "missing or duplicate geometry between builds" case this document lists as operationally significant |
+
+Root `tileset.json` stayed byte-identical across all four runs — the
+non-determinism is confined to specific content GLBs, not the tile
+hierarchy structure itself. Every recurring `geometry`-flagged tile across
+both comparisons shares one common source file in its batched content:
+`63437175_bldg_6697_op.gml` (15.3 MB, 826 buildings) — no other source
+file appears in an affected tile that this one doesn't also appear in.
+**Claim 2 (determinism) fails at full-profile scale, for a real,
+root-caused, non-diffuse reason** — not evenly distributed noise, one
+specific large multi-building source file's geometry (most plausibly its
+triangulation step) is non-deterministic between runs, at both
+concurrency settings tested. The earlier single-building small-profile
+L2/PASS was correct but never a valid basis for a general "Mago is
+deterministic" claim. Full detail and the exact byte-diff analysis:
+`docs/findings.md` Phase 4.
