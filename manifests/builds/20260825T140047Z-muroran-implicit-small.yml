@@ -1,0 +1,24 @@
+schema_version: "1"
+build_id: "20260825T140047Z-muroran-implicit-small"
+municipality: "muroran"
+mode: "implicit"
+profile: "small"
+mago_version: "1.16.2"
+mago_image: "plateau-mago-implicit-tiler:1.16.2"
+mago_jar_url: "https://github.com/Gaia3D/mago-3d-tiler/releases/download/v1.16.2/mago-3d-tiler-1.16.2.jar"
+mago_jar_sha256: "d37e58b634e91d7ce7ca046168b1db2cf950cd9b2ffacb826fd3b10a8d31f7e2"
+concurrency: 4
+input_dir: "/Users/hfu/plateau-mago-implicit/data/.build-staging/muroran/20260825T140047Z-muroran-implicit-small"
+output_dir: "/Users/hfu/plateau-mago-implicit/data/output/muroran/implicit/small/20260825T140047Z-muroran-implicit-small"
+command: "docker run --rm -v /Users/hfu/plateau-mago-implicit/data/.build-staging/muroran/20260825T140047Z-muroran-implicit-small:/data/input -v /Users/hfu/plateau-mago-implicit/data/output/muroran/implicit/small/20260825T140047Z-muroran-implicit-small:/data/output -e JAVA_OPTS=-Xmx4g plateau-mago-implicit-tiler:1.16.2 --input /data/input --output /data/output --inputType citygml --proj +proj=longlat +datum=WGS84 +axis=neu +no_defs --tilingMode implicit --multiThreadCount 4"
+started_at: "2026-08-25T14:00:48Z"
+ended_at: "2026-08-25T14:00:49Z"
+duration_seconds: 1
+return_code: 0
+output_file_count: 4
+output_total_bytes: 5425
+root_tileset_sha256: "c36ed3373643ede98583f12d66f14bfcf7ac4aaee610b6fecc5e18caf1684389"
+root_tileset_bytes:      423
+validation_status: "not-run"
+git_commit: "214c74e569c620cc5247219d3cbc38efdf4d310f"
+git_dirty: false

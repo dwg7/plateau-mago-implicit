@@ -1,0 +1,101 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-25T14:00:56.340307+00:00",
+  "input_dir": "/Users/hfu/plateau-mago-implicit/data/output/muroran/implicit/small/20260825T140047Z-muroran-implicit-small",
+  "file_count": 4,
+  "normalized_tileset": {
+    "asset": {
+      "version": "1.1"
+    },
+    "geometricError": 64.0,
+    "root": {
+      "boundingVolume": {
+        "region": [
+          2.46038,
+          0.738407,
+          2.460383,
+          0.73841,
+          1.760003,
+          5.973003
+        ]
+      },
+      "content": {
+        "uri": "data/R/{level}/{x}/{y}.glb"
+      },
+      "geometricError": 64.0,
+      "implicitTiling": {
+        "availableLevels": 3,
+        "subdivisionScheme": "QUADTREE",
+        "subtreeLevels": 4,
+        "subtrees": {
+          "uri": "subtrees/R/{level}/{x}/{y}.json"
+        }
+      },
+      "refine": "ADD"
+    }
+  },
+  "files": [
+    {
+      "path": "data/R/2/2/1.glb",
+      "size_bytes": 4568,
+      "sha256": "ca92ed4f25ab4f8e3334762116cb4aab5ff2b2bba47a433c613f013e9793c251",
+      "glb_normalized": {
+        "normalized_sha256": "aa1c0f7a399ba3804b35c6685c16961d5935db5441e98d7db8cc68a512cd47a0",
+        "redacted_property_count": 1
+      }
+    },
+    {
+      "path": "subtrees/R/0/0/0.bin",
+      "size_bytes": 64,
+      "sha256": "03bb53c458f07e73cdb38a82da1332a3008c7dfbf8834df7b3cb8d91eeec7ff7"
+    },
+    {
+      "path": "subtrees/R/0/0/0.json",
+      "size_bytes": 370,
+      "sha256": "cbdb54fdc800501fc11d249b821ecfd907c0a2145cbec1d616bfbfd99cef588b",
+      "subtree_counts": {
+        "subtree_levels": 4,
+        "tile_availability": 3,
+        "content_availability": 1,
+        "child_subtree_availability": 0,
+        "format": "json+bin"
+      }
+    },
+    {
+      "path": "tileset.json",
+      "size_bytes": 423,
+      "sha256": "c36ed3373643ede98583f12d66f14bfcf7ac4aaee610b6fecc5e18caf1684389",
+      "normalized_content": {
+        "asset": {
+          "version": "1.1"
+        },
+        "geometricError": 64.0,
+        "root": {
+          "boundingVolume": {
+            "region": [
+              2.46038,
+              0.738407,
+              2.460383,
+              0.73841,
+              1.760003,
+              5.973003
+            ]
+          },
+          "content": {
+            "uri": "data/R/{level}/{x}/{y}.glb"
+          },
+          "geometricError": 64.0,
+          "implicitTiling": {
+            "availableLevels": 3,
+            "subdivisionScheme": "QUADTREE",
+            "subtreeLevels": 4,
+            "subtrees": {
+              "uri": "subtrees/R/{level}/{x}/{y}.json"
+            }
+          },
+          "refine": "ADD"
+        }
+      }
+    }
+  ]
+}

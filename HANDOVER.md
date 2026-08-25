@@ -13,7 +13,11 @@ items (one pass criterion still failing for a real reason — see below),
 Phase 3 formally complete for the small profile, Phase 4 (full-profile
 Sarabetsu) run for real with a major finding: determinism fails at full
 scale even though it holds at small scale — see below, this is the
-single most important finding since the CesiumJS 1.117 bug.** This was a
+single most important finding since the CesiumJS 1.117 bug — Phase 5
+(small Muroran) also run for real, confirming small-profile determinism
+holds regardless of municipality and surfacing a real structural
+difference in tile refinement driven by Muroran's LOD1-only source
+data.** This was a
 single long session that took the project
 from "merged scaffolding, never actually run" to "real PLATEAU data,
 real Mago 3DTiler output, rendering correctly in a real browser from a
@@ -289,6 +293,33 @@ that finding's "benign padding" reading. Full detail, exact byte offsets,
 and the source-file isolation method: `docs/findings.md` Phase 4,
 `docs/determinism.md` Results.
 
+## Phase 5 (small Muroran) run for real
+
+Repeated Phase 1–3's small-profile procedure on Muroran's small_file
+(`63403767_bldg_6697_op.gml`) instead of Sarabetsu's — this supersedes
+the earlier Phase 0 config-only spot check. Both modes convert correctly;
+geographic placement matches the known-correct coordinates exactly
+(140.9694°E/42.3076°N), and the output height range (4.213 m) closely
+matches the source's declared `bldg:measuredHeight` (4.6 m). Formal
+determinism check (4 builds, 2 concurrency settings, same procedure as
+Phase 3/4): **L2/PASS at both settings** — a useful cross-check on Phase
+4's finding, since it confirms small-profile determinism holds regardless
+of *which* municipality's single building is used, reinforcing that
+Phase 4's L3/FAIL was specifically about processing many buildings from
+one large source file, not something Sarabetsu-specific.
+
+**Real structural finding, not a bug:** Muroran's Explicit tree looks
+different from Sarabetsu's — one branch with byte-identical geometry at
+two refinement depths, instead of Sarabetsu's two sibling branches with
+genuinely different LOD0/LOD1 geometry. Traced to the source data:
+Muroran's PLATEAU dataset is LOD1-only (confirmed back in Phase 0), so
+Mago has only one real geometry to place and duplicates it across its own
+internal refinement chain rather than expressing a second LOD. Same
+converter, same mode, structurally different output — driven by what LODs
+the source actually contains, exactly the kind of "Special attention:
+Tile refinement" finding `docs/test-plan.md` names as Phase 5's purpose.
+Full detail: `docs/findings.md` Phase 5.
+
 ## Tooling gaps closed this session
 
 Two gaps found while first trying to validate/compare real output, both
@@ -358,34 +389,35 @@ repointed at real `tunnel.optgeo.org` URLs + formal Phase 3 small-profile
 determinism (`53075b4`); Phase 2 hierarchy/geometric-error comparison +
 LOD↔filename correction + subtree-tooling bugfixes (`92c9f7d`); GitHub
 Pages re-verification notes (`77a0c01`); `METADATA_INVALID_LENGTH` spec
-check + the 14km/2.7km viewer camera-target bug fix
-(`1817ddc`); user-confirmed the camera fix actually works (`d0eee89`).
-**Phase 4 (full-profile Sarabetsu, this session's biggest finding —
-determinism fails at scale) is done but not yet committed** — see above
-for the finding itself.
+check + the 14km/2.7km viewer camera-target bug fix (`1817ddc`);
+user-confirmed the camera fix actually works (`d0eee89`); Phase 4
+full-profile Sarabetsu, this session's biggest finding — determinism
+fails at scale (`214c74e`). **Phase 5 (small Muroran) is done but not yet
+committed** — see above for the finding itself.
+
+The user explicitly said an upstream Mago 3DTiler report is not
+necessarily the goal, so that's no longer an open decision blocking
+anything — it's optional future work only, not a next step.
 
 Immediate next steps:
 
-1. Commit and push Phase 4's work: `scripts/build.sh` (full-profile
-   scoping fix), `docs/findings.md`/`docs/determinism.md`/
-   `docs/hypothesis.md` (Phase 4 findings + Claim 2 status flip), this
-   file, plus the new build/normalized/comparison/validation manifests
-   under `manifests/`.
-2. Decide whether to pursue minimizing `63437175_bldg_6697_op.gml` to a
-   small standalone reproduction for an upstream Mago 3DTiler report — not
-   attempted this session (see `docs/findings.md` Phase 4 "Next smallest
-   experiment").
-3. Only after Sarabetsu Phase 1–4 are genuinely settled (they now are,
-   modulo the upstream-report decision above): start Phase 5 (Muroran)
-   for real — still not begun as a formal phase run, only a Phase 0
-   config-verification spot check exists.
-4. Phase 4's measurement list has real gaps: peak process memory,
-   first-useful-render time, initial request count/bytes, navigation
-   responsiveness, geographic-jump convergence, and browser long-session
-   memory trend were not measured this session (see `docs/findings.md`
-   Phase 4 "Next smallest experiment" for why — needs either `docker
-   stats` monitoring during a build or live interactive browser testing
-   this session's automated tooling couldn't reliably do).
+1. Commit and push Phase 5's work: `docs/findings.md`/`docs/hypothesis.md`
+   (Phase 5 section, if touched), this file, plus the new Muroran
+   build/normalized/comparison/validation manifests under `manifests/`.
+2. Decide whether to continue to Phase 6 (expanded/full-profile Muroran)
+   — per Phase 5's own "Next smallest experiment," this should
+   specifically re-run Phase 4's determinism procedure on Muroran's full
+   profile to check whether the same class of large-source-file
+   non-determinism reproduces there too, not just measure coverage.
+3. Phase 4's measurement list has real gaps that would also apply to
+   Phase 6: peak process memory, first-useful-render time, initial
+   request count/bytes, navigation responsiveness, geographic-jump
+   convergence, and browser long-session memory trend were not measured
+   this session (needs either `docker stats` monitoring during a build or
+   live interactive browser testing this session's automated tooling
+   couldn't reliably do).
+4. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
+   and explicitly optional per `docs/scope.md`.
 
 Lower-priority, tracked but not blocking:
 

@@ -804,16 +804,95 @@ recorded earlier in this file and in `HANDOVER.md`).
 
 ## Phase 5: Small Muroran City test
 
-*Not started as a formal phase run. A config-verification spot check was
-done during Phase 0 (see below) to confirm the CRS/proj fix generalizes to
-Muroran before recording it in `config/muroran.yml` — this is not a Phase 5
-run and Phase 5 should still start fresh once Phase 1–4 for Sarabetsu are
-complete.*
+**Status: Run for real, 2026-08-25.** Repeats Phase 1–3's small-profile
+procedure (Explicit build, Implicit build, geographic/vertical
+verification, formal determinism check) on Muroran's small_file
+(`udx/bldg/63403767_bldg_6697_op.gml`) instead of Sarabetsu's — this
+supersedes the earlier Phase 0 config-only spot check with a full,
+evidence-based run through the actual pipeline.
 
-- ✓ (spot check only) `+proj=longlat +datum=WGS84 +axis=neu +no_defs` also
-  correctly places Muroran's small_file
-  (`udx/bldg/63403767_bldg_6697_op.gml`): output matched the source
-  envelope exactly (140.9694°E, 42.3076°N).
+### Confirmed
+
+- ✓ Both modes convert Muroran's small_file without crashing. `make build
+  DATASET=muroran MODE=explicit PROFILE=small`: build
+  `20260825T135855Z-muroran-explicit-small`, 1s, 2 tile contents, 3 output
+  files, 10,225 bytes. `make build DATASET=muroran MODE=implicit
+  PROFILE=small`: build `20260825T135919Z-muroran-implicit-small`, 1s, 1
+  tile content, 4 output files, 5,425 bytes, 1 subtree file (0 errors,
+  `availableLevels: 3` — one fewer than Sarabetsu's small-profile 4,
+  consistent with a single simple building needing less quadtree depth).
+- ✓ **Geographic and vertical placement confirmed correct** — the same
+  `+proj=longlat +datum=WGS84 +axis=neu +no_defs` fix from Sarabetsu
+  generalizes, now verified through a real pipeline run rather than a
+  config-only spot check: decoded the Implicit tileset's region back to
+  degrees and got 140.96940°E–140.96958°E, 42.30758°N–42.30777°N —
+  matching the known-correct 140.9694°E/42.3076°N exactly. Height range
+  1.760–5.973 m (4.213 m span) closely matches the source's own declared
+  `bldg:measuredHeight` of **4.6 m** (small discrepancy expected: the
+  output range comes from actual mesh vertex bounds, not the declared
+  attribute value directly).
+- ✓ **Formal Phase 3-style determinism check, small profile: L2/PASS at
+  both concurrency settings**, consistent with Sarabetsu's small-profile
+  result. 4 builds total (`20260825T135919Z`, `20260825T140031Z` at
+  `CONCURRENCY=1`; `20260825T140047Z`, `20260825T140049Z` at
+  `CONCURRENCY=4`), all four with identical root `tileset.json` SHA-256
+  (`c36ed337...`). Both same-concurrency comparisons classify L2/PASS
+  (the same benign per-run UUID `byte-only` difference as every other
+  small-profile comparison this session). This is a useful cross-check on
+  Phase 4's finding: small-profile determinism holds regardless of
+  *which* municipality's single building is used, reinforcing that Phase
+  4's L3/FAIL was specifically about processing many buildings from one
+  large source file, not something Sarabetsu-specific.
+- ✓ **Same `METADATA_INVALID_LENGTH` pattern present, same
+  alignment-padding signature.** Explicit: 2 errors (one per content
+  file); Implicit: 1 error. Not re-decoded byte-by-byte again (already
+  established the pattern conclusively at both small and full scale for
+  Sarabetsu) — consistent with expectations, nothing new here.
+- ✓ **No missing or duplicate geometry between Explicit and Implicit.**
+  Decoded all three content GLBs (`RC000.glb`, `RC0000.glb` from
+  Explicit; `data/R/2/2/1.glb` from Implicit): all three carry the same
+  `FileName` (`63403767_bldg_6697_op.gml`), the same `propertyTable.count
+  = 1`, and byte-identical geometry accessors (24-vertex `VEC3`, same
+  min/max bounds in every file).
+
+### Unexpected findings
+
+- ? **Muroran's Explicit tree structure is qualitatively different from
+  Sarabetsu's small-profile tree — a real "Special attention: Tile
+  refinement" finding from `docs/test-plan.md`'s Phase 5 goal, not a
+  bug.** Sarabetsu's Explicit small-profile tree (Phase 2) has **two
+  sibling branches** under the root, one per PLATEAU LOD, each with
+  *genuinely different geometry* (a flat footprint vs. a solid volume).
+  Muroran's Explicit tree has **one single branch** with content at two
+  different refinement depths (`RC000.glb` at `geometricError: 8.01`,
+  `RC0000.glb` at `geometricError: 0.01`) — and those two files are
+  **byte-identical in geometry** (same accessor, same vertex bounds).
+  Root cause: Sarabetsu's source data has LOD0 and LOD1 both present (so
+  Mago has two genuinely different geometries to place in sibling
+  branches); Muroran's PLATEAU dataset is LOD1-only (confirmed in Phase
+  0: "LOD {1} only" for the whole municipality), so Mago has only one
+  real geometry and duplicates it across its own internal two-step
+  refinement chain instead of expressing a second, different LOD. Same
+  mode, same converter, structurally different output — driven entirely
+  by what LODs the *source* data actually contains.
+
+### Not confirmed
+
+- ✗ Several of `docs/test-plan.md`'s Phase 5 "Special attention" items
+  are genuinely about the *whole municipality's* varied terrain (slope
+  and coastal conditions, high-latitude graphics precision at scale) —
+  not meaningfully testable against one flat building's small_file. These
+  remain open for Phase 6 (expanded Muroran), where the terrain variation
+  they're meant to probe actually exists in the input.
+
+### Next smallest experiment
+
+Phase 5 (small profile) is complete. Phase 6 (expanded/full-profile
+Muroran) is next if pursued — given Phase 4's finding that determinism
+issues only appeared at full-profile scale with a large multi-building
+source file, Phase 6 should specifically re-run the same determinism
+procedure on Muroran's full profile to check whether the same class of
+issue reproduces with Muroran's own building files, not just Sarabetsu's.
 
 ---
 

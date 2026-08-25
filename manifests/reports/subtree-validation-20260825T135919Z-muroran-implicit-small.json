@@ -1,0 +1,59 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-25T14:00:25.030928+00:00",
+  "input_dir": "/Users/hfu/plateau-mago-implicit/data/output/muroran/implicit/small/20260825T135919Z-muroran-implicit-small",
+  "subtree_file_count": 1,
+  "error_count": 0,
+  "subtrees": [
+    {
+      "path": "/Users/hfu/plateau-mago-implicit/data/output/muroran/implicit/small/20260825T135919Z-muroran-implicit-small/subtrees/R/0/0/0.json",
+      "size_bytes": 370,
+      "valid": true,
+      "format": "json+bin",
+      "json_header": {
+        "buffers": [
+          {
+            "uri": "0.bin",
+            "byteLength": 64
+          }
+        ],
+        "bufferViews": [
+          {
+            "buffer": 0,
+            "byteOffset": 0,
+            "byteLength": 11
+          },
+          {
+            "buffer": 0,
+            "byteOffset": 16,
+            "byteLength": 11
+          },
+          {
+            "buffer": 0,
+            "byteOffset": 32,
+            "byteLength": 32
+          }
+        ],
+        "tileAvailability": {
+          "bitstream": 0,
+          "availableCount": 3
+        },
+        "contentAvailability": [
+          {
+            "bitstream": 1,
+            "availableCount": 1
+          }
+        ],
+        "childSubtreeAvailability": {
+          "bitstream": 2,
+          "availableCount": 0
+        }
+      },
+      "tile_availability_count": 3,
+      "content_availability_count": 1,
+      "child_subtree_availability_count": 0,
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}
