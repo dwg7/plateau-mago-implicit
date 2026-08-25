@@ -92,17 +92,36 @@ After normalization, differences are classified as:
 
 ## Results
 
-**Formal Phase 3 (this procedure, both concurrency settings) has not been
-run yet.** A preliminary, informal two-build comparison was done
-2026-08-24 while verifying Phase 1/2 worked at all, and is recorded here
-because it produced a concrete, root-caused finding worth keeping — full
-detail in `docs/findings.md` Phase 3:
+**Formal Phase 3 (this procedure, both concurrency settings) run
+2026-08-25** — Sarabetsu Village, implicit mode, small profile, single
+building (`63437290_bldg_6697_op.gml`), all four builds in the same pinned
+environment (Mago 3DTiler 1.16.2, same Docker image) back-to-back:
 
-| Run | Build ID | Duration | Level | Notes |
+| Run | Build ID | Concurrency | Duration | Root tileset.json SHA-256 |
 |---|---|---|---|---|
-| 1 | `20260824T215746Z-sarabetsu-implicit-small` | 1s | — | `tileset.json` + subtree byte-identical to run 2 |
-| 2 | `20260824T215851Z-sarabetsu-implicit-small` | 2s | — | Same as above; `compare-builds.sh` verdict: **L3 / FAIL**, but root-caused to a random UUID mago-3d-tiler embeds in GLB metadata (`id` property) — not a difference in `tileset.json`, subtree structure, or actual geometry. Believed to be a tooling false-negative (`tools/normalize.py` doesn't yet redact GLB-internal UUIDs), not evidence of genuine Mago non-determinism, but that belief has not been confirmed by fixing the tooling and re-running. |
+| 1 | `20260825T101519Z-sarabetsu-implicit-small` | 1 | 2s | `4e86402...` |
+| 2 | `20260825T101534Z-sarabetsu-implicit-small` | 1 | 1s | `4e86402...` (identical) |
+| 3 | `20260825T101608Z-sarabetsu-implicit-small` | 4 | 1s | `4e86402...` (identical) |
+| 4 | `20260825T101615Z-sarabetsu-implicit-small` | 4 | 1s | `4e86402...` (identical) |
 
-Formal Phase 3 (concurrency=1 vs concurrency>1, full classification) is
-next after the GLB-UUID normalization gap is closed — see `HANDOVER.md`.
-| 2 | TBD | TBD | TBD | TBD |
+| Comparison | Level | Determinism | Notes |
+|---|---|---|---|
+| Run 1 vs Run 2 (concurrency=1 vs 1) | L2 | ✓ PASS | Only difference: `data/R/3/4/2.glb`, classified `byte-only` (the known per-run random UUID Mago embeds in `EXT_structural_metadata`, redacted by `tools/normalize.py` before hashing) |
+| Run 3 vs Run 4 (concurrency=4 vs 4) | L2 | ✓ PASS | Same single `byte-only` difference, same file |
+| Run 1 vs Run 3 (concurrency=1 vs 4) | L2 | ✓ PASS | Same single `byte-only` difference — concurrency setting itself produced no additional differences beyond the baseline per-run UUID |
+
+All four `tileset.json` root files are byte-identical (same SHA-256); all
+four subtree JSON+bin pairs matched; the only difference in any comparison,
+at either concurrency setting or across settings, was the same benign
+embedded-UUID `byte-only` difference already characterized in Phase 3's
+Unexpected findings. **Claim 2 (determinism) is now formally confirmed at
+Level 2 for this dataset/profile** — not just the earlier preliminary
+single-pair signal. Full reports:
+`manifests/reports/comparison-20260825T101519Z-...-vs-20260825T101534Z-...md`,
+`manifests/reports/comparison-20260825T101608Z-...-vs-20260825T101615Z-...md`,
+`manifests/reports/comparison-20260825T101519Z-...-vs-20260825T101608Z-...-concurrency1v4.md`.
+
+**Caveat:** this is still the single-building small_file, not a
+multi-building/full-profile run — see Phase 4 for whether concurrency
+effects change at real scale (many buildings processed across threads is a
+materially different code path than one building on any thread count).

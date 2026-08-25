@@ -125,8 +125,14 @@ if [ "$PROFILE" = "small" ]; then
     cp "$SMALL_FILE_PATH" "$STAGING_DIR/"
     INPUT_FILES=("$STAGING_DIR/$(basename "$SMALL_FILE_PATH")")
 else
-    # Full profile: use all building files
-    mapfile -t INPUT_FILES < <(find "$SOURCE_DIR" -name "*.gml" | sort)
+    # Full profile: use all building files.
+    # Avoids `mapfile`/`readarray` (bash 4+ only) — see compare-builds.sh
+    # for why: macOS's default `/bin/bash` is 3.2 and `env bash` resolves
+    # to it whenever nothing newer is earlier on PATH.
+    INPUT_FILES=()
+    while IFS= read -r f; do
+        INPUT_FILES+=("$f")
+    done < <(find "$SOURCE_DIR" -name "*.gml" | sort)
     if [ "${#INPUT_FILES[@]}" -eq 0 ]; then
         echo "ERROR: No CityGML files found in $SOURCE_DIR" >&2
         exit 1

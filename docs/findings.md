@@ -394,10 +394,11 @@ as a real, validator-detected defect rather than a hypothesis.
 
 ## Phase 3: Determinism
 
-**Status: Preliminary observation only — not formally started per
-docs/test-plan.md's procedure (two concurrency settings, full run log),
-but the tooling gap the preliminary check exposed has been fixed and
-re-verified.**
+**Status: Formally complete for Sarabetsu Village, implicit mode, small
+profile (single building).** 2026-08-25. The formal `docs/test-plan.md`
+procedure — two concurrency settings, full `docs/determinism.md`
+classification, a proper run log — has now been executed, not just the
+earlier single-pair preliminary check.
 
 ### Confirmed
 
@@ -412,19 +413,29 @@ re-verified.**
   L3/FAIL was a tooling false-negative (a benign, non-geometric random ID
   Mago embeds per-run), not evidence of real non-determinism in
   mago-3d-tiler's actual conversion output.
-
-### Partially confirmed
-
-- ~ Only one build pair, one profile (small), one concurrency setting
-  (1) has been checked. The formal Phase 3 procedure — two concurrency
-  settings, the full docs/determinism.md classification table, a proper
-  run log — has still not been executed. L2/PASS above should be treated
-  as a strong, evidence-based signal, not a substitute for that formal run.
-
-### Not confirmed
-
-*None outstanding for this specific build pair — see Partially confirmed
-for what the formal procedure still needs to cover.*
+- ✓ **(2026-08-25) Formal two-concurrency-setting procedure run for real**:
+  4 builds total (2× `CONCURRENCY=1`, 2× `CONCURRENCY=4`), all back-to-back
+  in the same pinned environment. All four root `tileset.json` files are
+  **byte-identical** (same SHA-256,
+  `4e8640202f3cb3720a934c1379595b3452295199ed03495add0d85e16b5d83bd`,
+  verified directly from each build's own manifest, not just inferred).
+  Three pairwise comparisons — concurrency=1 vs 1, concurrency=4 vs 4, and
+  directly across concurrency=1 vs concurrency=4 — each classify **L2 /
+  PASS**, with the only difference in every case being the same benign
+  embedded-UUID `byte-only` difference in `data/R/3/4/2.glb`. Concurrency
+  setting itself introduced no additional differences. Full detail and the
+  run log: `docs/determinism.md` Results.
+- ✓ **(2026-08-25) Unexpected finding while running this: `scripts/compare-builds.sh`
+  and `scripts/build.sh`'s "full profile" branch both used `mapfile` (a bash
+  4+ builtin), which fails immediately with `mapfile: command not found`
+  under macOS's stock `/bin/bash` (3.2 — Apple ships an old bash for
+  licensing reasons) whenever `#!/usr/bin/env bash` resolves to it ahead of
+  a newer bash on `PATH`. This is a real, reproducible portability bug, not
+  environment-specific noise: it blocks `make compare` (and the `full`
+  profile of `make build`) on an unmodified macOS PATH. Fixed by replacing
+  both `mapfile` calls with a portable `while IFS= read -r; do …; done`
+  loop; re-verified `make compare` succeeds under both plain `/bin/bash`
+  (3.2) and Homebrew's bash 5.
 
 ### Unexpected findings
 
@@ -462,14 +473,12 @@ for what the formal procedure still needs to cover.*
 
 ### Next smallest experiment
 
-↓ Run the full formal Phase 3 procedure (two concurrency settings,
-docs/determinism.md's classification table, a proper run log) — the
-tooling now gives a trustworthy answer, so this is the remaining gap
-between "preliminary signal" and "Claim 2 formally evaluated."
-
-↓ Once that's done, run the full formal Phase 3 procedure (two concurrency
-settings, docs/determinism.md's classification table) rather than this
-preliminary two-build spot check.
+Phase 3 is formally complete for this dataset/mode/profile. Phase 4
+(expanded Sarabetsu test, many buildings) is next — it should re-check
+whether concurrency affects determinism at real scale, since one building
+processed on any thread count is not a strong test of parallel-write
+races that could only show up with many buildings/tiles in flight at
+once.
 
 ---
 
@@ -512,7 +521,7 @@ complete.*
 | Claim | Status | Phase evaluated | Notes |
 |---|---|---|---|
 | Conversion feasibility | Partially confirmed | 1, 2 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, now fully validatable (subtree tooling gap closed), AND confirmed rendering correctly in a real browser (CesiumJS 1.144) — but validation surfaced a real Mago defect (`METADATA_INVALID_LENGTH`), so "validates independently" is currently ✗ |
-| Determinism | Partially confirmed (strong preliminary signal) | 3 (preliminary) | Initial L3/FAIL was a tooling false-negative (a benign per-run random ID in GLB metadata); after fixing `tools/normalize.py` to redact it, the same build pair reclassifies as L2/PASS. Formal Phase 3 (2 concurrency settings, full run log) not yet executed |
+| Determinism | Confirmed (Level 2) for small profile | 3 (formal) | Initial L3/FAIL was a tooling false-negative (a benign per-run random ID in GLB metadata); after fixing `tools/normalize.py` to redact it, formal Phase 3 (4 builds, concurrency=1 and concurrency=4, 3 pairwise comparisons) confirms L2/PASS in every comparison, with byte-identical `tileset.json` across all 4 builds. Not yet re-checked at Phase 4 (multi-building) scale |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
 | Practical consumption | Partially confirmed | 2 | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but only tested with the tiniest possible dataset (1 building); navigation/memory/long-session behavior at any real scale is still untested |
 

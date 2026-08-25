@@ -1,0 +1,30 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-25T10:17:04.200146+00:00",
+  "repeatability_level": "L2",
+  "repeatability_description": "Structurally identical after normalization",
+  "determinism_pass": true,
+  "summary": {
+    "common_files": 4,
+    "only_in_build1": 0,
+    "only_in_build2": 0,
+    "files_with_differences": 1,
+    "byte_only_differences": 1,
+    "structural_differences": 0,
+    "difference_categories": {
+      "byte-only": 1
+    }
+  },
+  "only_in_build1": [],
+  "only_in_build2": [],
+  "differences": [
+    {
+      "path": "data/R/3/4/2.glb",
+      "sha256_1": "af5b5ebc2a904861e16b9e61aa443b70c321bd3d60d9075e5ad2a31456e2a36c",
+      "sha256_2": "141dd8ea6c8214b789ae2cefb9b67c6d117e4a4d36532c78bc359d97152d791d",
+      "size_1": 4804,
+      "size_2": 4804,
+      "category": "byte-only"
+    }
+  ]
+}

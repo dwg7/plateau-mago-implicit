@@ -9,8 +9,8 @@ the next concrete step," not narrate history (that's what git log and
 ## Status as of 2026-08-25
 
 **Phase 0 complete, Phase 1 complete, Phase 2 substantially complete
-(including real browser rendering + real public hosting), Phase 3
-preliminary-only.** This was a single long session that took the project
+(including real browser rendering + real public hosting), Phase 3 formally
+complete for the small profile.** This was a single long session that took the project
 from "merged scaffolding, never actually run" to "real PLATEAU data,
 real Mago 3DTiler output, rendering correctly in a real browser from a
 real public host." Almost everything that could plausibly be wrong with
@@ -39,9 +39,10 @@ about Mago's CLI, CRS handling, subtree format, or CesiumJS behavior.**
 
 **Not yet done:** `make build ... PROFILE=full` (whole-municipality, never
 attempted); Muroran through the real pipeline (Phase 5 — only a
-config-verification spot check was done); formal Phase 3 (two concurrency
-settings); loading Muroran or a multi-building dataset in the viewer
-(only ever tested with the single-building small_file).
+config-verification spot check was done); Phase 4 (expanded, multi-building
+Sarabetsu determinism/concurrency check — Phase 3 so far only used the
+single-building small_file); loading Muroran or a multi-building dataset in
+the viewer (only ever tested with the single-building small_file).
 
 ## The single most important finding: CesiumJS 1.117 cannot render Implicit Tiling at all
 
@@ -102,11 +103,52 @@ as-is (generic `file_server`, CORS already `*`). That draft file is now
 effectively unnecessary; kept for reference/if the simpler config ever
 needs it, but don't assume it's in use.
 
-`viewer/viewer.js`'s predefined `VIEWPOINTS` still point at same-origin
-`/tiles/...` paths (i.e. only resolve if someone runs `make serve`
-locally) — **not yet repointed at the real tunnel.optgeo.org URLs.** That
-would be the natural next step to make the GitHub Pages dropdown usable
-without a custom URL paste.
+**(2026-08-25 update) `viewer/viewer.js`'s `VIEWPOINTS` now point the two
+published Sarabetsu entries at the real
+`https://tunnel.optgeo.org/plateau-mago-implicit/...` URLs**; the two
+Muroran entries still point at same-origin `/tiles/...` (only resolve via
+`make serve`) since Muroran hasn't been built/published yet — their
+dropdown labels now say so explicitly (`viewer/index.html`). Verified for
+real: served `viewer/` locally, selected "Sarabetsu Village — Implicit
+(small)" from the dropdown, confirmed via
+`performance.getEntriesByType('resource')` that it fetched
+`tileset.json` from `tunnel.optgeo.org` (not localhost), and confirmed
+`tileset.statistics` reached `{visited:5, selected:1}` — the exact
+known-good numbers from the Phase 2 CesiumJS 1.144 finding above. Same
+check done for "Sarabetsu Village — Explicit (small)": confirmed both
+`data/RC0000.glb` and `data/RC1000.glb` were actually fetched from
+`tunnel.optgeo.org` and reached `{selected:2, features:2, tris:14,
+tilesLoaded:2}` — matching Explicit mode's known 2-content-tile (LOD0 +
+LOD1) structure. Not yet re-verified through the actual deployed GitHub
+Pages page (only tested against the edited local files) — that requires
+committing and pushing first.
+
+## Phase 3 (determinism) is now formally complete for the small profile
+
+Ran the actual `docs/test-plan.md` procedure — two concurrency settings,
+not just the earlier single-pair preliminary check: 4 builds (2×
+`CONCURRENCY=1`, 2× `CONCURRENCY=4`), 3 pairwise comparisons (1v1, 4v4, and
+directly 1v4). All 4 root `tileset.json` files are byte-identical (same
+SHA-256); every comparison classifies **L2/PASS**, with the only
+difference in each case being the same benign per-run embedded-UUID
+`byte-only` difference in the GLB (see the Phase 3 tooling gap above).
+Concurrency itself introduced no additional non-determinism. Full run log
+and reports: `docs/determinism.md` Results, `docs/findings.md` Phase 3.
+**Caveat carried forward to Phase 4:** this only tested one building: a
+real multi-building/parallel-write race could behave differently at scale,
+so Phase 4 should re-check determinism, not just assume it from this
+result.
+
+**Found and fixed in the process:** `scripts/compare-builds.sh` and
+`scripts/build.sh`'s `full`-profile branch both used `mapfile` (a bash 4+
+builtin). macOS ships bash 3.2 as its default `/bin/bash`; whenever that's
+earlier on `PATH` than a newer bash, `#!/usr/bin/env bash` resolves to it
+and `mapfile` fails outright with `mapfile: command not found` — this
+silently broke `make compare` (and would break `make build ...
+PROFILE=full`) on an unmodified macOS `PATH`. Fixed by replacing both with
+a portable `while IFS= read -r; do …; done` loop; re-verified `make
+compare` succeeds under both plain `/bin/bash` (3.2) and Homebrew's bash 5,
+and `make test` still passes.
 
 ## Tooling gaps closed this session
 
@@ -172,12 +214,16 @@ re-verified against real data:
 
 ## Next concrete step
 
-1. Point `viewer/viewer.js`'s `VIEWPOINTS` at the real
-   `https://tunnel.optgeo.org/plateau-mago-implicit/...` URLs so the
-   GitHub Pages dataset dropdown resolves without a manual URL paste.
-2. Run the formal Phase 3 procedure (two concurrency settings, full
-   `docs/determinism.md` classification, a proper run log) — current
-   L2/PASS is a strong single-sample signal, not the formal result.
+1. ~~Point `viewer/viewer.js`'s `VIEWPOINTS` at the real
+   `https://tunnel.optgeo.org/plateau-mago-implicit/...` URLs~~ **Done
+   2026-08-25** — see "Real public hosting" above for verification detail.
+   Not yet committed/pushed, so the live GitHub Pages page doesn't have
+   this change yet.
+2. ~~Run the formal Phase 3 procedure (two concurrency settings, full
+   `docs/determinism.md` classification, a proper run log)~~ **Done
+   2026-08-25** — see "Phase 3 (determinism) is now formally complete"
+   above. L2/PASS confirmed at both concurrency settings and across them,
+   for the single-building small profile.
 3. Complete Phase 2's remaining checklist items: geometric-error/hierarchy
    comparison against `docs/test-plan.md`'s full checklist (feature-count
    reconciliation is already done).
@@ -186,6 +232,13 @@ re-verified against real data:
    to report it upstream.
 5. Only after Phase 1–4 fully complete for Sarabetsu: start Phase 5
    (Muroran) for real.
+
+Uncommitted local changes this session: `viewer/viewer.js`,
+`viewer/index.html` (Sarabetsu VIEWPOINTS → real tunnel.optgeo.org URLs),
+`scripts/compare-builds.sh`, `scripts/build.sh` (mapfile → portable loop),
+`docs/determinism.md`, `docs/findings.md`, this file. Not committed yet —
+ask the user before committing/pushing (pushing is what makes the GitHub
+Pages viewer pick up the VIEWPOINTS change).
 
 Lower-priority, tracked but not blocking:
 

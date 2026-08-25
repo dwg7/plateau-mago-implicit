@@ -12,15 +12,19 @@
 
 // Predefined viewpoints.
 //
-// tilesetUrl is absolute and points at nginx's /tiles/ location (aliased to
-// data/output/ — see config/nginx.conf and compose.yml), under a "latest"
-// symlink that scripts/build.sh updates on every successful build to point
-// at that build's timestamped BUILD_ID directory. This must stay in sync
-// with the output path scripts/build.sh actually writes to.
+// Sarabetsu entries point at the real published build on tunnel.optgeo.org
+// (scripts/publish.sh / make publish), so they resolve from the GitHub Pages
+// viewer with no local server needed — verified reachable via `curl -I`
+// 2026-08-25 (see HANDOVER.md "Real public hosting"). Muroran has not been
+// built/published yet (Phase 5, not started — see docs/findings.md), so
+// those entries still point at nginx's local /tiles/ location (aliased to
+// data/output/ — see config/nginx.conf and compose.yml) and only resolve
+// when running `make serve` locally. Update them to the equivalent
+// tunnel.optgeo.org URL once Muroran is published for real.
 const VIEWPOINTS = {
   sarabetsu_explicit_small: {
     label: 'Sarabetsu Village — Explicit (small)',
-    tilesetUrl: '/tiles/sarabetsu/explicit/small/latest/tileset.json',
+    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/small/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(143.1, 42.6, 5000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
@@ -30,7 +34,7 @@ const VIEWPOINTS = {
   },
   sarabetsu_implicit_small: {
     label: 'Sarabetsu Village — Implicit (small)',
-    tilesetUrl: '/tiles/sarabetsu/implicit/small/latest/tileset.json',
+    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/small/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(143.1, 42.6, 5000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
@@ -39,7 +43,7 @@ const VIEWPOINTS = {
     },
   },
   muroran_explicit_small: {
-    label: 'Muroran City — Explicit (small)',
+    label: 'Muroran City — Explicit (small) [local only, not yet published]',
     tilesetUrl: '/tiles/muroran/explicit/small/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(141.0, 42.3, 8000),
     orientation: {
@@ -49,7 +53,7 @@ const VIEWPOINTS = {
     },
   },
   muroran_implicit_small: {
-    label: 'Muroran City — Implicit (small)',
+    label: 'Muroran City — Implicit (small) [local only, not yet published]',
     tilesetUrl: '/tiles/muroran/implicit/small/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(141.0, 42.3, 8000),
     orientation: {

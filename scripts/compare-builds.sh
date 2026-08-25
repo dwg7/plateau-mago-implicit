@@ -24,8 +24,15 @@ NORM_DIR="$REPO_ROOT/manifests/normalized"
 REPORT_DIR="$REPO_ROOT/manifests/reports"
 mkdir -p "$NORM_DIR" "$REPORT_DIR"
 
-# Find two most recent builds (exclude $OUTPUT_BASE itself)
-mapfile -t BUILDS < <(find "$OUTPUT_BASE" -mindepth 1 -maxdepth 1 -type d | sort | tail -2)
+# Find two most recent builds (exclude $OUTPUT_BASE itself).
+# Uses a while/read loop rather than `mapfile`/`readarray` (bash 4+ only):
+# macOS ships bash 3.2 as its default `/bin/bash`, and `#!/usr/bin/env bash`
+# resolves to it whenever nothing newer sits earlier on PATH — mapfile then
+# fails with "command not found" before this script does anything useful.
+BUILDS=()
+while IFS= read -r dir; do
+    BUILDS+=("$dir")
+done < <(find "$OUTPUT_BASE" -mindepth 1 -maxdepth 1 -type d | sort | tail -2)
 
 if [ "${#BUILDS[@]}" -lt 2 ]; then
     echo "ERROR: Need at least two builds to compare." >&2
