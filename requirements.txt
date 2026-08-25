@@ -1,0 +1,15 @@
+# Third-party Python dependencies for this project's tools/*.py scripts.
+#
+# CLAUDE.md's default is "standard library only, no new external
+# dependencies without discussing it with the user first" — this file
+# exists specifically because one was discussed and approved
+# (2026-08-27): tools/geoid_correct.py needs Japan's official GSIGEO2011
+# geoid model to convert PLATEAU's orthometric building heights to the
+# ellipsoidal heights 3D Tiles/CesiumJS expect. See docs/findings.md
+# "Cross-phase follow-up: terrain/building vertical datum mismatch" for
+# why this is needed, and tools/geoid_correct.py's own docstring for how
+# it's used.
+#
+# Install with: pip3 install -r requirements.txt
+
+japan-geoid>=0.4.3

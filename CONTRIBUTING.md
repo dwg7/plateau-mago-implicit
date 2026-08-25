@@ -33,7 +33,10 @@ make bootstrap
 ## Code style
 
 - Shell scripts: POSIX-compatible Bash, `set -euo pipefail`
-- Python: PEP 8, no external dependencies not already in use
+- Python: PEP 8, no new external dependencies without discussing it with
+  the user first (`pip3 install -r requirements.txt` for the one
+  currently in use — `japan-geoid`, for `tools/geoid_correct.py`'s
+  GSIGEO2011 geoid correction; approved 2026-08-27, see `DECISIONS.md`)
 - YAML: two-space indentation, quoted strings where ambiguous
 
 ## Testing

@@ -38,6 +38,21 @@ check_command git "Git"
 check_command yq "yq (YAML parser)"
 echo ""
 
+echo "--- Python dependencies ---"
+# The only third-party Python dependency in this project (approved
+# 2026-08-27, see DECISIONS.md and requirements.txt): tools/geoid_correct.py
+# needs GSIGEO2011 to convert PLATEAU's orthometric building heights to
+# ellipsoidal height before Mago sees them. Checked here, not
+# auto-installed, so bootstrap stays a "verify and report" script like
+# the rest of this file.
+if python3 -c "import japan_geoid" &>/dev/null; then
+    echo "  ✓ japan-geoid: $(python3 -c 'import importlib.metadata as m; print(m.version("japan-geoid"))' 2>/dev/null || echo 'installed')"
+else
+    echo "  ✗ japan-geoid: NOT FOUND (run: pip3 install -r requirements.txt)"
+    ERRORS=$((ERRORS + 1))
+fi
+echo ""
+
 echo "--- Environment ---"
 echo "  OS: $(uname -s) $(uname -r)"
 echo "  Arch: $(uname -m)"

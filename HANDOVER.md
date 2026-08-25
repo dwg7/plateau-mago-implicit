@@ -6,7 +6,15 @@ work session — it should always answer "what's the state right now and what's
 the next concrete step," not narrate history (that's what git log and
 `docs/findings.md` are for).
 
-## Status as of 2026-08-25/26
+## Status as of 2026-08-25/26/27
+
+**2026-08-27 in one line:** found and fixed a real vertical-datum bug —
+PLATEAU buildings were rendering 28-34m buried below the newly-added real
+terrain; root-caused, fixed with a new `japan-geoid`-based build step,
+rebuilt and republished all 4 full-profile combinations. See "Real
+elevation added" below for the full account. Only remaining step is the
+user's own visual reconfirmation (Cloudflare cache may still show the old
+result for a few hours).
 
 **Phases 0–6 all run for real against both municipalities, and all 8
 dataset/mode/profile combinations are published live on
@@ -531,13 +539,78 @@ are both true, and real terrain tile requests (`layer.json`, `0/0/0.terrain`,
 pixel rendering (same limitation as everything else viewer-related this
 session).
 
-**Open question, not investigated:** Mago's building placement uses
-ellipsoid height by default (no terrain-clamping option was passed at
-build time) — in sloped areas, especially Muroran (a port city, not
-flat — `docs/test-plan.md`'s Phase 5 explicitly calls out "slope and
-coastal conditions" as something to watch), a building's base may not
-sit flush with the now-real terrain surface underneath it. Worth checking
-once the user can see it live.
+**Update 2026-08-26/27: the open question above was answered (worse than
+"may not sit flush"), and then fixed.** Decoded real absolute elevations
+from `bldg:lod1Solid` for 20 buildings across both municipalities and
+sampled the live viewer's actual Re:Earth Terrain provider at those exact
+coordinates (`Cesium.sampleTerrain` in a real browser tab against the
+deployed GitHub Pages page). Result: buildings sit a tight, systematic
+**28–34 m below** the real terrain surface — Muroran: mean −33.37 m
+(stdev 0.75 m, n=12, coastal to hillside); Sarabetsu: mean −27.78 m
+(stdev 0.66 m, n=5). Cross-checked independently against
+`GeographicLib`'s EGM2008 geoid calculator: undulation (N) at Muroran's
+coordinates is 32.83 m, at Sarabetsu's is 27.91 m — both match the
+measured offsets to within 0.5 m. **Root cause: PLATEAU's `lod1Solid`
+height values are effectively orthometric (geoid-referenced, confirmed
+against PLATEAU's own documentation) despite being declared under
+EPSG:6697 (nominally ellipsoidal by CRS definition); `scripts/build.sh`'s
+`--proj` fix only corrects horizontal axis order and passes Z through
+unchanged, so Mago places buildings at the raw orthometric value while 3D
+Tiles/CesiumJS — and Re:Earth Terrain's EGM2008-corrected DEM — both
+treat height as true ellipsoidal.** The user independently confirmed this
+visually on the live site before the fix: "全部建物が沈んでいる" (all the
+buildings are sunk), matching high-rises being the visible exception (a
+tall enough building pokes back up through a ~33m sink).
+
+**The user then asked whether Eukarya (who operate Re:Earth Terrain) had
+already solved this** — leading to finding **PLATEAU-Terrain**
+(`tile.plateauview.mlit.go.jp`), Eukarya's *official* PLATEAU VIEW terrain
+service, whose own docs claim GSIGEO2011-based alignment with PLATEAU's
+3D building data specifically. Tested it directly: **the offset was
+unchanged** — confirming the terrain side was never the problem; the fix
+has to happen on the building-height side, in this project's own
+pipeline. Found the real fix PLATEAU's own tooling uses instead: an
+official FME "Vertical Transformation with GSIGEO2011" step, and a small
+MIT-licensed library implementing the same model —
+[japan-geoid](https://github.com/ciscorn/japan-geoid). With the user's
+explicit approval (this project's first third-party Python dependency —
+see `DECISIONS.md` D21), built `tools/geoid_correct.py` (a second
+build-time staging step alongside `tools/strip_higher_lod.py`) that adds
+GSIGEO2011 geoid undulation to every building coordinate's height before
+Mago sees it. Verified end-to-end on the small_file first (output
+region height became 34.79–39.01m, matching both the geoid-corrected
+source value and real terrain at that location), then rebuilt all 4
+full-profile combinations — tile counts unchanged (198/760/1259/553),
+`make validate` shows only the pre-existing, unrelated
+`METADATA_INVALID_LENGTH` pattern. Full detail: `docs/findings.md`
+"Cross-phase follow-up: terrain/building vertical datum mismatch."
+
+**Published 2026-08-27** (user approved): all 4 full-profile combinations
+re-published via `make publish ... EXECUTE=1`. Verified the origin itself
+is correct — a cache-busting query string (`?cachebust=...`) returns
+`cf-cache-status: MISS` and the new, geoid-corrected root bounding region
+(Sarabetsu 142.3–354.9m, Muroran 32.3–521.6m — matching the local
+rebuilt output exactly).
+
+**Caching gotcha, worth knowing before checking visually:** immediately
+after publishing, the canonical `/latest/tileset.json` URLs were still
+returning `cf-cache-status: HIT` with `age: ~6600s` (~110 min) — i.e.
+**Cloudflare's edge cache is still serving the pre-fix (buried-buildings)
+tileset**, same `cache-control: max-age=14400` (4h) behavior already
+documented above for the small-profile deletion. No Cloudflare purge
+API is configured in this session, so this can't be forced. It'll clear
+on its own within 4h of each tile's own cache time, but a spot-check on
+the live viewer soon after this publish may still show the *old*, buried
+appearance purely from caching, not because the fix didn't take —
+appending a throwaway query string to the URL (or waiting) sidesteps it.
+
+Still needs: visual reconfirmation in the live viewer once the cache
+clears — this fix was verified through coordinate math, two independent
+geoid cross-checks (EGM2008 calculator, PLATEAU-Terrain), one
+small-profile build round-trip, and an origin-vs-cache check via
+cache-busting, not through a screenshot, for the same
+`document.visibilityState: "hidden"` reason as every other viewer check
+this project has done.
 
 Attribution for the terrain layer (Re:Earth Terrain / Mapterhorn) added
 to `viewer/index.html`'s attribution line, alongside PLATEAU and
@@ -688,22 +761,41 @@ step.
 Immediate next steps, roughly in priority order:
 
 1. **Ask the user to spot-check the viewer live** — kitaphoto imagery,
-   Re:Earth Terrain elevation, the Japanese consumer-facing redesign, the
-   collapsible panels, and (the actual motivating question) whether the
-   LOD1-baseline fix resolved the "torn texture" look on the large
-   Sarabetsu building. This session's automated browser tooling confirmed
-   network/config correctness for all of these (right provider types,
-   real tile fetches succeeding, no console errors) but never got past
-   the recurring `document.visibilityState: "hidden"` limitation to
-   confirm actual on-screen pixels — every visual claim above is grounded
-   in network/data-level checks, not a screenshot.
-2. **Check whether real terrain (Re:Earth Terrain) creates a building/
-   ground mismatch** — flagged but not investigated: Mago's building
-   placement uses ellipsoid height by default (no terrain-clamping option
-   passed at build time), so in sloped areas — Muroran especially, a port
-   city, not flat — a building's base may not sit flush with the terrain
-   surface now rendered underneath it. Only checkable once the user can
-   see it live (point 1).
+   Re:Earth Terrain elevation (now expected to show buildings buried
+   ~28-34m below ground, per point 2 below — not just misaligned),
+   the Japanese consumer-facing redesign, the collapsible panels, and
+   (the actual motivating question) whether the LOD1-baseline fix
+   resolved the "torn texture" look on the large Sarabetsu building.
+   This session's automated browser tooling confirmed network/config
+   correctness for all of these (right provider types, real tile
+   fetches succeeding, no console errors) but never got past the
+   recurring `document.visibilityState: "hidden"` limitation to confirm
+   actual on-screen pixels — every visual claim above is grounded in
+   network/data-level checks, not a screenshot. Claude in Chrome (a real,
+   visible browser) was tried again this session as a workaround but had
+   no browser connected — still needs either that connection or the
+   user's own eyes.
+2. **Terrain/building vertical datum mismatch — root-caused, fixed, AND
+   published; only visual reconfirmation remains.** Root cause: PLATEAU's
+   `bldg:lod1Solid` heights are referenced to Tokyo Bay mean sea level
+   (orthometric), not the ellipsoid, despite EPSG:6697 being nominally
+   ellipsoidal — confirmed against PLATEAU's own documentation and by
+   testing that even Eukarya's official PLATEAU-Terrain service doesn't
+   fix it on its own (the terrain side was always correct). Fixed with a
+   new build-time staging step, `tools/geoid_correct.py`, using the
+   `japan-geoid` package (GSIGEO2011, the same model PLATEAU's own FME
+   workflow uses) — this project's first third-party Python dependency,
+   approved by the user first (`DECISIONS.md` D21). Verified on the
+   small_file, rebuilt all 4 full-profile combinations (tile counts
+   unchanged, `make validate` shows no new error type), and published
+   all 4 (user approved) — origin confirmed correct via cache-busting
+   (`cf-cache-status: MISS` returns the new height ranges). **What's
+   left:** the same visual reconfirmation as point 1 — plus be aware the
+   canonical `/latest/` URLs may still serve Cloudflare's stale,
+   pre-fix cache for up to ~4h after this publish (see "Real elevation
+   added" below for the exact cache-busting workaround). Full detail:
+   `docs/findings.md` "Cross-phase follow-up: terrain/building vertical
+   datum mismatch."
 3. Only real remaining measurement gap from `docs/test-plan.md`'s Phase
    4/6 lists: peak process memory, first-useful-render time, initial
    request count/bytes, navigation responsiveness, geographic-jump
@@ -755,8 +847,11 @@ Lower-priority, tracked but not blocking:
 
 ## Open questions for the user
 
-- None blocking. Everything above is technical follow-through, not a
-  pending decision.
+- **Resolved:** the geoid/datum fix-path question (build-time correction
+  via `japan-geoid`, D21) and the publish question — both approved by the
+  user 2026-08-27; the fix is built, verified, rebuilt, and published.
+  Nothing blocking here now except the Cloudflare cache TTL (~4h, see
+  above) before a live visual check will show the corrected result.
 - Worth a decision eventually, not urgent: switch to the Docker Hub
   `gaia3d/mago-3d-tiler` public image instead of the local JAR build? The
   JAR path already works and is arguably more transparent.

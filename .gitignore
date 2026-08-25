@@ -6,6 +6,7 @@ data/source/*
 data/output/*
 !data/output/.gitkeep
 data/.build-staging/
+data/.build-staging-geoid/
 
 # Python
 __pycache__/

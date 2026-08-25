@@ -158,11 +158,36 @@ fi
 # from there and writes into a per-build staging directory.
 STAGING_DIR="$REPO_ROOT/data/.build-staging/${DATASET}/${BUILD_ID}"
 mkdir -p "$STAGING_DIR"
-INPUT_FILES=()
+STAGED_FILES=()
 for src in "${SOURCE_FILES[@]}"; do
     dest="$STAGING_DIR/$(basename "$src")"
     python3 "$REPO_ROOT/tools/strip_higher_lod.py" "$src" "$dest" || {
         echo "ERROR: tools/strip_higher_lod.py failed on $src" >&2
+        exit 1
+    }
+    STAGED_FILES+=("$dest")
+done
+
+# Second staging pass: PLATEAU's building heights are referenced to Tokyo
+# Bay mean sea level (orthometric), not the ellipsoid, even though
+# EPSG:6697 is nominally an ellipsoidal-height CRS — verified empirically
+# against two independent, correctly-ellipsoidal terrain services
+# (buildings sit 28-34m below real terrain, matching each site's
+# GSIGEO2011 geoid undulation almost exactly; see docs/findings.md
+# "Cross-phase follow-up: terrain/building vertical datum mismatch").
+# Mago's --proj only fixes horizontal axis order and passes Z through
+# unchanged, so this has to happen before Mago sees the file, same as
+# LOD stripping above. Unconditional for both profiles — there's no
+# baseline scenario where feeding Mago un-geoid-corrected height is
+# correct once the destination renderer treats Z as ellipsoidal.
+GEOID_STAGING_DIR="$REPO_ROOT/data/.build-staging-geoid/${DATASET}/${BUILD_ID}"
+mkdir -p "$GEOID_STAGING_DIR"
+INPUT_FILES=()
+for src in "${STAGED_FILES[@]}"; do
+    dest="$GEOID_STAGING_DIR/$(basename "$src")"
+    python3 "$REPO_ROOT/tools/geoid_correct.py" "$src" "$dest" || {
+        echo "ERROR: tools/geoid_correct.py failed on $src" >&2
+        echo "  Is the japan-geoid package installed? pip3 install -r requirements.txt" >&2
         exit 1
     }
     INPUT_FILES+=("$dest")

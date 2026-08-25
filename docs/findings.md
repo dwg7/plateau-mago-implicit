@@ -1104,6 +1104,187 @@ there, only ruled out one candidate explanation.
 
 ---
 
+## Cross-phase follow-up: terrain/building vertical datum mismatch (2026-08-26)
+
+**Status: Root-caused and fixed, verified against real (re)builds.** Answers the open question HANDOVER.md
+flagged when Re:Earth Terrain was wired in ("Mago's building placement uses
+ellipsoid height by default... a building's base may not sit flush with the
+terrain surface"). The real answer is more severe than "may not sit flush":
+buildings are placed **systematically 28–34 m below** the real terrain
+surface, in both municipalities, and the exact offset matches each
+location's EGM2008 geoid undulation almost exactly.
+
+### Confirmed
+
+- ✓ **`bldg:lod1Solid`'s absolute Z coordinates are real, location-varying
+  elevations, not a flat placeholder.** Decoded 20 buildings' `lod1Solid`
+  `gml:posList` values directly from source CityGML (not from `lod0RoofEdge`,
+  which uses a literal `0` Z placeholder for its 2D outline and produced a
+  false "every building's base Z is 0" reading on a first, sloppier pass —
+  corrected before drawing any conclusion). Muroran's base elevations range
+  from ~1.3 m (coastal) to ~82 m (hillside, port-city terrain); Sarabetsu's
+  range ~222–316 m (inland plateau farmland) — both geographically
+  plausible, confirming these are real absolute heights, declared under
+  each dataset's `EPSG:6697` (JGD2011, geographic 3D — ellipsoidal height by
+  CRS definition).
+- ✓ **Sampled the live viewer's actual Re:Earth Terrain provider** (the
+  exact `CesiumTerrainProvider` instance `viewer/viewer.js` constructs, via
+  `Cesium.sampleTerrain(viewer.terrainProvider, 12, cartographics)` run
+  against the deployed `https://dwg7.github.io/plateau-mago-implicit/` page
+  in a real browser tab — `sampleTerrainMostDetailed` returned `null` at
+  several points, root-caused to real coverage gaps in Mapterhorn's global
+  DEM at max zoom, not a bug; fixed by requesting a fixed level (12) instead)
+  at 17 of those 20 building coordinates (3 still returned no data even at
+  level 12/10/8/6/4 and were dropped).
+- ✓ **The source height vs. sampled terrain height difference is a tight,
+  per-municipality constant, not noise:** Muroran (n=12): mean **−33.37 m**,
+  population stdev 0.75 m, range −32.34 to −34.75 m — this despite the 12
+  points spanning coastal (~1.3 m source elevation) to hillside (~82 m)
+  terrain, exactly the "slope and coastal conditions" `docs/test-plan.md`
+  flagged for Phase 5. Sarabetsu (n=5): mean **−27.78 m**, population stdev
+  0.66 m, range −26.85 to −28.72 m. A sub-1m-stdev cluster across such
+  different elevations/slopes rules out ordinary DEM-resolution noise as
+  the explanation — that would scatter much more on Muroran's slopes.
+- ✓ **Independently cross-checked against `GeographicLib`'s EGM2008 geoid
+  calculator** (`geographiclib.sourceforge.io/cgi-bin/GeoidEval`, a
+  standard reference tool, not this project's own code): EGM2008 geoid
+  undulation (N) at 42.32°N/140.98°E (central Muroran) is **32.83 m**; at
+  42.58°N/143.11°E (central Sarabetsu) is **27.91 m**. Both match the
+  measured offsets above to within 0.5 m (Muroran) and 0.13 m (Sarabetsu) —
+  well inside the ~0.7 m per-municipality stdev already observed from real
+  DEM/geoid-model discretization. This is a quantitative match, not a
+  qualitative "seems plausible" — the two independent numbers (measured
+  offset vs. published EGM2008 N) agree to a fraction of a percent at both
+  sites.
+
+### Root cause (strong evidence, not yet upstream-confirmed)
+
+PLATEAU's `bldg:lod1Solid` height values, though declared under `EPSG:6697`
+(nominally ellipsoidal height by CRS definition), are in practice populated
+with **orthometric heights** — elevation above the geoid, i.e. Japan's
+standard 標高/T.P.-referenced elevation, most likely derived from GSI's DEM
+during PLATEAU production. `scripts/build.sh`'s
+`--proj "+proj=longlat +datum=WGS84 +axis=neu +no_defs"` only fixes
+axis *order* for the horizontal components; it passes the Z value straight
+through unchanged, so Mago places buildings at that raw orthometric value
+and 3D Tiles/CesiumJS then interpret it as WGS84 **ellipsoidal** height (by
+construction — `Cartesian3.fromDegrees`/`CARTOGRAPHIC_DEGREES` height is
+always ellipsoidal). Re:Earth Terrain's DEM, per its own documentation and
+`viewer/viewer.js`'s comment on it, *does* apply the EGM2008 geoid
+correction to render a true ellipsoidal ground surface. The gap between
+"building Z taken as ellipsoidal but is actually orthometric" and "terrain
+correctly rendered as ellipsoidal" is exactly the local geoid undulation —
+which is what was measured.
+
+### Unexpected findings
+
+- ? **The severity was worse than the open question anticipated when first
+  raised.** HANDOVER.md originally framed this as "may not sit flush" (a
+  cosmetic edge case). The real measured effect — buildings placed 28–34 m
+  *below* the real terrain surface, uniformly across both municipalities
+  and regardless of slope — meant every building in the published
+  full-profile builds rendered as fully buried once real terrain became
+  the ground surface, not merely misaligned at the base. Confirmed by the
+  user directly, independently of this investigation: after seeing the
+  live site with real terrain, they reported "all buildings except a few
+  of Muroran's high-rises appear sunk into the ground" — matching the
+  measured 28–34 m offset almost exactly (a high-rise tall enough to
+  poke back above a ~33 m sinking would look mostly normal from a distance;
+  everything shorter would visibly disappear into the terrain).
+- ✓ (resolved) **This is a documented, known PLATEAU convention, not
+  specific to these two datasets.** PLATEAU's own technical documentation
+  (https://www.mlit.go.jp/plateau/learning/tpc03-4/, "CityGMLの座標・高さと
+  データ変換") states building heights are referenced to Tokyo Bay mean sea
+  level, not the ellipsoid. PLATEAU's officially-recommended FME conversion
+  workflow includes a "Vertical Transformation with GSIGEO2011" step for
+  exactly this reason — every PLATEAU CityGML consumer that wants correct
+  absolute placement is expected to apply this conversion themselves; it
+  is not something Mago 3DTiler (or any other converter) does automatically
+  (confirmed directly in Mago's own build log output: `Geoid Model(Height
+  Reference): Ellipsoid` — it takes input height as already ellipsoidal,
+  with no correction option).
+- ✓ (resolved) **Swapping to PLATEAU's own official terrain service does
+  NOT fix this on its own** — tested directly (see Confirmed, next
+  section) — because the terrain side was never the problem; the source
+  building height data is the side that needs correcting, and no terrain
+  provider can compensate for that from the outside.
+
+### Confirmed (fix)
+
+- ✓ **Tried the "Eukarya-aligned" terrain-only fix first, and it didn't
+  work — which is itself informative.** At the user's request ("Eukarya
+  さんの方で何かやってなかったっけ？"), found and tested **PLATEAU-Terrain**
+  (`https://tile.plateauview.mlit.go.jp/terrain`), operated by Eukarya as
+  part of the official PLATEAU VIEW infrastructure, whose own
+  documentation states it converts GSI's DEM via GSIGEO2011 "to ensure
+  vertical alignment with PLATEAU's 3D building datasets." Re-ran the same
+  17-point `Cesium.sampleTerrain` check against this provider instead of
+  Re:Earth Terrain: **the offset was unchanged** (Muroran ~−33m, Sarabetsu
+  ~−27m, same as before). This confirms the terrain side was always
+  correct — the mismatch is entirely in how this project's own pipeline
+  handles the *source* building height, not in which terrain service is
+  used.
+- ✓ **Found the actual fix PLATEAU's own tooling uses**: PLATEAU's
+  officially-recommended FME workflow applies a "Vertical Transformation
+  with GSIGEO2011" step, and a small MIT-licensed library exists that
+  embeds the same model: `japan-geoid` (https://github.com/ciscorn/japan-geoid,
+  Rust with Python/JS bindings). Verified `geoid.get_height(lon, lat)`
+  against both municipalities' central coordinates: Muroran 32.99m,
+  Sarabetsu 28.08m — matching the measured offsets (33.37m / 27.78m) to
+  within the sampling noise already established, and even closer than the
+  EGM2008 cross-check above (as expected: GSIGEO2011 is Japan's own,
+  more locally accurate model, and the one PLATEAU's own tooling uses).
+- ✓ **Approved by the user** (via explicit confirmation, offered
+  alongside a no-new-dependency viewer-side alternative and a "do nothing
+  yet" option) to add `japan-geoid` as this project's first third-party
+  Python dependency — recorded in the new `requirements.txt` and
+  `DECISIONS.md` D21, checked (not silently auto-installed) by
+  `scripts/bootstrap.sh`.
+- ✓ **Built `tools/geoid_correct.py`**, a second build-time staging step
+  (same shape as `tools/strip_higher_lod.py`, wired into `scripts/build.sh`
+  immediately after it, unconditional for both profiles) that adds
+  GSIGEO2011 geoid undulation to every `gml:posList`/`gml:pos` height
+  found inside a `bldg:Building`/`bldg:BuildingPart` element — i.e.
+  orthometric → ellipsoidal, matching PLATEAU's own recommended
+  conversion. Benchmarked the geoid lookup at ~0.1μs/call (50,000 calls in
+  4.8ms), so no numpy/batching was needed even for source files with
+  30,000+ coordinate values.
+- ✓ **Verified end-to-end on the small_file before touching real
+  published data.** Ran `scripts/build.sh muroran implicit small` with the
+  new staging step: Mago's own log confirmed it still treats input height
+  as `Ellipsoid` (unchanged Mago behavior — the fix has to happen before
+  Mago, which it now does), and the output tileset's root bounding region
+  height became `34.79–39.01m` — exactly the geoid-corrected source value,
+  and squarely inside the real terrain range (~34–37m) measured near that
+  coastal location earlier in this investigation. Confirms Mago passes the
+  corrected Z through losslessly.
+- ✓ **Rebuilt all 4 full-profile combinations** (`sarabetsu`/`muroran` ×
+  `explicit`/`implicit`). Tile content counts are **unchanged** from the
+  pre-fix (post-LOD1-stripping) builds — 198/760/1259/553 — confirming the
+  fix only shifts vertical placement, not tiling structure or feature
+  count. `make validate` on all 4 shows only the already-documented,
+  unrelated `METADATA_INVALID_LENGTH` alignment-padding pattern (same
+  `CONTENT_VALIDATION_ERROR`/`METADATA_INVALID_LENGTH` shape as every
+  prior build) — no new error type introduced by this change.
+
+### Next smallest experiment
+
+The 4 rebuilt full-profile combinations need to be re-published (not yet
+done — a real, public-facing action, held for explicit confirmation) and
+then visually reconfirmed by the user in the live viewer — this fix was
+verified through coordinate math, an independent geoid calculator, a
+second official terrain service, and one small-profile build round-trip,
+not through a screenshot, for the same `document.visibilityState:
+"hidden"` reason as every other viewer check this project has done.
+A full-profile GLB spot-check (decoding an actual built building's Z from
+the 4 rebuilt tilesets, the way the small-profile check was done) was not
+repeated — the small-profile round-trip already established Mago
+preserves corrected height losslessly, and tile-count parity across all 4
+rebuilds shows no structural regression — but would be the next thing to
+do if any doubt remains after visual reconfirmation.
+
+---
+
 ## Phase 7: Optional higher-detail tests
 
 *Not started. Phase 7 is optional and separate.*

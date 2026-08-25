@@ -361,3 +361,63 @@ default to pinning the latest release of both the viewer library and the
 converter for this project, not "whatever the scaffold happened to ship
 with" — re-verify both are still current at the start of any future
 session that touches the viewer or the conversion pipeline.
+
+## D21 — Approved one new Python dependency (`japan-geoid`) to fix a real vertical-datum bug, not worked around with a viewer-side hack
+
+**Status:** Accepted, 2026-08-27
+
+Real elevation sampling (`Cesium.sampleTerrain` against two independent,
+correctly-ellipsoidal terrain services — Re:Earth Terrain and PLATEAU's
+own official PLATEAU-Terrain) found buildings sitting a tight, systematic
+28-34m below the real terrain surface in both municipalities. Root cause:
+PLATEAU's `bldg:lod1Solid` heights are referenced to Tokyo Bay mean sea
+level (confirmed against PLATEAU's own documentation), not the ellipsoid,
+even though EPSG:6697 is nominally an ellipsoidal-height CRS — and
+neither `scripts/build.sh`'s `--proj` CRS fix nor Mago 3DTiler itself
+(confirmed via its own build log: "Geoid Model(Height Reference):
+Ellipsoid" — it takes input height as already ellipsoidal) corrects for
+this. Full measurement detail: `docs/findings.md` "Cross-phase follow-up:
+terrain/building vertical datum mismatch."
+
+Considered and rejected a viewer-side fix (a per-dataset constant
+`modelMatrix` offset in `viewer/viewer.js`) as the "obvious" low-risk
+option requiring no new dependency — rejected because (a) it's imprecise
+at a municipality's edges, where the true geoid undulation drifts by
+multiple meters across a single dataset's extent (confirmed: Sarabetsu's
+own 5 sample points already span a 1.9m range), and (b) it only fixes
+*this* viewer, not the underlying GLB data any other consumer would load.
+
+Instead, added `tools/geoid_correct.py` (a new build-time staging step,
+same shape as `tools/strip_higher_lod.py`) using the `japan-geoid`
+package (MIT license, https://github.com/ciscorn/japan-geoid) — chosen
+specifically because it embeds GSI's own GSIGEO2011 grid, the same geoid
+model PLATEAU-Terrain and PLATEAU's officially-recommended FME
+"Vertical Transformation with GSIGEO2011" workflow both use, rather than
+a generic global model (EGM2008) that would introduce its own small
+regional discrepancy against PLATEAU's own tooling. Per-call cost is
+~0.1μs (benchmarked), so no batching/numpy dependency was needed despite
+some source files having 30,000+ coordinate values.
+
+This is the first third-party Python dependency in this project,
+crossing CLAUDE.md's "standard library only" default — flagged to the
+user explicitly (via `AskUserQuestion`, offering the viewer-side
+alternative and a "do nothing yet" option too) before installing
+anything, per CLAUDE.md's requirement to discuss new dependencies first.
+Approved. Recorded in `requirements.txt` (new file) and checked (not
+auto-installed) by `scripts/bootstrap.sh`. Consequence: `make build` now
+has a real Python package prerequisite beyond the interpreter itself —
+`docs/reproducibility.md` and any future "what does a clean clone need"
+documentation should list `pip3 install -r requirements.txt` alongside
+Docker/Node/etc.
+
+Verified before rebuilding real data: ran the small-profile Muroran build
+end-to-end with the new staging step wired in — the output tileset's
+bounding region height (34.79-39.01m) matched the geoid-corrected source
+value exactly, and independently landed in the same range as real
+terrain sampled at that coastal location (~34-37m), confirming Mago
+passes the corrected Z through losslessly. Rebuilt all 4 full-profile
+combinations; tile content counts were unchanged from the pre-fix builds
+(198/760/1259/553) — confirming the fix only shifts vertical placement,
+not tiling structure — and `make validate` on all 4 shows only the
+already-documented, unrelated `METADATA_INVALID_LENGTH` alignment-padding
+pattern, no new error type.
