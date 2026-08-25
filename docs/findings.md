@@ -234,15 +234,52 @@ data (not by reading Mago's docs alone):
   Implicit's `FileName`: offsets end at 50, declared byteLength 52;
   Explicit's `BatchId`: offsets end at 1, declared byteLength 4). This is
   the standard "pad binary buffer views to 4-byte alignment" pattern
-  common in glTF binary data — not obviously a content bug. Whether
-  `EXT_structural_metadata`'s spec requires exact-length bufferViews (in
-  which case Mago's alignment padding is non-conformant) or tolerates
-  trailing padding (in which case `3d-tiles-validator` is being overly
-  strict) has **not been checked against the normative spec text** — this
-  needs resolving before deciding which project (if either) to report to.
-  `scripts/validate.sh` correctly surfaces this as a failure either way
-  (per its job of not hiding real validator output), but "Mago has a
-  metadata bug" should not be asserted as fact until this is resolved.
+  common in glTF binary data — not obviously a content bug.
+- → **(2026-08-25) Checked against the normative spec text and the
+  validator's own source — genuinely ambiguous, not resolvable to
+  "confirmed bug" on either side; recommend an upstream *clarification
+  question*, not a bug report.** Read the primary sources directly rather
+  than inferring from behavior:
+  - `EXT_structural_metadata`'s spec
+    ([CesiumGS/glTF, `3d-tiles-next` branch](https://github.com/CesiumGS/glTF/blob/3d-tiles-next/extensions/2.0/Vendor/EXT_structural_metadata/README.md))
+    and the `propertyTable.property.schema.json` it defines say nothing
+    about the `values` buffer view's `byteLength` needing to exactly equal
+    the content length implied by `stringOffsets` — the spec only defines
+    how to *compute* a string's length from consecutive offsets, not a
+    constraint on the containing buffer view's declared size. The same
+    spec document *does* explicitly describe padding elsewhere (GLB `BIN`
+    chunk padded to an 8-byte boundary, "byte length of the BIN chunk may
+    be up to 7 bytes larger than JSON-defined `buffer.byteLength`"),
+    confirming trailing padding is an anticipated, normal part of this
+    extension's binary encoding at the chunk level — just not stated
+    either way at the individual-bufferView level.
+  - `3d-tiles-validator`'s own implementation
+    (`src/validation/metadata/BinaryPropertyTableValidator.ts`,
+    `computeNumberOfValues()` + `validateValuesBufferViewByteLength()`)
+    computes the expected length for a STRING property as *exactly* the
+    last `stringOffset` value, then rejects the buffer view on any
+    deviation (`actualByteLength !== expectedByteLength`, zero tolerance).
+    This is a deliberate, hand-written strict-equality check — not a
+    validator bug in the sense of misreading the spec, since the spec
+    doesn't state the rule either way at this level; it's a validator
+    design choice that happens to reject Mago's common alignment-padding
+    convention. No spec citation appears in the validator's code comments
+    or the PR that introduced it
+    ([CesiumGS/3d-tiles-validator#357](https://github.com/CesiumGS/3d-tiles-validator/pull/357)
+    and its predecessor metadata-validation PRs #236–238).
+  - No prior GitHub issue in `CesiumGS/3d-tiles-validator` discusses this
+    specific question (searched for `METADATA_INVALID_LENGTH` and
+    `byteLength`/padding — no hits).
+  **Conclusion:** neither "Mago has a metadata bug" nor "the validator is
+  wrong" can be asserted as fact — the spec is silent on this specific
+  point, and the validator's strictness is a defensible-but-undocumented
+  design choice. `scripts/validate.sh` correctly continues to surface this
+  as a real validation failure (per its job of not hiding real validator
+  output). The appropriate next action, if pursued, is a clarification
+  *question* to `CesiumGS/3d-tiles-validator` or the `EXT_structural_metadata`
+  spec repo asking whether the `values` buffer view's `byteLength` must
+  exactly match the content length or may include alignment padding — not
+  a bug report against either project.
 - → `--tilingMode implicit` is explicitly marked `[Experimental]` in Mago
   3DTiler's own `--help` output (v1.16.2). Per `docs/limitations.md`, this
   is stated here accurately and neutrally, not as a defect — but it means
@@ -477,6 +514,35 @@ the `METADATA_INVALID_LENGTH` validator finding.*
   correctly in the GitHub Pages-hosted viewer (`https://dwg7.github.io/plateau-mago-implicit/`)
   over real HTTPS/CORS, in a real browser. `docs/hypothesis.md`'s Claim 4
   status updated accordingly.
+- ? **(2026-08-25, reported by the user directly) The GitHub Pages viewer
+  loaded successfully but showed no building — not a tileset or CesiumJS
+  defect, a wrong camera target in `viewer/viewer.js`.** `VIEWPOINTS`'
+  `destination` coordinates were a rough Sarabetsu/Muroran
+  municipality-center guess ((143.1, 42.6) and (141.0, 42.3)) dating from
+  before the small_file building's precise coordinates were established in
+  Phase 1/5 — never corrected afterward. Computed the actual distance from
+  each guess to the real, verified building location (143.2530°E,
+  42.6604°N for Sarabetsu; 140.9694°E, 42.3076°N for Muroran, both from
+  earlier Phase 1/5 findings): **14.2 km** for Sarabetsu, **2.7 km** for
+  Muroran. At the previous 5000–8000 m viewing altitude with a 45°
+  downward pitch, a building this size (bounding sphere radius ~77 m) at
+  that distance is far outside the camera's view frustum — the tileset was
+  correctly published and correctly loaded (confirmed independently
+  earlier the same day via direct `fetch()` and manual `Cesium3DTileset`
+  traversal against the real host), but the camera never pointed anywhere
+  near it. Fixed by setting `destination` to each dataset's actual
+  verified building coordinates at a much closer 300 m, with a straight
+  nadir (`pitch: -90`) orientation specifically to guarantee the tiny
+  building stays centered in frame regardless of forward-look offset —
+  the kind of framing math error that caused this bug in the first place.
+  **Not independently re-confirmed by pixel/screenshot rendering in this
+  session** — the same `document.visibilityState: "hidden"` testing-tool
+  artifact from the earlier CesiumJS-1.144 re-verification (see Phase 2
+  "post-push" note in `HANDOVER.md`) blocked live tile selection in this
+  automated browser pane even after the fix; the coordinate correction
+  itself is verified by direct computation against previously-confirmed
+  building locations, not by live pixels. Awaiting the user's own
+  confirmation from a real browser tab.
 
 ### Upstream candidates
 
@@ -496,10 +562,14 @@ minimum supported CesiumJS version precisely.
 `scripts/build.sh`'s Mago invocation (`--implicitSubtreeLevels`) — currently
 unused, so Mago's default of 4 is used regardless of what's configured.
 
-↓ Prepare a minimal reproduction of the `METADATA_INVALID_LENGTH`
-error (`BatchId`/`FileName` buffer-view length mismatches) as a proper
-upstream report per `CONTRIBUTING.md`'s process, now that it's confirmed
-as a real, validator-detected defect rather than a hypothesis.
+↓ (2026-08-25: superseded — see Phase 1 Upstream candidates, spec text now
+checked.) If pursued further, prepare a minimal reproduction of the
+`METADATA_INVALID_LENGTH` finding and file it as a *clarification
+question* (not a bug report) against `CesiumGS/3d-tiles-validator` or the
+`EXT_structural_metadata` spec repo, per `CONTRIBUTING.md`'s process — the
+spec text doesn't settle whether trailing alignment padding on a
+property-table `values` buffer view is conformant, so neither project can
+honestly be told "you have a bug" yet.
 
 ---
 
@@ -631,7 +701,7 @@ complete.*
 
 | Claim | Status | Phase evaluated | Notes |
 |---|---|---|---|
-| Conversion feasibility | Partially confirmed | 1, 2 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, now fully validatable (subtree tooling gap closed) and fully compared against Explicit (feature identity, no missing/duplicate geometry, hierarchy/geometric error), AND confirmed rendering correctly in a real browser (CesiumJS 1.144) — but validation surfaced a real Mago defect (`METADATA_INVALID_LENGTH`), so "validates independently" is currently ✗ |
+| Conversion feasibility | Partially confirmed | 1, 2 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, now fully validatable (subtree tooling gap closed) and fully compared against Explicit (feature identity, no missing/duplicate geometry, hierarchy/geometric error), AND confirmed rendering correctly in a real browser (CesiumJS 1.144) — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text — neither Mago nor the validator can be said to be "wrong" on current evidence), so "validates independently" is currently ✗ |
 | Determinism | Confirmed (Level 2) for small profile | 3 (formal) | Initial L3/FAIL was a tooling false-negative (a benign per-run random ID in GLB metadata); after fixing `tools/normalize.py` to redact it, formal Phase 3 (4 builds, concurrency=1 and concurrency=4, 3 pairwise comparisons) confirms L2/PASS in every comparison, with byte-identical `tileset.json` across all 4 builds. Not yet re-checked at Phase 4 (multi-building) scale |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
 | Practical consumption | Partially confirmed | 2 | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but only tested with the tiniest possible dataset (1 building); navigation/memory/long-session behavior at any real scale is still untested |

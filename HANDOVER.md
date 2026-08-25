@@ -225,6 +225,37 @@ annotation crashed at import time on this environment's Python 3.9 (no
 minimum Python version is pinned anywhere in this repo). Full detail:
 `docs/findings.md` Phase 2.
 
+## Fixed: viewer camera pointed 14km/2.7km away from the actual building
+
+**Reported directly by the user** (2026-08-25, after the tunnel.optgeo.org
+push): the live GitHub Pages page loaded with no error, but no building
+was ever visible. Root cause: `viewer/viewer.js`'s `VIEWPOINTS.destination`
+coordinates were a rough municipality-center guess ((143.1, 42.6) for
+Sarabetsu, (141.0, 42.3) for Muroran) left over from before this session
+established the small_file building's actual coordinates — computed the
+real distance and got **14.2 km** (Sarabetsu) / **2.7 km** (Muroran) from
+where the camera was actually looking to where the (tiny, ~77 m bounding
+sphere) building actually is. At the previous 5000–8000 m altitude with a
+45° downward pitch, the building was never inside the camera's frustum.
+Not a tileset, publish, or CesiumJS defect — the underlying data was
+already confirmed working correctly earlier in this session (direct
+`fetch()` checks and manual `Cesium3DTileset` traversal both succeeded
+against the real host). Fixed by pointing `destination` at each dataset's
+real verified coordinates, 300 m altitude, straight nadir (`pitch: -90`,
+chosen specifically so the tiny building can't fall outside frame from a
+forward-look offset error like this one). **Not independently
+re-confirmed by live rendering in this session** — the same
+`document.visibilityState: "hidden"` testing-tool throttling documented
+above blocked tile selection in the automated browser pane even after the
+fix (confirmed via `Cesium3DTileset.statistics` staying at
+`visited:0` for a completely fresh tileset instance, correctly positioned
+camera, no errors). The coordinate fix itself is a straightforward,
+verifiable-by-inspection correction (destination now equals the building's
+already-established real coordinates), not something that depends on live
+pixels to validate — but genuinely confirming it fixed the user's
+symptom needs the user's own browser. Full detail: `docs/findings.md`
+Phase 2 Unexpected findings.
+
 ## Tooling gaps closed this session
 
 Two gaps found while first trying to validate/compare real output, both
@@ -289,33 +320,36 @@ re-verified against real data:
 
 ## Next concrete step
 
-1. ~~Point `viewer/viewer.js`'s `VIEWPOINTS` at the real
-   `https://tunnel.optgeo.org/plateau-mago-implicit/...` URLs~~ **Done and
-   committed 2026-08-25** (commit `53075b4`) — see "Real public hosting"
-   above for verification detail. Not yet pushed, so the live GitHub Pages
-   page doesn't have this change yet.
-2. ~~Run the formal Phase 3 procedure (two concurrency settings, full
-   `docs/determinism.md` classification, a proper run log)~~ **Done and
-   committed 2026-08-25** (commit `53075b4`) — see "Phase 3 (determinism)
-   is now formally complete" above. L2/PASS confirmed at both concurrency
-   settings and across them, for the single-building small profile.
-3. ~~Complete Phase 2's remaining checklist items: geometric-error/hierarchy
-   comparison against `docs/test-plan.md`'s full checklist~~ **Done
-   2026-08-25** — see "Phase 2's remaining comparison item (hierarchy/geometric
-   error) is done" above. Also corrected a backwards LOD↔filename mapping
-   and fixed two real bugs in `tools/inspect_subtree.py`/`tools/normalize.py`
-   found along the way. Not yet committed.
-4. Resolve the `METADATA_INVALID_LENGTH` ambiguity against
-   `EXT_structural_metadata`'s actual spec text before deciding whether
-   to report it upstream.
+All five original items are now done. Summary (commits, in order):
+1. Viewer `VIEWPOINTS` repointed at real `tunnel.optgeo.org` URLs — `53075b4`.
+2. Formal Phase 3 determinism procedure (2 concurrency settings) — `53075b4`.
+3. Phase 2 hierarchy/geometric-error comparison, plus a corrected
+   LOD↔filename mapping and two real subtree-tooling bugfixes found along
+   the way — `92c9f7d`.
+4. ~~Resolve the `METADATA_INVALID_LENGTH` ambiguity against
+   `EXT_structural_metadata`'s actual spec text~~ **Done 2026-08-25** — read
+   the spec text (`CesiumGS/glTF` `3d-tiles-next` branch), the
+   `propertyTable.property.schema.json`, and the validator's own source
+   (`BinaryPropertyTableValidator.ts`) directly. Conclusion: the spec is
+   genuinely silent on whether a property-table `values` buffer view's
+   `byteLength` must exactly equal the `stringOffsets`-derived content
+   length or may include alignment padding — the validator enforces exact
+   equality by a deliberate but spec-uncited design choice. Neither "Mago
+   has a bug" nor "the validator is wrong" is assertable as fact. If
+   pursued further, the right move is a clarification *question* upstream,
+   not a bug report. Full detail: `docs/findings.md` Phase 1 Upstream
+   candidates. Not yet committed (see below).
 5. Only after Phase 1–4 fully complete for Sarabetsu: start Phase 5
-   (Muroran) for real.
+   (Muroran) for real. **This is the actual next open item.**
 
-Uncommitted local changes this session (step 3 above): `tools/inspect_subtree.py`,
-`tools/normalize.py`, `docs/findings.md`, this file, plus regenerated
-`manifests/normalized/*.json` and `manifests/reports/comparison-*.{json,md}`
-and two new `manifests/reports/{3dtiles-validator,subtree-validation}-*`
-files from re-running `make validate`. Not committed yet — ask the user
+A GitHub Pages re-verification after pushing steps 1–3 found no site
+errors — see "Real public hosting" above for detail (including a
+browser-tool-specific testing caveat, not a site issue) — recorded and
+pushed as `77a0c01`.
+
+Uncommitted local changes this session (step 4 above): `docs/findings.md`,
+this file. No code changes for step 4 — it was pure spec research, no
+tooling/manifest changes to regenerate. Not committed yet — ask the user
 before committing/pushing.
 
 Lower-priority, tracked but not blocking:

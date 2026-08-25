@@ -21,44 +21,57 @@
 // data/output/ — see config/nginx.conf and compose.yml) and only resolve
 // when running `make serve` locally. Update them to the equivalent
 // tunnel.optgeo.org URL once Muroran is published for real.
+//
+// destination/orientation below fly the camera to the small_file
+// building's actual verified coordinates (docs/findings.md Phase 1/5),
+// not a rough municipality-center guess — an earlier version of this file
+// used (143.1, 42.6) / (141.0, 42.3), which are respectively ~14.2km and
+// ~2.7km away from the real single building these small-profile builds
+// contain (bounding sphere radius on the order of 77m for Sarabetsu), so
+// the previous viewpoints flew the camera to empty ground and nothing
+// ever appeared in frame — not a tileset/CesiumJS bug, a wrong camera
+// target. Pitch is a straight-down -90 (not an angled view) specifically
+// to guarantee the tiny building stays centered in frame regardless of
+// forward-look offset math, since getting that wrong is exactly what
+// caused the original bug.
 const VIEWPOINTS = {
   sarabetsu_explicit_small: {
     label: 'Sarabetsu Village — Explicit (small)',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/small/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(143.1, 42.6, 5000),
+    destination: Cesium.Cartesian3.fromDegrees(143.2530, 42.6604, 300),
     orientation: {
       heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-45),
+      pitch: Cesium.Math.toRadians(-90),
       roll: 0,
     },
   },
   sarabetsu_implicit_small: {
     label: 'Sarabetsu Village — Implicit (small)',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/small/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(143.1, 42.6, 5000),
+    destination: Cesium.Cartesian3.fromDegrees(143.2530, 42.6604, 300),
     orientation: {
       heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-45),
+      pitch: Cesium.Math.toRadians(-90),
       roll: 0,
     },
   },
   muroran_explicit_small: {
     label: 'Muroran City — Explicit (small) [local only, not yet published]',
     tilesetUrl: '/tiles/muroran/explicit/small/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(141.0, 42.3, 8000),
+    destination: Cesium.Cartesian3.fromDegrees(140.9694, 42.3076, 300),
     orientation: {
       heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-45),
+      pitch: Cesium.Math.toRadians(-90),
       roll: 0,
     },
   },
   muroran_implicit_small: {
     label: 'Muroran City — Implicit (small) [local only, not yet published]',
     tilesetUrl: '/tiles/muroran/implicit/small/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(141.0, 42.3, 8000),
+    destination: Cesium.Cartesian3.fromDegrees(140.9694, 42.3076, 300),
     orientation: {
       heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-45),
+      pitch: Cesium.Math.toRadians(-90),
       roll: 0,
     },
   },
