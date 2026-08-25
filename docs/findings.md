@@ -898,7 +898,97 @@ issue reproduces with Muroran's own building files, not just Sarabetsu's.
 
 ## Phase 6: Expanded Muroran City test
 
-*Not started.*
+**Status: Run for real, 2026-08-25.** Full-profile builds (all 100 real
+building mesh files, 55,906 buildings, 485 MB under `udx/bldg/` — bigger
+on disk than Sarabetsu's full profile despite roughly 8× fewer buildings
+having a materially larger per-file average size) for both modes, plus
+the same formal two-concurrency-setting determinism procedure as Phase 4.
+**Determinism fails here too — the Phase 4 finding generalizes beyond
+Sarabetsu — but the failure pattern is meaningfully different, which
+refines rather than just repeats the earlier finding.**
+
+### Confirmed
+
+- ✓ Both modes convert the full municipality without crashing. `make
+  build DATASET=muroran MODE=explicit PROFILE=full`: build
+  `20260825T140552Z-muroran-explicit-full`, 83s, 1259 tile contents, 1260
+  output files, 76,202,797 bytes. `make build DATASET=muroran
+  MODE=implicit PROFILE=full`: build `20260825T140722Z-muroran-implicit-full`,
+  78s, 553 tile contents, 818 output files, 73,390,981 bytes, 132 subtree
+  files (root: `tiles=58 content=46 children=131`).
+- ✓ **`METADATA_INVALID_LENGTH` alignment-padding pattern holds here too,
+  now across 4 independent full-profile validator runs (2 municipalities
+  × 2 modes).** Muroran Explicit: 1164 affected files, 1871 leaf issues;
+  Muroran Implicit: 528 affected files, 787 leaf issues. Every one of the
+  2658 combined instances has a declared-vs-required byte delta of 1, 2,
+  or 3 — the same 100%-within-alignment-padding-range result as
+  Sarabetsu's full-profile run, now over 4097 combined instances across
+  both municipalities and both scales with zero outliers.
+
+### Not confirmed
+
+- ✗ **Claim 2 (determinism) fails at Muroran's full-profile scale too —
+  confirming Phase 4 generalizes, with a different failure shape worth
+  distinguishing.** Same procedure: 2 builds at `CONCURRENCY=1`
+  (`20260825T140722Z`, `20260825T140847Z`), 2 at `CONCURRENCY=4`
+  (`20260825T141104Z`, `20260825T141217Z`), all four with byte-identical
+  root `tileset.json` (SHA-256 `69175b76...`).
+  - Concurrency=1 vs 1: 553/818 files differ; 548 `byte-only`, **5
+    `geometry`** (`R/2/2/0`, `R/2/2/1`, `R/3/4/1`, `R/3/5/2`, `R/4/7/2`).
+  - Concurrency=4 vs 4: 553/818 files differ; 528 `byte-only`, **25
+    `geometry`** — five times as many geometry-affected tiles as the
+    concurrency=1 pair, from a single comparison at each setting (not
+    averaged over repeated trials, so this ratio is a signal worth
+    following up, not a confirmed effect size).
+  - Byte-diffed the largest affected tile (`R/2/2/1`, 13 batched
+    buildings, 252,616 bytes): real differences in both `indices`
+    (103/25,712 bytes) and `positions` (343/81,828 bytes) bufferViews,
+    confirming genuine geometry non-determinism here too, not just the
+    expected per-row UUID noise (which also differed, as expected, in the
+    much larger `id_values` bufferView).
+- ✗ **Unlike Sarabetsu, no single source file is common to every affected
+  tile.** Decoded `FileName` values for all 5 concurrency=1
+  geometry-affected tiles: the building files batched into each tile
+  overlap partially (e.g. `63403788_bldg_6697_op.gml` appears in 3 of the
+  5; `63414000_bldg_6697_op.gml` in a different 3 of the 5) but **no
+  filename appears in all five**. Muroran's 100 building files are far
+  more uniform in size than Sarabetsu's (no single 15 MB/826-building
+  outlier), so many files get batched together per content tile instead
+  of one large file dominating — consistent with a revised picture where
+  the non-determinism isn't tied to one specific problem file, but to
+  *how many buildings get batched into one content tile* in general, with
+  larger batches carrying more risk regardless of whether that comes from
+  one big source file (Sarabetsu) or several combined smaller ones
+  (Muroran).
+
+### Unexpected findings
+
+- ? **This refines Phase 4's root-cause hypothesis, not just confirms
+  it.** Phase 4's Sarabetsu finding could have been read as "one specific
+  source file has a defect." Phase 6 rules that reading out: Muroran
+  reproduces real geometry non-determinism with no comparable single-file
+  culprit, and the concurrency=1-vs-4 asymmetry in affected-tile count (5
+  vs 25) is a real, if unconfirmed-at-n=1, hint that thread-level ordering
+  contributes on top of a baseline non-determinism that exists even at
+  concurrency=1. The more defensible characterization now: **batching
+  multiple buildings into one content tile's mesh (via whatever
+  triangulation/merge step Mago performs) is where the non-determinism
+  actually lives**, independent of which municipality or which specific
+  source file supplies those buildings.
+
+### Next smallest experiment
+
+↓ Repeat the concurrency=1 vs concurrency=4 comparison several more times
+(not just one pair each) to get an actual effect-size estimate for
+whether higher concurrency increases affected-tile count, rather than
+relying on a single sample at each setting.
+
+↓ If a minimal reproduction is ever pursued (per Phase 4's note, not
+committed to), Muroran's diffuse multi-file pattern is actually easier to
+reason about for isolating "does batch size alone predict non-determinism
+risk" than Sarabetsu's single dominant file — e.g. deliberately building
+tiny batches of 2, 5, 10 buildings and checking at what batch size
+geometry differences start appearing.
 
 ---
 
@@ -912,8 +1002,8 @@ issue reproduces with Muroran's own building files, not just Sarabetsu's.
 
 | Claim | Status | Phase evaluated | Notes |
 |---|---|---|---|
-| Conversion feasibility | Partially confirmed | 1, 2, 4 | Explicit fully confirmed for the small_file; Implicit generated, geographically correct, now fully validatable (subtree tooling gap closed) and fully compared against Explicit (feature identity, no missing/duplicate geometry, hierarchy/geometric error), AND confirmed rendering correctly in a real browser (CesiumJS 1.144) — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text — neither Mago nor the validator can be said to be "wrong" on current evidence), so "validates independently" is currently ✗. Phase 4 confirms both modes also convert the full municipality (6,795 buildings) without crashing, and the METADATA_INVALID_LENGTH pattern holds consistently at scale (1439 instances, 100% within the 4-byte-alignment-padding range) |
-| Determinism | **Fails at full scale (L3/FAIL); Level 2 holds only for the single-building small profile** | 3, 4 | Phase 3 (single-building small profile, 4 builds, 2 concurrency settings) confirms L2/PASS after fixing a GLB-UUID tooling false-negative. Phase 4 (full municipality, same procedure) contradicts this: L3/FAIL at both concurrency settings, with real geometry (vertex/index) differences and one observed missing content tile between builds of identical input — root-caused to one specific 826-building source file, not diffuse noise. The small-profile result was correct but never generalizable; full-scale is the honest answer for this claim |
+| Conversion feasibility | Partially confirmed | 1, 2, 4, 5, 6 | Explicit fully confirmed for both municipalities' small_files; Implicit generated, geographically correct for both, fully validatable and fully compared against Explicit — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text), so "validates independently" is currently ✗. Both modes also convert both municipalities' full profiles (6,795 and 55,906 buildings) without crashing, and the METADATA_INVALID_LENGTH pattern holds consistently across both municipalities and both scales (4097 combined instances, 100% within the 4-byte-alignment-padding range) |
+| Determinism | **Fails at full scale for both municipalities (L3/FAIL); Level 2 holds only for the single-building small profile** | 3, 4, 5, 6 | Phase 3/5 (single-building small profile, Sarabetsu and Muroran, 2 concurrency settings each) confirm L2/PASS after fixing a GLB-UUID tooling false-negative. Phase 4/6 (full municipality, same procedure, both municipalities) contradict this: L3/FAIL at both concurrency settings for both. Sarabetsu's failure traced to one dominant 826-building source file; Muroran's showed no single common file, refining the hypothesis to "batching multiple buildings into one content tile carries non-determinism risk in general," not a one-file defect. Small-profile results were correct but never generalizable; full-scale is the honest answer for this claim, for both municipalities |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
 | Practical consumption | Partially confirmed | 2 | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but only tested with the tiniest possible dataset (1 building); navigation/memory/long-session behavior at any real scale is still untested |
 

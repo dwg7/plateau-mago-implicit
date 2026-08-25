@@ -55,20 +55,25 @@ Non-semantic differences are separated from structural differences.
 - **Level 3:** Semantically equivalent but structurally different
 - A deterministic pass requires Level 2 or better
 
-**Current status:** Formally evaluated at two scales (2026-08-25), with
-opposite results. **Small profile (single building): Level 2/PASS.** The
-earlier preliminary Level 3/FAIL was root-caused to a single non-semantic
-artifact (a random UUID Mago embeds in GLB metadata); after fixing
-`tools/normalize.py` to redact it, the formal procedure (4 builds, 2
-concurrency settings) confirms L2/PASS in every comparison. **Full
-profile (6,795 buildings): Level 3/FAIL.** The same formal procedure at
-full scale found real geometry (vertex/index) differences between builds
-of identical input, and in one comparison a content tile present in one
-build and entirely missing from the other — root-caused to one specific
-15.3 MB, 826-building source file, not diffuse noise across the dataset.
-**The claim does not hold in general** — it holds only for the
-single-building case, which is not representative of real usage. See
-`docs/findings.md` Phase 3 and Phase 4.
+**Current status:** Formally evaluated at two scales, for both
+municipalities (2026-08-25), with consistent opposite results. **Small
+profile (single building): Level 2/PASS for both Sarabetsu and
+Muroran.** The earlier preliminary Level 3/FAIL was root-caused to a
+single non-semantic artifact (a random UUID Mago embeds in GLB metadata);
+after fixing `tools/normalize.py` to redact it, the formal procedure (4
+builds, 2 concurrency settings) confirms L2/PASS in every comparison, for
+both municipalities independently. **Full profile: Level 3/FAIL for both**
+(Sarabetsu, 6,795 buildings; Muroran, 55,906 buildings). Both found real
+geometry (vertex/index) differences between builds of identical input.
+Sarabetsu's traced cleanly to one specific 15.3 MB, 826-building source
+file; Muroran's showed no single common file across affected tiles,
+refining the picture to "batching multiple buildings into one content
+tile carries non-determinism risk in general," not a one-file defect —
+Muroran also showed a hint (unconfirmed at n=1) that higher concurrency
+increases the number of affected tiles. **The claim does not hold in
+general** — it holds only for the single-building case, which is not
+representative of real usage, and this now holds for both municipalities
+tested, not just one. See `docs/findings.md` Phase 3–6.
 
 ---
 

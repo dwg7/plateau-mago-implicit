@@ -155,3 +155,32 @@ concurrency settings tested. The earlier single-building small-profile
 L2/PASS was correct but never a valid basis for a general "Mago is
 deterministic" claim. Full detail and the exact byte-diff analysis:
 `docs/findings.md` Phase 4.
+
+**Formal Phase 6 (same procedure, Muroran full profile) run 2026-08-25**
+— repeats the exact Phase 4 procedure on Muroran (55,906 buildings, 100
+files) instead of Sarabetsu, to check generalization:
+
+| Run | Build ID | Concurrency | Output files | Root tileset.json SHA-256 |
+|---|---|---|---|---|
+| 1 | `20260825T140722Z-muroran-implicit-full` | 1 | 818 | `69175b7...` |
+| 2 | `20260825T140847Z-muroran-implicit-full` | 1 | 818 | `69175b7...` (identical) |
+| 3 | `20260825T141104Z-muroran-implicit-full` | 4 | 818 | `69175b7...` (identical) |
+| 4 | `20260825T141217Z-muroran-implicit-full` | 4 | 818 | `69175b7...` (identical) |
+
+| Comparison | Level | Determinism | Notes |
+|---|---|---|---|
+| Run 1 vs Run 2 (concurrency=1 vs 1) | **L3** | **✗ FAIL** | 548 `byte-only`, **5 `geometry`** (real vertex/index differences, confirmed by byte-diffing the largest affected tile) |
+| Run 3 vs Run 4 (concurrency=4 vs 4) | **L3** | **✗ FAIL** | 528 `byte-only`, **25 `geometry`** — 5× the concurrency=1 count, from a single comparison at each setting (a signal, not a confirmed effect size without repeated trials) |
+
+**Confirms Phase 4 generalizes beyond Sarabetsu, but refines the
+root-cause picture.** Unlike Sarabetsu, no single source file was common
+to every geometry-affected tile — Muroran's 100 building files are more
+uniform in size (no 15 MB/826-building outlier), so tiles batch
+contributions from several files rather than one dominant one. The more
+defensible characterization: non-determinism lives in *batching multiple
+buildings into one content tile's mesh*, not in one specific defective
+source file. The concurrency=1-vs-4 asymmetry (5 vs 25 affected tiles) is
+a real hint that thread-level ordering adds on top of a baseline
+non-determinism present even single-threaded, but this needs repeated
+trials at each setting to confirm as an effect, not just note as a single
+comparison's result. Full detail: `docs/findings.md` Phase 6.

@@ -8,16 +8,18 @@ the next concrete step," not narrate history (that's what git log and
 
 ## Status as of 2026-08-25
 
-**Phase 0 complete, Phase 1 complete, Phase 2 complete for all comparison
-items (one pass criterion still failing for a real reason — see below),
-Phase 3 formally complete for the small profile, Phase 4 (full-profile
-Sarabetsu) run for real with a major finding: determinism fails at full
-scale even though it holds at small scale — see below, this is the
-single most important finding since the CesiumJS 1.117 bug — Phase 5
-(small Muroran) also run for real, confirming small-profile determinism
-holds regardless of municipality and surfacing a real structural
-difference in tile refinement driven by Muroran's LOD1-only source
-data.** This was a
+**Phases 0–6 all run for real against both municipalities.** Phase 4
+(full-profile Sarabetsu) found the session's biggest finding: determinism
+fails at full scale even though it holds at small scale. Phase 5 (small
+Muroran) confirmed small-profile determinism holds regardless of
+municipality and found a real structural tile-refinement difference
+driven by Muroran's LOD1-only source data. **Phase 6 (full-profile
+Muroran) confirms Phase 4's determinism failure generalizes beyond
+Sarabetsu, and refines the root cause** — Muroran shows no single
+"problem file" the way Sarabetsu did, pointing instead at batching
+multiple buildings into one content tile as the real source of
+non-determinism, with a concurrency-dependent hint (more threads, more
+affected tiles) not yet confirmed at more than n=1. This was a
 single long session that took the project
 from "merged scaffolding, never actually run" to "real PLATEAU data,
 real Mago 3DTiler output, rendering correctly in a real browser from a
@@ -320,6 +322,36 @@ the source actually contains, exactly the kind of "Special attention:
 Tile refinement" finding `docs/test-plan.md` names as Phase 5's purpose.
 Full detail: `docs/findings.md` Phase 5.
 
+## Phase 6 (full-profile Muroran): confirms Phase 4 generalizes, refines the root cause
+
+Ran the exact Phase 4 procedure on Muroran's full profile (55,906
+buildings, 100 files, 485 MB — bigger on disk than Sarabetsu's full
+profile despite ~8× fewer buildings). Both modes convert correctly
+(Explicit: 1259 tile contents, 83s; Implicit: 553 tile contents, 78s).
+**Determinism fails again, at both concurrency settings** (L3/FAIL for
+concurrency=1 vs 1, and 4 vs 4), confirming Phase 4's finding isn't
+Sarabetsu-specific.
+
+**But the failure shape is different, which matters:** Sarabetsu's
+non-determinism traced cleanly to one dominant 826-building source file.
+Muroran has no comparable outlier (its 100 files are much more uniform in
+size), and decoding the `FileName` values in all 5 concurrency=1
+geometry-affected tiles found **no single file common to all of them** —
+each affected tile batches a different, partially-overlapping set of
+building files. This rules out "one specific file has a defect" as the
+general explanation and points instead at **batching multiple buildings
+into one content tile's mesh** (whatever merge/triangulation step that
+involves) as where the non-determinism actually lives, independent of
+municipality or source file. Also notable: the concurrency=4 pair showed
+5× as many affected tiles as the concurrency=1 pair (25 vs 5) — a real
+hint that thread-level ordering contributes on top of a baseline
+non-determinism present even single-threaded, but this is one comparison
+at each setting, not a confirmed effect size (would need repeated trials
+to establish). `METADATA_INVALID_LENGTH`'s alignment-padding pattern
+continues to hold with zero outliers, now across 4097 combined instances
+spanning both municipalities and both scales. Full detail:
+`docs/findings.md` Phase 6, `docs/determinism.md` Results.
+
 ## Tooling gaps closed this session
 
 Two gaps found while first trying to validate/compare real output, both
@@ -384,40 +416,45 @@ re-verified against real data:
 
 ## Next concrete step
 
-This session's work, roughly in order (commits): viewer VIEWPOINTS
-repointed at real `tunnel.optgeo.org` URLs + formal Phase 3 small-profile
-determinism (`53075b4`); Phase 2 hierarchy/geometric-error comparison +
-LOD↔filename correction + subtree-tooling bugfixes (`92c9f7d`); GitHub
-Pages re-verification notes (`77a0c01`); `METADATA_INVALID_LENGTH` spec
-check + the 14km/2.7km viewer camera-target bug fix (`1817ddc`);
-user-confirmed the camera fix actually works (`d0eee89`); Phase 4
-full-profile Sarabetsu, this session's biggest finding — determinism
-fails at scale (`214c74e`). **Phase 5 (small Muroran) is done but not yet
-committed** — see above for the finding itself.
+**All of Phases 0–6 are now done for real, for both municipalities.**
+This session's commits, in order: viewer VIEWPOINTS repointed at real
+`tunnel.optgeo.org` URLs + formal Phase 3 small-profile determinism
+(`53075b4`); Phase 2 hierarchy/geometric-error comparison + LOD↔filename
+correction + subtree-tooling bugfixes (`92c9f7d`); GitHub Pages
+re-verification notes (`77a0c01`); `METADATA_INVALID_LENGTH` spec check +
+the 14km/2.7km viewer camera-target bug fix (`1817ddc`); user-confirmed
+the camera fix actually works (`d0eee89`); Phase 4 full-profile
+Sarabetsu, this session's biggest finding — determinism fails at scale
+(`214c74e`); Phase 5 small Muroran (`531bdce`). **Phase 6 (full-profile
+Muroran) is done but not yet committed** — see above for the finding
+itself.
 
 The user explicitly said an upstream Mago 3DTiler report is not
-necessarily the goal, so that's no longer an open decision blocking
-anything — it's optional future work only, not a next step.
+necessarily the goal, so that's optional future work only, not a next
+step.
 
 Immediate next steps:
 
-1. Commit and push Phase 5's work: `docs/findings.md`/`docs/hypothesis.md`
-   (Phase 5 section, if touched), this file, plus the new Muroran
-   build/normalized/comparison/validation manifests under `manifests/`.
-2. Decide whether to continue to Phase 6 (expanded/full-profile Muroran)
-   — per Phase 5's own "Next smallest experiment," this should
-   specifically re-run Phase 4's determinism procedure on Muroran's full
-   profile to check whether the same class of large-source-file
-   non-determinism reproduces there too, not just measure coverage.
-3. Phase 4's measurement list has real gaps that would also apply to
-   Phase 6: peak process memory, first-useful-render time, initial
+1. Commit and push Phase 6's work: `docs/findings.md`/
+   `docs/determinism.md`/`docs/hypothesis.md` (Phase 6 findings +
+   Claim 2 status now covering both municipalities), this file, plus the
+   new Muroran full-profile build/normalized/comparison/validation
+   manifests under `manifests/`.
+2. Only real remaining measurement gap from `docs/test-plan.md`'s Phase
+   4/6 lists: peak process memory, first-useful-render time, initial
    request count/bytes, navigation responsiveness, geographic-jump
-   convergence, and browser long-session memory trend were not measured
+   convergence, and browser long-session memory trend — none measured
    this session (needs either `docker stats` monitoring during a build or
    live interactive browser testing this session's automated tooling
    couldn't reliably do).
+3. The concurrency=1-vs-4 affected-tile-count asymmetry found in Phase 6
+   (5 vs 25) is currently a single-comparison hint, not a confirmed
+   effect — repeating that comparison a few more times at each setting
+   would turn it into an actual finding instead of a "worth watching"
+   note.
 4. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
-   and explicitly optional per `docs/scope.md`.
+   and explicitly optional per `docs/scope.md` — the only phase not yet
+   run in some form.
 
 Lower-priority, tracked but not blocking:
 
