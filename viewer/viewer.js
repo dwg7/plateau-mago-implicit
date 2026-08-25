@@ -12,17 +12,15 @@
 
 // Predefined viewpoints.
 //
-// Sarabetsu entries point at the real published build on tunnel.optgeo.org
+// All entries point at real published builds on tunnel.optgeo.org
 // (scripts/publish.sh / make publish), so they resolve from the GitHub Pages
 // viewer with no local server needed — verified reachable via `curl -I`
-// 2026-08-25 (see HANDOVER.md "Real public hosting"). Muroran has not been
-// built/published yet (Phase 5, not started — see docs/findings.md), so
-// those entries still point at nginx's local /tiles/ location (aliased to
-// data/output/ — see config/nginx.conf and compose.yml) and only resolve
-// when running `make serve` locally. Update them to the equivalent
-// tunnel.optgeo.org URL once Muroran is published for real.
+// 2026-08-26 (see HANDOVER.md "Real public hosting"). Both municipalities
+// are published for both modes and both profiles (small = the single
+// small_file building used for Phase 1-3/5; full = the whole municipality,
+// Phase 4/6).
 //
-// destination/orientation below fly the camera to the small_file
+// small_* destination/orientation fly the camera to the small_file
 // building's actual verified coordinates (docs/findings.md Phase 1/5),
 // not a rough municipality-center guess — an earlier version of this file
 // used (143.1, 42.6) / (141.0, 42.3), which are respectively ~14.2km and
@@ -34,6 +32,13 @@
 // to guarantee the tiny building stays centered in frame regardless of
 // forward-look offset math, since getting that wrong is exactly what
 // caused the original bug.
+//
+// full_* destination/orientation use each build's own root tileset.json
+// bounding region (computed 2026-08-26) to center on the whole
+// municipality's building extent, not a guess — Sarabetsu spans roughly
+// 16km x 22km, Muroran roughly 11.5km x 15.5km — at an altitude high
+// enough to keep that whole extent in frame from a straight-down view,
+// for the same framing-safety reason as the small_* entries above.
 const VIEWPOINTS = {
   sarabetsu_explicit_small: {
     label: 'Sarabetsu Village — Explicit (small)',
@@ -55,9 +60,29 @@ const VIEWPOINTS = {
       roll: 0,
     },
   },
+  sarabetsu_explicit_full: {
+    label: 'Sarabetsu Village — Explicit (full, 6,795 buildings)',
+    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/full/latest/tileset.json',
+    destination: Cesium.Cartesian3.fromDegrees(143.2044, 42.6716, 22000),
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-90),
+      roll: 0,
+    },
+  },
+  sarabetsu_implicit_full: {
+    label: 'Sarabetsu Village — Implicit (full, 6,795 buildings)',
+    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/full/latest/tileset.json',
+    destination: Cesium.Cartesian3.fromDegrees(143.2044, 42.6716, 22000),
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-90),
+      roll: 0,
+    },
+  },
   muroran_explicit_small: {
-    label: 'Muroran City — Explicit (small) [local only, not yet published]',
-    tilesetUrl: '/tiles/muroran/explicit/small/latest/tileset.json',
+    label: 'Muroran City — Explicit (small)',
+    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/explicit/small/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(140.9694, 42.3076, 300),
     orientation: {
       heading: Cesium.Math.toRadians(0),
@@ -66,9 +91,29 @@ const VIEWPOINTS = {
     },
   },
   muroran_implicit_small: {
-    label: 'Muroran City — Implicit (small) [local only, not yet published]',
-    tilesetUrl: '/tiles/muroran/implicit/small/latest/tileset.json',
+    label: 'Muroran City — Implicit (small)',
+    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/implicit/small/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(140.9694, 42.3076, 300),
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-90),
+      roll: 0,
+    },
+  },
+  muroran_explicit_full: {
+    label: 'Muroran City — Explicit (full, 55,906 buildings)',
+    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/explicit/full/latest/tileset.json',
+    destination: Cesium.Cartesian3.fromDegrees(140.9786, 42.3722, 16000),
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-90),
+      roll: 0,
+    },
+  },
+  muroran_implicit_full: {
+    label: 'Muroran City — Implicit (full, 55,906 buildings)',
+    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/implicit/full/latest/tileset.json',
+    destination: Cesium.Cartesian3.fromDegrees(140.9786, 42.3722, 16000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
       pitch: Cesium.Math.toRadians(-90),

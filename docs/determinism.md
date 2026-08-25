@@ -179,8 +179,14 @@ uniform in size (no 15 MB/826-building outlier), so tiles batch
 contributions from several files rather than one dominant one. The more
 defensible characterization: non-determinism lives in *batching multiple
 buildings into one content tile's mesh*, not in one specific defective
-source file. The concurrency=1-vs-4 asymmetry (5 vs 25 affected tiles) is
-a real hint that thread-level ordering adds on top of a baseline
-non-determinism present even single-threaded, but this needs repeated
-trials at each setting to confirm as an effect, not just note as a single
-comparison's result. Full detail: `docs/findings.md` Phase 6.
+source file.
+
+**Follow-up (2 more concurrency=1 runs, `20260825T193738Z` and
+`20260825T193913Z`): the concurrency effect is confirmed, with a
+specific, clean shape.** The second concurrency=1 pair shows exactly the
+same 5 `geometry`-classified tiles as the first pair — literally the
+identical file set, not just the same count. All 5 of those tiles are
+also present in the concurrency=4 pair's 25-tile set. So: a fixed,
+reproducible baseline of 5 unstable tiles exists regardless of thread
+count, and `CONCURRENCY=4` adds roughly 20 more on top of that baseline
+rather than replacing it. Full detail: `docs/findings.md` Phase 6.

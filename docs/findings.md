@@ -967,21 +967,36 @@ refines rather than just repeats the earlier finding.**
   it.** Phase 4's Sarabetsu finding could have been read as "one specific
   source file has a defect." Phase 6 rules that reading out: Muroran
   reproduces real geometry non-determinism with no comparable single-file
-  culprit, and the concurrency=1-vs-4 asymmetry in affected-tile count (5
-  vs 25) is a real, if unconfirmed-at-n=1, hint that thread-level ordering
-  contributes on top of a baseline non-determinism that exists even at
-  concurrency=1. The more defensible characterization now: **batching
-  multiple buildings into one content tile's mesh (via whatever
-  triangulation/merge step Mago performs) is where the non-determinism
-  actually lives**, independent of which municipality or which specific
-  source file supplies those buildings.
+  culprit. The more defensible characterization now: **batching multiple
+  buildings into one content tile's mesh (via whatever triangulation/merge
+  step Mago performs) is where the non-determinism actually lives**,
+  independent of which municipality or which specific source file
+  supplies those buildings.
+- ? **(2026-08-25/26 follow-up) The concurrency effect is confirmed, not
+  just a single-comparison hint — and it has a clean, specific shape.**
+  Built 2 more `CONCURRENCY=1` runs (`20260825T193738Z`,
+  `20260825T193913Z`) and compared them: **exactly 5 `geometry`-classified
+  tiles again, and it's the literal same 5 tiles** (`R/2/2/0`, `R/2/2/1`,
+  `R/3/4/1`, `R/3/5/2`, `R/4/7/2`) as the first concurrency=1 pair, byte
+  for byte the same set. This isn't noise fluctuating around 5 — at
+  concurrency=1, the same fixed subset of tiles is unstable every time,
+  while everything else stays reproducible. Cross-checked against the
+  concurrency=4 pair's 25 affected tiles: **all 5 of the concurrency=1
+  tiles are a subset of the concurrency=4 set** — concurrency=4 doesn't
+  replace the baseline instability, it adds ~20 more unstable tiles on
+  top of it. This is now a real, well-characterized finding, not a
+  single-sample hint: there's a baseline, thread-count-independent
+  non-determinism affecting a fixed, identifiable set of tiles, and
+  concurrency adds further instability beyond that baseline.
 
 ### Next smallest experiment
 
-↓ Repeat the concurrency=1 vs concurrency=4 comparison several more times
-(not just one pair each) to get an actual effect-size estimate for
-whether higher concurrency increases affected-tile count, rather than
-relying on a single sample at each setting.
+↓ (2026-08-25/26: partially done — see the follow-up above, which
+confirms the concurrency effect with 2 pairs at each setting rather than
+1. A larger n, e.g. 5+ pairs at each setting, would firm up the exact
+"how much does concurrency add" effect size, and checking whether the
+concurrency=4 tile *set* is stable run-to-run the way the concurrency=1
+set is would be the natural next question.)
 
 ↓ If a minimal reproduction is ever pursued (per Phase 4's note, not
 committed to), Muroran's diffuse multi-file pattern is actually easier to

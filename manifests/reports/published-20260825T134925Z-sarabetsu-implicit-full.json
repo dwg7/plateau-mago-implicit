@@ -1,0 +1,13 @@
+{
+  "schema_version": "1",
+  "build_id": "20260825T134925Z-sarabetsu-implicit-full",
+  "dataset": "sarabetsu",
+  "mode": "implicit",
+  "profile": "full",
+  "published_at": "2026-08-25T19:44:41Z",
+  "remote_host": "jaxa.optgeo.org",
+  "remote_path": "/home/pod/x-24b/data/plateau-mago-implicit/sarabetsu/implicit/full/20260825T134925Z-sarabetsu-implicit-full/",
+  "public_url": "https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/full/latest/tileset.json",
+  "root_tileset_sha256": "016c449d47be9a1502a2f6f8170e241da76136f1da21322385f22a6b7f5da011",
+  "source_build_manifest": "manifests/builds/20260825T134925Z-sarabetsu-implicit-full.yml"
+}

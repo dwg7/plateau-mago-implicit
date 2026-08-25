@@ -4,7 +4,7 @@
   "dataset": "sarabetsu",
   "mode": "explicit",
   "profile": "small",
-  "published_at": "2026-08-25T09:49:37Z",
+  "published_at": "2026-08-25T19:44:09Z",
   "remote_host": "jaxa.optgeo.org",
   "remote_path": "/home/pod/x-24b/data/plateau-mago-implicit/sarabetsu/explicit/small/20260824T215737Z-sarabetsu-explicit-small/",
   "public_url": "https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/small/latest/tileset.json",

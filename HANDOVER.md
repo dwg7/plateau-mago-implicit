@@ -6,21 +6,25 @@ work session — it should always answer "what's the state right now and what's
 the next concrete step," not narrate history (that's what git log and
 `docs/findings.md` are for).
 
-## Status as of 2026-08-25
+## Status as of 2026-08-25/26
 
-**Phases 0–6 all run for real against both municipalities.** Phase 4
-(full-profile Sarabetsu) found the session's biggest finding: determinism
-fails at full scale even though it holds at small scale. Phase 5 (small
-Muroran) confirmed small-profile determinism holds regardless of
-municipality and found a real structural tile-refinement difference
-driven by Muroran's LOD1-only source data. **Phase 6 (full-profile
-Muroran) confirms Phase 4's determinism failure generalizes beyond
-Sarabetsu, and refines the root cause** — Muroran shows no single
-"problem file" the way Sarabetsu did, pointing instead at batching
-multiple buildings into one content tile as the real source of
-non-determinism, with a concurrency-dependent hint (more threads, more
-affected tiles) not yet confirmed at more than n=1. This was a
-single long session that took the project
+**Phases 0–6 all run for real against both municipalities, and all 8
+dataset/mode/profile combinations are published live on
+tunnel.optgeo.org.** Phase 4 (full-profile Sarabetsu) found the session's
+biggest finding: determinism fails at full scale even though it holds at
+small scale. Phase 5 (small Muroran) confirmed small-profile determinism
+holds regardless of municipality and found a real structural
+tile-refinement difference driven by Muroran's LOD1-only source data.
+**Phase 6 (full-profile Muroran) confirms Phase 4's determinism failure
+generalizes beyond Sarabetsu, and refines the root cause** — Muroran
+shows no single "problem file" the way Sarabetsu did, pointing instead at
+batching multiple buildings into one content tile as the real source of
+non-determinism, with a confirmed (not just hinted) concurrency effect: a
+fixed baseline of 5 tiles is unstable regardless of thread count, and
+`CONCURRENCY=4` adds ~20 more on top. At the user's explicit request, all
+8 combinations (both municipalities × both modes × both profiles) are now
+published for real, and the viewer's dataset dropdown has 8 entries
+covering all of them. This was a single long session that took the project
 from "merged scaffolding, never actually run" to "real PLATEAU data,
 real Mago 3DTiler output, rendering correctly in a real browser from a
 real public host." Almost everything that could plausibly be wrong with
@@ -97,14 +101,45 @@ file serving with `Access-Control-Allow-Origin: *`.
 
 `scripts/publish.sh` (also `make publish`) does this: dry-run by default,
 `--execute` to actually rsync + update a remote `latest` symlink +
-record `manifests/reports/published-<build-id>.json`. **Both Sarabetsu
-small-profile builds (Explicit and Implicit) are published for real
-right now** — verified reachable with correct `Content-Type`/CORS headers
-via `curl -I`, and verified rendering in the real GitHub Pages viewer.
+record `manifests/reports/published-<build-id>.json`. **(2026-08-26
+update) All 8 combinations — both municipalities × both modes × both
+profiles — are now published for real**, at the user's explicit request
+("full-profileも含めて全部公開"). Each verified individually with
+`curl -s -o /dev/null -w "%{http_code}"` → 200.
 
-Real, currently-live URLs:
-- `https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/small/latest/tileset.json`
-- `https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/small/latest/tileset.json`
+**`.env` had to be recreated this session** — it's gitignored and wasn't
+present on disk (the file that made the earlier Sarabetsu-only publish
+work in a prior session is gone; not investigated why). Recreated from
+the real, already-documented values in `.env.example`'s comments and this
+file's own text above (`PUBLISH_HOST=jaxa.optgeo.org`,
+`PUBLISH_PATH=/home/pod/x-24b/data/plateau-mago-implicit`,
+`PUBLISH_URL_BASE=https://tunnel.optgeo.org/plateau-mago-implicit`) — not
+secrets, auth is via the local SSH config already set up on this machine
+(confirmed working: `ssh jaxa.optgeo.org` succeeds). If a future session
+finds `.env` missing again, this is exactly what to put back.
+
+`viewer/viewer.js`'s `VIEWPOINTS` and `viewer/index.html`'s dropdown now
+have all 8 entries — 4 new `*_full` entries added (computed each from its
+own real published `tileset.json`'s root bounding region, not a guess:
+Sarabetsu full center (143.2044, 42.6716) at 22000m, Muroran full center
+(140.9786, 42.3722) at 16000m, both straight nadir), and the 2 Muroran
+small entries lost their "not yet published" labels since they're real
+now. **Not independently re-confirmed by live rendering in this
+session's automated browser tool** for the same `document.visibilityState:
+"hidden"` reason as every other viewer verification this session — direct
+`fetch()` of all 8 tileset.json URLs succeeded, and the dropdown-selected
+URL/status was confirmed correct for at least one full-profile entry, but
+full-profile pixel rendering wasn't confirmed the way the small-profile
+fix was (via the user's own browser). Worth asking the user to spot-check
+a `*_full` entry the same way they confirmed the camera-target fix.
+
+Real, currently-live URLs (all 8, `<dataset>/<mode>/<profile>`):
+- `sarabetsu/explicit/small`, `sarabetsu/implicit/small`
+- `sarabetsu/explicit/full`, `sarabetsu/implicit/full`
+- `muroran/explicit/small`, `muroran/implicit/small`
+- `muroran/explicit/full`, `muroran/implicit/full`
+
+  (pattern: `https://tunnel.optgeo.org/plateau-mago-implicit/<dataset>/<mode>/<profile>/latest/tileset.json`)
 
 `config/tunnel-optgeo.Caddyfile` (a draft Caddy config with per-extension
 MIME/CORS/cache headers) exists in the repo but **was not applied** —
@@ -342,15 +377,17 @@ building files. This rules out "one specific file has a defect" as the
 general explanation and points instead at **batching multiple buildings
 into one content tile's mesh** (whatever merge/triangulation step that
 involves) as where the non-determinism actually lives, independent of
-municipality or source file. Also notable: the concurrency=4 pair showed
-5× as many affected tiles as the concurrency=1 pair (25 vs 5) — a real
-hint that thread-level ordering contributes on top of a baseline
-non-determinism present even single-threaded, but this is one comparison
-at each setting, not a confirmed effect size (would need repeated trials
-to establish). `METADATA_INVALID_LENGTH`'s alignment-padding pattern
-continues to hold with zero outliers, now across 4097 combined instances
-spanning both municipalities and both scales. Full detail:
-`docs/findings.md` Phase 6, `docs/determinism.md` Results.
+municipality or source file. **Follow-up, confirmed not just a
+single-comparison hint:** built 2 more concurrency=1 runs and compared —
+**the exact same 5 tiles** as the first concurrency=1 pair, byte-identical
+file set. All 5 are a subset of the concurrency=4 pair's 25-tile set.
+Clean, reproducible shape: a fixed baseline of 5 unstable tiles exists
+regardless of thread count, and `CONCURRENCY=4` adds roughly 20 more on
+top of that baseline rather than replacing it. `METADATA_INVALID_LENGTH`'s
+alignment-padding pattern continues to hold with zero outliers, now
+across 4097 combined instances spanning both municipalities and both
+scales. Full detail: `docs/findings.md` Phase 6, `docs/determinism.md`
+Results.
 
 ## Tooling gaps closed this session
 
@@ -416,18 +453,21 @@ re-verified against real data:
 
 ## Next concrete step
 
-**All of Phases 0–6 are now done for real, for both municipalities.**
-This session's commits, in order: viewer VIEWPOINTS repointed at real
-`tunnel.optgeo.org` URLs + formal Phase 3 small-profile determinism
-(`53075b4`); Phase 2 hierarchy/geometric-error comparison + LOD↔filename
-correction + subtree-tooling bugfixes (`92c9f7d`); GitHub Pages
-re-verification notes (`77a0c01`); `METADATA_INVALID_LENGTH` spec check +
-the 14km/2.7km viewer camera-target bug fix (`1817ddc`); user-confirmed
-the camera fix actually works (`d0eee89`); Phase 4 full-profile
-Sarabetsu, this session's biggest finding — determinism fails at scale
-(`214c74e`); Phase 5 small Muroran (`531bdce`). **Phase 6 (full-profile
-Muroran) is done but not yet committed** — see above for the finding
-itself.
+**All of Phases 0–6 are done for real, for both municipalities, and all
+8 dataset/mode/profile combinations are published live.** This session's
+commits, in order: viewer VIEWPOINTS repointed at real `tunnel.optgeo.org`
+URLs + formal Phase 3 small-profile determinism (`53075b4`); Phase 2
+hierarchy/geometric-error comparison + LOD↔filename correction +
+subtree-tooling bugfixes (`92c9f7d`); GitHub Pages re-verification notes
+(`77a0c01`); `METADATA_INVALID_LENGTH` spec check + the 14km/2.7km viewer
+camera-target bug fix (`1817ddc`); user-confirmed the camera fix actually
+works (`d0eee89`); Phase 4 full-profile Sarabetsu, this session's biggest
+finding — determinism fails at scale (`214c74e`); Phase 5 small Muroran
+(`531bdce`); Phase 6 full-profile Muroran, confirming Phase 4 generalizes
+(`4a15e47`). **Not yet committed:** publishing all 8 combinations to
+tunnel.optgeo.org + the 4 new `viewer/viewer.js` full-profile entries +
+the confirmed (not just hinted) concurrency-effect follow-up — see above
+for both.
 
 The user explicitly said an upstream Mago 3DTiler report is not
 necessarily the goal, so that's optional future work only, not a next
@@ -435,24 +475,32 @@ step.
 
 Immediate next steps:
 
-1. Commit and push Phase 6's work: `docs/findings.md`/
-   `docs/determinism.md`/`docs/hypothesis.md` (Phase 6 findings +
-   Claim 2 status now covering both municipalities), this file, plus the
-   new Muroran full-profile build/normalized/comparison/validation
-   manifests under `manifests/`.
-2. Only real remaining measurement gap from `docs/test-plan.md`'s Phase
+1. Commit and push: `viewer/viewer.js`/`viewer/index.html` (4 new
+   full-profile dropdown entries + Muroran small no longer marked
+   unpublished), `docs/findings.md`/`docs/determinism.md` (concurrency
+   effect confirmed with a second run pair), this file, plus the 2 new
+   Muroran concurrency=1 build/normalized/comparison manifests under
+   `manifests/`. **Do not commit `.env`** (gitignored, contains the
+   publish target — recreate from this file's "Real public hosting"
+   section if it goes missing again).
+2. Ask the user to spot-check a `*_full` viewer entry in their own
+   browser the same way they confirmed the camera-target fix — this
+   session's automated browser tool couldn't get past the
+   `document.visibilityState: "hidden"` limitation to confirm full-profile
+   pixel rendering itself (URL/fetch/status were confirmed correct, actual
+   rendering wasn't).
+3. Only real remaining measurement gap from `docs/test-plan.md`'s Phase
    4/6 lists: peak process memory, first-useful-render time, initial
    request count/bytes, navigation responsiveness, geographic-jump
    convergence, and browser long-session memory trend — none measured
    this session (needs either `docker stats` monitoring during a build or
    live interactive browser testing this session's automated tooling
    couldn't reliably do).
-3. The concurrency=1-vs-4 affected-tile-count asymmetry found in Phase 6
-   (5 vs 25) is currently a single-comparison hint, not a confirmed
-   effect — repeating that comparison a few more times at each setting
-   would turn it into an actual finding instead of a "worth watching"
-   note.
-4. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
+4. If pursued further: check whether the concurrency=4 tile *set* is
+   stable run-to-run the way the concurrency=1 5-tile set turned out to
+   be, and get a larger sample (5+ pairs per setting) for a firmer effect
+   size.
+5. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
    and explicitly optional per `docs/scope.md` — the only phase not yet
    run in some form.
 
