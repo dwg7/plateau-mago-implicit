@@ -208,6 +208,28 @@ Cesium.CesiumTerrainProvider.fromUrl('https://terrain.reearth.land/cesium-mesh/e
 viewer.scene.fog.enabled = false;
 viewer.scene.globe.depthTestAgainstTerrain = true;
 
+// Mitigate the roof/wall shimmer the user reported (2026-08-27) on real
+// PLATEAU buildings. Investigated two candidate causes before touching
+// anything: (1) duplicate/overlapping LOD1 geometry from Mago or the
+// source CityGML — decoded a real built GLB (sarabetsu/explicit/full's
+// RC021.glb, 21,794 triangles) and searched for triangles sharing the
+// same 3 vertices to within 1mm: found only 2 (0.01%), ruling out
+// duplicate geometry as the primary cause. (2) CesiumJS's logarithmic
+// depth buffer — used by default so one scene can span planet-to-building
+// scale, but Cesium's own engineering blog
+// (https://cesium.com/blog/2018/05/24/logarithmic-depth/) states plainly
+// that precision loss from this is "particularly problematic with flat
+// surfaces like roofs," exactly the reported symptom. `Scene`'s own docs
+// for the near-plane analogue property state "if a primitive or model
+// close to the surface shows z-fighting, decreasing this will eliminate
+// the artifact, but decrease performance." This viewer only ever shows
+// two small municipalities, never a true planet-scale view, so trading a
+// little of that unused range for real precision here is a good deal.
+// Lowered from the 1e9 default to 1e5. Not independently confirmed by
+// live rendering this session (same `document.visibilityState: "hidden"`
+// limitation as every other viewer check) — worth the user's own look.
+viewer.scene.logarithmicDepthFarToNearRatio = 1e5;
+
 // Start already looking at Hokkaido, not the default whole-Earth view —
 // this viewer is only ever about Sarabetsu/Muroran, so a global starting
 // view is irrelevant to what it's for, and it also means the initial
@@ -306,7 +328,7 @@ function flyTo(destination, orientation) {
         usefulViewTime = performance.now() - loadStartTime;
         updateDiagnostic('d-useful-view', formatMs(usefulViewTime));
       }
-      setStatus('表示準備完了。マウス・タッチで操作できます。');
+      setStatus('');
     },
   });
 }
@@ -320,6 +342,8 @@ document.getElementById('datasetSelect').addEventListener('change', function () 
 
   const url = vp.tilesetUrl;
   document.getElementById('customUrl').value = url;
+  currentDatasetKey = key;
+  currentCustomUrl = null;
 
   loadTileset(url, vp.label).then(() => {
     if (vp.destination && vp.orientation) {
@@ -335,8 +359,91 @@ document.getElementById('loadBtn').addEventListener('click', () => {
     setStatus('tileset.json のURLを入力してください。');
     return;
   }
+  currentDatasetKey = null;
+  currentCustomUrl = url;
   loadTileset(url, url);
 });
+
+// URL hash view-state, like MapLibre GL JS's `hash` option — lets a
+// specific dataset + camera view be bookmarked or shared via the URL.
+// Format: #dataset=<key>&lon=<deg>&lat=<deg>&h=<meters>&heading=<deg>&pitch=<deg>&roll=<deg>
+// (or #url=<encoded tileset.json URL>&... in place of `dataset` for a
+// custom, non-predefined tileset loaded via the URL field). Cesium has no
+// built-in equivalent, so this is hand-rolled, deliberately kept to the
+// same small parameter set MapLibre's own hash uses (position +
+// orientation) rather than trying to serialize full viewer state.
+let currentDatasetKey = null;
+let currentCustomUrl = null;
+let hashRestoring = false;
+
+function updateHash() {
+  if (hashRestoring || !currentTileset) return;
+  const params = new URLSearchParams();
+  if (currentDatasetKey) {
+    params.set('dataset', currentDatasetKey);
+  } else if (currentCustomUrl) {
+    params.set('url', currentCustomUrl);
+  } else {
+    return;
+  }
+  const carto = viewer.camera.positionCartographic;
+  params.set('lon', Cesium.Math.toDegrees(carto.longitude).toFixed(6));
+  params.set('lat', Cesium.Math.toDegrees(carto.latitude).toFixed(6));
+  params.set('h', Math.round(carto.height));
+  params.set('heading', Cesium.Math.toDegrees(viewer.camera.heading).toFixed(1));
+  params.set('pitch', Cesium.Math.toDegrees(viewer.camera.pitch).toFixed(1));
+  params.set('roll', Cesium.Math.toDegrees(viewer.camera.roll).toFixed(1));
+  history.replaceState(null, '', '#' + params.toString());
+}
+viewer.camera.moveEnd.addEventListener(updateHash);
+
+function cameraFromHashParams(params) {
+  if (!params.has('lon') || !params.has('lat') || !params.has('h')) return null;
+  return {
+    destination: Cesium.Cartesian3.fromDegrees(
+      parseFloat(params.get('lon')),
+      parseFloat(params.get('lat')),
+      parseFloat(params.get('h'))
+    ),
+    orientation: {
+      heading: Cesium.Math.toRadians(parseFloat(params.get('heading') || '0')),
+      pitch: Cesium.Math.toRadians(parseFloat(params.get('pitch') || '-90')),
+      roll: Cesium.Math.toRadians(parseFloat(params.get('roll') || '0')),
+    },
+  };
+}
+
+// Restore view from the URL hash at startup, if present. Runs after the
+// listeners above so loadTileset()'s own state changes don't race it.
+(function restoreFromHash() {
+  const raw = location.hash.replace(/^#/, '');
+  if (!raw) return;
+  const params = new URLSearchParams(raw);
+  const datasetKey = params.get('dataset');
+  const customUrl = params.get('url');
+  const cam = cameraFromHashParams(params);
+
+  hashRestoring = true;
+  if (datasetKey && VIEWPOINTS[datasetKey]) {
+    const vp = VIEWPOINTS[datasetKey];
+    document.getElementById('datasetSelect').value = datasetKey;
+    document.getElementById('customUrl').value = vp.tilesetUrl;
+    currentDatasetKey = datasetKey;
+    loadTileset(vp.tilesetUrl, vp.label).then(() => {
+      viewer.camera.setView(cam || { destination: vp.destination, orientation: vp.orientation });
+      hashRestoring = false;
+    });
+  } else if (customUrl) {
+    document.getElementById('customUrl').value = customUrl;
+    currentCustomUrl = customUrl;
+    loadTileset(customUrl, customUrl).then(() => {
+      if (cam) viewer.camera.setView(cam);
+      hashRestoring = false;
+    });
+  } else {
+    hashRestoring = false;
+  }
+})();
 
 // Diagnostics update loop
 viewer.clock.onTick.addEventListener(() => {

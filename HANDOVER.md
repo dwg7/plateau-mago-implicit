@@ -761,11 +761,78 @@ Both changes verified locally (served `viewer/` with a plain
 imagery provider correctly reports `minimumLevel:1, maximumLevel:17,
 tileWidth:512` pointed at `seamlessphoto512`; loading a real dataset sets
 `currentTileset.style.color.expression === "color('#F2EFE6')"`; zero
-console errors either way. **Not yet visually confirmed by the user** —
-same as every other viewer check, this was verified at the network/API
-level in this session's tooling, not by looking at rendered pixels. Not
-yet pushed to `main` (GitHub Pages auto-deploys `viewer/` on push) — held
-for confirmation since it updates the live public site.
+console errors either way. Pushed to `main` (`c3b22d6`) at the user's
+request — GitHub Pages auto-deploys `viewer/` on push. **The user then
+looked at the live site and confirmed the geoid fix worked** (buildings
+sitting on real terrain, not buried) and reported two follow-on issues,
+addressed in "Roof/wall shimmer and a URL hash feature" below.
+
+## Roof/wall shimmer and a URL hash feature, 2026-08-27
+
+The user reported roofs and wall/window areas of a large, complex
+Sarabetsu building "チカチカ" (flickering/shimmering) on the live site,
+screenshotted directly, and asked a direct question: is this Mago's
+fault, or is it CesiumJS being "too clever" (their analogy: like a
+certain era of Microsoft)?
+
+**Investigated rather than guessed, per this project's own standard.**
+Two candidate causes:
+1. **Duplicate/overlapping LOD1 geometry** (from Mago, or from the
+   source CityGML modeling a complex building as multiple BuildingParts
+   with independently-digitized shared walls) — decoded a real built
+   GLB (`sarabetsu/explicit/full`'s `RC021.glb`, chosen because its
+   bounding region contains the predefined Sarabetsu viewpoint
+   coordinates; 21,794 triangles) with a small ad hoc script
+   (struct/json/numpy, not committed to `tools/` — a one-off
+   investigation, not a pipeline step) and searched for triangles
+   sharing the same 3 vertices to within 1mm. Found only **2 exact
+   duplicates (0.01%)** — not remotely enough to explain widespread
+   shimmer across both roof and wall areas. This rules out duplicate
+   geometry as the primary cause, at least in the sampled tile.
+2. **CesiumJS's logarithmic depth buffer.** Cesium's own engineering
+   blog (https://cesium.com/blog/2018/05/24/logarithmic-depth/) states
+   precision loss from it is "particularly problematic with flat
+   surfaces like roofs" — the exact reported symptom, on both roof and
+   flat wall/window areas. `Scene`'s own API docs describe a tuning
+   knob for exactly this: "if a primitive or model close to the surface
+   shows z-fighting, decreasing [the ratio] will eliminate the
+   artifact, but decrease performance."
+
+**Verdict, evidence-based: this reads as CesiumJS's known depth-buffer
+precision trade-off, not a Mago/PLATEAU data defect** — and not "too
+clever" either; it's a real, openly-documented, unavoidable engineering
+trade-off every WebGL globe-scale renderer using a single depth buffer
+has to make (planet-to-building scale in one scene), not something
+unique to Cesium's design. Mitigated in `viewer.js` by setting
+`viewer.scene.logarithmicDepthFarToNearRatio = 1e5` (down from the
+default `1e9`) — this viewer only ever shows two small municipalities,
+never a true planet-scale view, so the traded-away far-range precision
+isn't needed here. **Not independently confirmed by live rendering this
+session** (same `document.visibilityState: "hidden"` limitation as
+everything else) — worth the user's own look; if shimmer persists,
+the next things to try are an even lower ratio or, if that's not
+enough, revisiting whether the source CityGML's multi-part buildings
+have near- (not exact-) duplicate walls that only a looser geometric
+tolerance would catch (the 1mm search here was intentionally strict).
+
+**Also added:** a MapLibre GL JS-style URL hash for bookmarking/sharing
+a specific view. Format: `#dataset=<key>&lon=<deg>&lat=<deg>&h=<m>&
+heading=<deg>&pitch=<deg>&roll=<deg>` (or `#url=<encoded tileset URL>&...`
+in place of `dataset` when a custom tileset was loaded via the URL
+field). Updates on `viewer.camera.moveEnd` via `history.replaceState`
+(no history spam); restored at startup by reading `location.hash` before
+falling back to the normal empty-state behavior. Cesium has no built-in
+equivalent, so this is hand-rolled — deliberately kept to the same small
+position+orientation parameter set MapLibre's own hash uses, not an
+attempt to serialize full viewer state. Verified locally (`python3 -m
+http.server` + this session's browser tool): selecting a dataset and
+moving the camera produces a correct hash string; reloading the page
+with that exact hash restores the same dataset selection, tileset, and
+camera position exactly, with zero console errors either way.
+
+Also trimmed the post-flyTo status message to an empty string per the
+user's request ("情報量は削ろう") — it previously read "表示準備完了。
+マウス・タッチで操作できます。"
 
 ## The `METADATA_INVALID_LENGTH` validator finding — status: genuinely ambiguous, not "confirmed Mago bug"
 
