@@ -6,9 +6,15 @@
 #
 # Target host/path are read from the environment — never hardcoded, never
 # committed (see .env.example): PUBLISH_HOST, PUBLISH_PATH, and optionally
-# PUBLISH_USER. This script never handles a password or private key itself;
-# it shells out to the system's own `rsync`/`ssh`, so auth is whatever your
-# local SSH config already provides (key-based auth is assumed).
+# PUBLISH_USER and PUBLISH_URL_BASE. This script never handles a password
+# or private key itself; it shells out to the system's own `rsync`/`ssh`,
+# so auth is whatever your local SSH config already provides (key-based
+# auth is assumed).
+#
+# PUBLISH_HOST is the SSH/rsync target — it may differ from the host the
+# published files are actually reachable at over HTTP (e.g. a Cloudflare
+# Tunnel front). If PUBLISH_URL_BASE is set, it's used to report/record
+# the real public URL instead of assuming PUBLISH_HOST doubles as one.
 #
 # Safe by default: without --execute, this only prints the rsync command it
 # WOULD run and exits — nothing is transferred. Pass --execute to actually
@@ -42,6 +48,7 @@ fi
 : "${PUBLISH_HOST:?ERROR: PUBLISH_HOST is not set. See docs/tile-hosting-plan.md and .env.example.}"
 : "${PUBLISH_PATH:?ERROR: PUBLISH_PATH is not set. See docs/tile-hosting-plan.md and .env.example.}"
 PUBLISH_USER="${PUBLISH_USER:-}"
+PUBLISH_URL_BASE="${PUBLISH_URL_BASE:-}"
 
 if ! command -v rsync &>/dev/null; then
     echo "ERROR: rsync is not installed." >&2
@@ -74,10 +81,18 @@ fi
 REMOTE_BASE="${PUBLISH_PATH%/}/${DATASET}/${MODE}/${PROFILE}"
 REMOTE_BUILD_DIR="${REMOTE_BASE}/${BUILD_ID}/"
 
+PUBLIC_URL=""
+if [ -n "$PUBLISH_URL_BASE" ]; then
+    PUBLIC_URL="${PUBLISH_URL_BASE%/}/${DATASET}/${MODE}/${PROFILE}/latest/tileset.json"
+fi
+
 echo "=== Publish: $DATASET / $MODE / $PROFILE ==="
 echo "  Build ID:      $BUILD_ID"
 echo "  Local dir:     $LOCAL_BUILD_DIR"
 echo "  Remote target: ${REMOTE_TARGET}:${REMOTE_BUILD_DIR}"
+if [ -n "$PUBLIC_URL" ]; then
+    echo "  Public URL:    $PUBLIC_URL"
+fi
 echo ""
 
 RSYNC_CMD=(rsync -avz --checksum "${LOCAL_BUILD_DIR}/" "${REMOTE_TARGET}:${REMOTE_BUILD_DIR}")
@@ -111,6 +126,7 @@ cat > "$RECORD_FILE" << EOF
   "published_at": "${PUBLISHED_AT}",
   "remote_host": "${PUBLISH_HOST}",
   "remote_path": "${REMOTE_BUILD_DIR}",
+  "public_url": "${PUBLIC_URL}",
   "root_tileset_sha256": "${ROOT_TILESET_SHA256}",
   "source_build_manifest": "manifests/builds/${BUILD_ID}.yml"
 }
@@ -119,6 +135,9 @@ EOF
 echo ""
 echo "Published: $BUILD_ID"
 echo "Record:    $RECORD_FILE"
+if [ -n "$PUBLIC_URL" ]; then
+    echo "Public URL: $PUBLIC_URL"
+fi
 echo ""
 echo "Next step: verify with curl, then update viewer/viewer.js's VIEWPOINTS"
 echo "if this should become one of the predefined dataset entries."
