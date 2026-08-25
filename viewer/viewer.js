@@ -15,55 +15,43 @@
 // All entries point at real published builds on tunnel.optgeo.org
 // (scripts/publish.sh / make publish), so they resolve from the GitHub Pages
 // viewer with no local server needed — verified reachable via `curl -I`
-// 2026-08-26 (see HANDOVER.md "Real public hosting"). Both municipalities
-// are published for both modes and both profiles (small = the single
-// small_file building used for Phase 1-3/5; full = the whole municipality,
-// Phase 4/6).
+// 2026-08-26 (see HANDOVER.md "Real public hosting"). Only full-profile
+// (whole-municipality) entries are offered — the small_file (single
+// building) entries served Phase 1-3/5's determinism/comparison
+// experiments, which are done; both the dropdown entries and the
+// underlying published data were removed together (2026-08-26, at the
+// user's request) rather than leaving a stale menu item pointing at
+// deleted data.
 //
-// small_* destination/orientation fly the camera to the small_file
-// building's actual verified coordinates (docs/findings.md Phase 1/5),
-// not a rough municipality-center guess — an earlier version of this file
-// used (143.1, 42.6) / (141.0, 42.3), which are respectively ~14.2km and
-// ~2.7km away from the real single building these small-profile builds
-// contain (bounding sphere radius on the order of 77m for Sarabetsu), so
-// the previous viewpoints flew the camera to empty ground and nothing
-// ever appeared in frame — not a tileset/CesiumJS bug, a wrong camera
-// target. Pitch is a straight-down -90 (not an angled view) specifically
-// to guarantee the tiny building stays centered in frame regardless of
-// forward-look offset math, since getting that wrong is exactly what
-// caused the original bug.
-//
-// full_* destination/orientation use each build's own root tileset.json
+// destination/orientation use each build's own root tileset.json
 // bounding region (computed 2026-08-26) to center on the whole
 // municipality's building extent, not a guess — Sarabetsu spans roughly
-// 16km x 22km, Muroran roughly 11.5km x 15.5km — at an altitude high
-// enough to keep that whole extent in frame from a straight-down view,
-// for the same framing-safety reason as the small_* entries above.
+// 16km x 22km, Muroran roughly 11.5km x 15.5km. Both explicit_full and
+// implicit_full for a dataset intentionally use the *Explicit* build's
+// region, not the Implicit one's: Implicit's root region is padded out to
+// the quadtree grid's boundary (needed for valid subdivision), not
+// tightly fit to actual building content the way Explicit's is —
+// confirmed by comparing the two directly (Implicit's north edge sits
+// ~3-6km further out than Explicit's for both municipalities), which
+// shifted the computed center north of where the buildings actually are.
+//
+// Altitude is deliberately much lower than "fit the whole extent in one
+// shot" would need (e.g. Sarabetsu's 22km-wide extent would want ~22km+
+// altitude) — at that altitude the root tile's own geometricError already
+// satisfies CesiumJS's default maximumScreenSpaceError (16px) before ever
+// reaching a tile with actual content, so the view looks sparse/empty
+// rather than "whole municipality, zoomed out" (verified by computing the
+// SSE-vs-distance refinement threshold directly: root geometricError 512
+// stops refining beyond ~22km at threshold 16, which is almost exactly
+// where the old 22km viewpoint sat). Lower altitude trades "shows the
+// literal full extent" for "actually shows buildings" — a deliberate
+// choice per user feedback that a sparse full-extent view reads worse
+// than a denser partial one.
 const VIEWPOINTS = {
-  sarabetsu_explicit_small: {
-    label: 'Sarabetsu Village — Explicit (small)',
-    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/small/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(143.2530, 42.6604, 300),
-    orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90),
-      roll: 0,
-    },
-  },
-  sarabetsu_implicit_small: {
-    label: 'Sarabetsu Village — Implicit (small)',
-    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/small/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(143.2530, 42.6604, 300),
-    orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90),
-      roll: 0,
-    },
-  },
   sarabetsu_explicit_full: {
-    label: 'Sarabetsu Village — Explicit (full, 6,795 buildings)',
+    label: '更別村 — Explicit（全建物 6,795棟）',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(143.2044, 42.6716, 22000),
+    destination: Cesium.Cartesian3.fromDegrees(143.2044, 42.6462, 6000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
       pitch: Cesium.Math.toRadians(-90),
@@ -71,29 +59,9 @@ const VIEWPOINTS = {
     },
   },
   sarabetsu_implicit_full: {
-    label: 'Sarabetsu Village — Implicit (full, 6,795 buildings)',
+    label: '更別村 — Implicit（全建物 6,795棟）',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(143.2044, 42.6716, 22000),
-    orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90),
-      roll: 0,
-    },
-  },
-  muroran_explicit_small: {
-    label: 'Muroran City — Explicit (small)',
-    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/explicit/small/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(140.9694, 42.3076, 300),
-    orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90),
-      roll: 0,
-    },
-  },
-  muroran_implicit_small: {
-    label: 'Muroran City — Implicit (small)',
-    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/implicit/small/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(140.9694, 42.3076, 300),
+    destination: Cesium.Cartesian3.fromDegrees(143.2044, 42.6462, 6000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
       pitch: Cesium.Math.toRadians(-90),
@@ -101,9 +69,9 @@ const VIEWPOINTS = {
     },
   },
   muroran_explicit_full: {
-    label: 'Muroran City — Explicit (full, 55,906 buildings)',
+    label: '室蘭市 — Explicit（全建物 55,906棟）',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/explicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(140.9786, 42.3722, 16000),
+    destination: Cesium.Cartesian3.fromDegrees(140.9786, 42.3613, 5000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
       pitch: Cesium.Math.toRadians(-90),
@@ -111,9 +79,9 @@ const VIEWPOINTS = {
     },
   },
   muroran_implicit_full: {
-    label: 'Muroran City — Implicit (full, 55,906 buildings)',
+    label: '室蘭市 — Implicit（全建物 55,906棟）',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/implicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(140.9786, 42.3722, 16000),
+    destination: Cesium.Cartesian3.fromDegrees(140.9786, 42.3613, 5000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
       pitch: Cesium.Math.toRadians(-90),
@@ -133,6 +101,11 @@ Cesium.Ion.defaultAccessToken = '';
 
 const viewer = new Cesium.Viewer('cesiumContainer', {
   baseLayerPicker: false,
+  // Without this, Cesium constructs its own default ion-based base layer
+  // (Bing Aerial) even though we clear the ion token above — it just fails
+  // to load instead of not existing. Explicitly skip it; kitaphoto is
+  // added as the only imagery layer right after construction, below.
+  baseLayer: false,
   geocoder: false,
   homeButton: true,
   sceneModePicker: false,
@@ -140,16 +113,56 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   animation: false,
   timeline: false,
   fullscreenButton: false,
-  imageryProvider: new Cesium.OpenStreetMapImageryProvider({
-    url: 'https://tile.openstreetmap.org/',
-    credit: '© OpenStreetMap contributors',
-  }),
+  // Cesium's default click-to-inspect popup shows raw feature properties
+  // (id, BatchId, NodeName, FileName) — exactly the technical detail this
+  // viewer's own UI deliberately hides by default. Off for consistency;
+  // selectionIndicator (the highlight bracket) stays on for basic feedback.
+  infoBox: false,
+  // `imageryProvider` (used here previously, for OSM) was deprecated in
+  // CesiumJS 1.104 and fully REMOVED in 1.107 — silently ignored by 1.144
+  // with no error/warning, so the globe's imagery was never actually
+  // loading regardless of which provider was named. Found 2026-08-26 while
+  // debugging why kitaphoto (below) wasn't appearing: `viewer.imageryLayers.length`
+  // was 0 even after construction. Fixed by using the current API
+  // (`baseLayer`) instead — see the assignment after construction below.
   terrainProvider: new Cesium.EllipsoidTerrainProvider(),
   creditContainer: document.createElement('div'),
 });
 
+// kitaphoto: GSI seamless aerial photography, re-tiled and gap-filled,
+// served from the user's own Martin tileserver (stars.optgeo.org) — not a
+// Cesium ion asset, so no API key/token is needed. TileJSON confirmed
+// 2026-08-26 via `curl https://stars.optgeo.org/kitaphoto` (minzoom 2,
+// maxzoom 12; z13+ intentionally not covered by this tileset, per its own
+// description — CesiumJS will upsample beyond z12 rather than fail).
+// Tiles are 512x512 (confirmed by downloading and inspecting one), not
+// Cesium's 256x256 default — tileWidth/tileHeight must be set explicitly
+// or the zoom-level-to-URL mapping is wrong (a 512px tile at level z
+// covers what a standard 256px tiling scheme calls level z+1).
+viewer.imageryLayers.addImageryProvider(
+  new Cesium.UrlTemplateImageryProvider({
+    url: 'https://stars.optgeo.org/kitaphoto/{z}/{x}/{y}',
+    credit: '国土地理院 シームレス空中写真 (GSI seamlessphoto), CC BY 4.0',
+    tileWidth: 512,
+    tileHeight: 512,
+    minimumLevel: 2,
+    maximumLevel: 12,
+  })
+);
+
 viewer.scene.fog.enabled = false;
 viewer.scene.globe.depthTestAgainstTerrain = true;
+
+// Start already looking at Hokkaido, not the default whole-Earth view —
+// this viewer is only ever about Sarabetsu/Muroran, so a global starting
+// view is irrelevant to what it's for, and it also means the initial
+// low-zoom tile requests land inside kitaphoto's actual coverage instead
+// of at levels/areas it doesn't serve (kitaphoto is Japan-focused; the
+// whole-Earth default view logs harmless but noisy "failed to obtain
+// image tile" console errors for level 0/1 and out-of-coverage areas).
+viewer.camera.setView({
+  destination: Cesium.Cartesian3.fromDegrees(142.3, 42.5, 400000),
+});
 
 // Helpers
 function setStatus(msg) {
@@ -183,11 +196,11 @@ async function loadTileset(url, label) {
   usefulViewTime = null;
   loadStartTime = performance.now();
 
-  setStatus(`Loading: ${url}`);
-  updateDiagnostic('d-dataset', `Dataset: ${label || url}`);
-  updateDiagnostic('d-url', `URL: ${url}`);
-  updateDiagnostic('d-first-visible', 'First visible: —');
-  updateDiagnostic('d-useful-view', 'Useful view: —');
+  setStatus(`読み込み中: ${label || url}`);
+  updateDiagnostic('d-dataset', label || url);
+  updateDiagnostic('d-url', url);
+  updateDiagnostic('d-first-visible', '—');
+  updateDiagnostic('d-useful-view', '—');
 
   try {
     const tileset = await Cesium.Cesium3DTileset.fromUrl(url, {
@@ -201,13 +214,13 @@ async function loadTileset(url, label) {
     tileset.tileLoad.addEventListener(() => {
       if (firstVisibleTime === null) {
         firstVisibleTime = performance.now() - loadStartTime;
-        updateDiagnostic('d-first-visible', `First visible: ${formatMs(firstVisibleTime)}`);
+        updateDiagnostic('d-first-visible', formatMs(firstVisibleTime));
       }
     });
 
-    setStatus(`Tileset loaded. Flying to viewpoint…`);
+    setStatus(`読み込み完了。視点へ移動しています…`);
   } catch (err) {
-    setStatus(`ERROR: ${err.message || err}`);
+    setStatus(`エラー: ${err.message || err}`);
     console.error('Tileset load error:', err);
   }
 }
@@ -221,9 +234,9 @@ function flyTo(destination, orientation) {
     complete: () => {
       if (usefulViewTime === null && currentTileset) {
         usefulViewTime = performance.now() - loadStartTime;
-        updateDiagnostic('d-useful-view', `Useful view: ${formatMs(usefulViewTime)}`);
+        updateDiagnostic('d-useful-view', formatMs(usefulViewTime));
       }
-      setStatus('Ready. Use controls to navigate.');
+      setStatus('表示準備完了。マウス・タッチで操作できます。');
     },
   });
 }
@@ -249,7 +262,7 @@ document.getElementById('datasetSelect').addEventListener('change', function () 
 document.getElementById('loadBtn').addEventListener('click', () => {
   const url = document.getElementById('customUrl').value.trim();
   if (!url) {
-    setStatus('Enter a tileset URL.');
+    setStatus('tileset.json のURLを入力してください。');
     return;
   }
   loadTileset(url, url);
@@ -260,10 +273,10 @@ viewer.clock.onTick.addEventListener(() => {
   if (!currentTileset) return;
 
   updateDiagnostic('d-tiles-loaded',
-    `Tiles loaded: ${currentTileset.statistics ? currentTileset.statistics.numberOfTilesWithContentReady : '—'}`
+    currentTileset.statistics ? String(currentTileset.statistics.numberOfTilesWithContentReady) : '—'
   );
   updateDiagnostic('d-tiles-pending',
-    `Tiles pending: ${currentTileset.statistics ? currentTileset.statistics.numberOfPendingRequests : '—'}`
+    currentTileset.statistics ? String(currentTileset.statistics.numberOfPendingRequests) : '—'
   );
 });
 
@@ -275,17 +288,47 @@ viewer.scene.postRender.addEventListener(() => {
   const now = performance.now();
   if (now - lastFpsTime >= 1000) {
     const fps = (frameCount / ((now - lastFpsTime) / 1000)).toFixed(0);
-    updateDiagnostic('d-fps', `FPS: ${fps}`);
+    updateDiagnostic('d-fps', fps);
     frameCount = 0;
     lastFpsTime = now;
 
     if (performance.memory) {
       updateDiagnostic('d-heap',
-        `Heap: ${formatBytes(performance.memory.usedJSHeapSize)} / ${formatBytes(performance.memory.jsHeapSizeLimit)}`
+        `${formatBytes(performance.memory.usedJSHeapSize)} / ${formatBytes(performance.memory.jsHeapSizeLimit)}`
       );
     }
   }
 });
 
+// Collapsible panel — state persisted so a reload doesn't re-expand it.
+const uiPanel = document.getElementById('ui');
+const uiToggle = document.getElementById('uiToggle');
+function setUiCollapsed(collapsed) {
+  uiPanel.classList.toggle('collapsed', collapsed);
+  uiToggle.textContent = collapsed ? '+' : '–';
+  try {
+    localStorage.setItem('plateau-mago-implicit:uiCollapsed', collapsed ? '1' : '0');
+  } catch (e) {
+    // localStorage unavailable (e.g. private browsing) — not persisted, still works this session.
+  }
+}
+document.getElementById('uiHeader').addEventListener('click', () => {
+  setUiCollapsed(!uiPanel.classList.contains('collapsed'));
+});
+let startCollapsed = false;
+try {
+  startCollapsed = localStorage.getItem('plateau-mago-implicit:uiCollapsed') === '1';
+} catch (e) {
+  // ignore
+}
+setUiCollapsed(startCollapsed);
+
+// Technical details section (FPS, heap, raw URL, custom tileset input) —
+// collapsed by default; this is developer-facing information, not
+// something a general visitor needs to see up front.
+document.getElementById('detailsToggle').addEventListener('click', () => {
+  document.getElementById('details').classList.toggle('open');
+});
+
 // Initial message
-setStatus('Select a dataset or enter a tileset URL.');
+setStatus('表示するデータを選んでください。');

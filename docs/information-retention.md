@@ -101,3 +101,41 @@ documented as `[GISVector]`-scoped, not confirmed applicable to CityGML
 input). Not yet evaluated for Implicit mode specifically (expected to
 match, since the same underlying conversion logic applies, but not
 independently checked) or for Muroran (Phase 5, not started).
+
+## Reference material: what the `id` property costs in bytes (2026-08-26)
+
+The user asked not for a decision, but for data to support one later — does
+`id` (the freshly-generated random UUID discussed above, which carries no
+semantic value: it isn't the source `gml:id`, and traceability back to the
+source file is already fully covered by the separate `FileName` property)
+justify its byte cost. Measured directly against the two real full-profile
+Implicit builds, by summing the `bufferView.byteLength` of every property's
+`values`/`stringOffsets`/`arrayOffsets` entries across every content GLB:
+
+| Dataset | Files | Total raw bytes | `id` share of raw bytes | All 4 properties' share of raw bytes |
+|---|---|---|---|---|
+| Sarabetsu implicit full | 804 | 18,123,960 | 843,856 (**4.66%**) | 1,768,048 (9.76%) |
+| Muroran implicit full | 553 | 73,333,240 | 2,238,452 (**3.05%**) | 4,681,520 (6.38%) |
+
+That understates the real-world cost, because a random UUID is
+high-entropy and compresses far worse than the geometry/repeated-string
+data around it. Zeroed the `id` bufferViews in place (a proxy for removal
+— actual removal would also drop the now-unused property/schema
+declarations, saving marginally more) and gzip-compressed (level 6) both
+versions of every file:
+
+| Dataset | Files | gzip bytes (with `id`) | gzip bytes (`id` zeroed) | Compressed savings |
+|---|---|---|---|---|
+| Sarabetsu implicit full | 804 | 5,548,429 | 4,989,481 | **10.07%** |
+| Muroran implicit full | 553 | 20,236,549 | 18,786,931 | **7.16%** |
+
+So `id` costs roughly **2x its raw-byte share once compression is
+accounted for** (10.07% vs 4.66% for Sarabetsu; 7.16% vs 3.05% for
+Muroran) — because it's the one property in the schema that's
+incompressible noise, while `NodeName`/`BatchId`/`FileName` are
+low-cardinality or repeated and compress well. This is exactly what a
+random UUID would be expected to do to a compressed payload; not a
+surprise finding, but now a measured one. No action taken — this is
+reference material for a future design decision (e.g. whether to
+special-case `id` out via post-processing, or check whether Mago has a
+way to omit it from the default schema), not a recommendation.

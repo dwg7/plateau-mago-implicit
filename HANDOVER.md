@@ -21,10 +21,20 @@ shows no single "problem file" the way Sarabetsu did, pointing instead at
 batching multiple buildings into one content tile as the real source of
 non-determinism, with a confirmed (not just hinted) concurrency effect: a
 fixed baseline of 5 tiles is unstable regardless of thread count, and
-`CONCURRENCY=4` adds ~20 more on top. At the user's explicit request, all
-8 combinations (both municipalities × both modes × both profiles) are now
-published for real, and the viewer's dataset dropdown has 8 entries
-covering all of them. This was a single long session that took the project
+`CONCURRENCY=4` adds ~20 more on top. All 8 combinations were published
+for real at one point; **the 4 small-profile ones were then removed again**
+(server + viewer menu, per the user's follow-up request once Phase 1-3/5
+were done with them) — only the 4 full-profile combinations are live and
+in the dropdown now. **The viewer also got a real bug fix and a
+ground-up redesign 2026-08-26**: `Cesium.Viewer`'s `imageryProvider`
+option has been removed since CesiumJS 1.107 and was silently doing
+nothing — the basemap was never actually loading, in any session,
+including this one until caught. Fixed (now uses
+`imageryLayers.addImageryProvider`), switched the basemap to the user's
+own `kitaphoto` tiles (GSI aerial photography, no API key needed), and
+rebuilt the UI as a Japanese-language, consumer-facing panel with
+developer diagnostics collapsed by default — see "Viewer overhaul" below
+for the full account. This was a single long session that took the project
 from "merged scaffolding, never actually run" to "real PLATEAU data,
 real Mago 3DTiler output, rendering correctly in a real browser from a
 real public host." Almost everything that could plausibly be wrong with
@@ -101,11 +111,12 @@ file serving with `Access-Control-Allow-Origin: *`.
 
 `scripts/publish.sh` (also `make publish`) does this: dry-run by default,
 `--execute` to actually rsync + update a remote `latest` symlink +
-record `manifests/reports/published-<build-id>.json`. **(2026-08-26
-update) All 8 combinations — both municipalities × both modes × both
-profiles — are now published for real**, at the user's explicit request
-("full-profileも含めて全部公開"). Each verified individually with
-`curl -s -o /dev/null -w "%{http_code}"` → 200.
+record `manifests/reports/published-<build-id>.json`. **(2026-08-26,
+superseded within the same session)** All 8 combinations were published
+at the user's explicit request ("full-profileも含めて全部公開"), then the
+4 small-profile ones were deleted again once their experiments were done
+(see "Viewer overhaul" below) — **only the 4 full-profile combinations
+are live now.**
 
 **`.env` had to be recreated this session** — it's gitignored and wasn't
 present on disk (the file that made the earlier Sarabetsu-only publish
@@ -119,27 +130,24 @@ secrets, auth is via the local SSH config already set up on this machine
 finds `.env` missing again, this is exactly what to put back.
 
 `viewer/viewer.js`'s `VIEWPOINTS` and `viewer/index.html`'s dropdown now
-have all 8 entries — 4 new `*_full` entries added (computed each from its
-own real published `tileset.json`'s root bounding region, not a guess:
-Sarabetsu full center (143.2044, 42.6716) at 22000m, Muroran full center
-(140.9786, 42.3722) at 16000m, both straight nadir), and the 2 Muroran
-small entries lost their "not yet published" labels since they're real
-now. **Not independently re-confirmed by live rendering in this
-session's automated browser tool** for the same `document.visibilityState:
-"hidden"` reason as every other viewer verification this session — direct
-`fetch()` of all 8 tileset.json URLs succeeded, and the dropdown-selected
-URL/status was confirmed correct for at least one full-profile entry, but
-full-profile pixel rendering wasn't confirmed the way the small-profile
-fix was (via the user's own browser). Worth asking the user to spot-check
-a `*_full` entry the same way they confirmed the camera-target fix.
+have only the 4 `*_full` entries (small-profile entries removed along
+with their published data, see "Viewer overhaul" below) — centers
+computed from each dataset's *Explicit* build's root bounding region
+(Implicit's is grid-padded, not tightly fit — see "Viewer overhaul"),
+altitude deliberately lower than "fit the whole extent" would need (see
+the long comment in `viewer.js` itself for the SSE-threshold math this is
+based on). **Not independently re-confirmed by live pixel rendering in
+this session's automated browser tool** — the same
+`document.visibilityState: "hidden"` limitation as every other viewer
+check this session; network-level (`fetch()`, layer/provider counts) and
+math-level (bounding-region computation) checks are solid, actual
+on-screen appearance needs the user's own browser.
 
-Real, currently-live URLs (all 8, `<dataset>/<mode>/<profile>`):
-- `sarabetsu/explicit/small`, `sarabetsu/implicit/small`
+Real, currently-live URLs (`<dataset>/<mode>/full`):
 - `sarabetsu/explicit/full`, `sarabetsu/implicit/full`
-- `muroran/explicit/small`, `muroran/implicit/small`
 - `muroran/explicit/full`, `muroran/implicit/full`
 
-  (pattern: `https://tunnel.optgeo.org/plateau-mago-implicit/<dataset>/<mode>/<profile>/latest/tileset.json`)
+  (pattern: `https://tunnel.optgeo.org/plateau-mago-implicit/<dataset>/<mode>/full/latest/tileset.json`)
 
 `config/tunnel-optgeo.Caddyfile` (a draft Caddy config with per-extension
 MIME/CORS/cache headers) exists in the repo but **was not applied** —
@@ -389,6 +397,110 @@ across 4097 combined instances spanning both municipalities and both
 scales. Full detail: `docs/findings.md` Phase 6, `docs/determinism.md`
 Results.
 
+## Viewer overhaul, 2026-08-26: site cleanup + a real CesiumJS imagery bug + consumer-facing redesign
+
+At the user's direction, several changes bundled into one session:
+
+**Site/data cleanup.** The 4 small_file (single-building) combinations —
+which only ever existed to support Phase 1-3/5's determinism/comparison
+experiments, now complete — were removed from both
+`tunnel.optgeo.org` (`rm -rf` on the remote `sarabetsu/{explicit,implicit}/small`
+and `muroran/{explicit,implicit}/small` directories via SSH) and the
+viewer's dataset dropdown. Local `data/output/` and all research records
+(`docs/findings.md`, `manifests/`) were deliberately left untouched — the
+user's explicit scope was "server-published data and the viewer menu
+only." **Caveat:** Cloudflare's edge cache (`cache-control: max-age=14400`)
+will keep serving stale 200 responses for the deleted URLs for up to ~4
+hours after deletion (confirmed via `cf-cache-status: HIT` on a
+still-200 response right after deleting the origin files) — no
+Cloudflare API/purge access is configured in this session, so this can't
+be forced; it'll clear on its own.
+
+**Implicit full-profile viewpoints were off-center** (user-reported,
+both municipalities) — root-caused to Implicit's root bounding region
+being padded to the quadtree grid boundary (not tightly fit to actual
+buildings the way Explicit's is), confirmed by comparing the two regions
+directly (Implicit's north edge sits 3-6km further out for both
+datasets). Fixed by computing both `*_full` viewpoints' centers from the
+*Explicit* build's region instead, for both datasets.
+
+**A real, previously-undiagnosed CesiumJS bug: the viewer's imagery was
+never loading, in any session before this one.** `Cesium.Viewer`'s
+`imageryProvider` constructor option — used here for OSM, and initially
+for kitaphoto too — was deprecated in CesiumJS 1.104 and fully **removed**
+in 1.107, with zero warning or error when passed to 1.144 (just silently
+ignored: `viewer.imageryLayers.length` was 0 after construction). Every
+screenshot this session showing a flat blue globe with no basemap was
+this bug, not a network/test-environment issue as first assumed. Fixed
+by using `viewer.imageryLayers.addImageryProvider(...)` after
+construction instead, with `baseLayer: false` in the constructor options
+to stop Cesium from also creating its own default (token-less, therefore
+always-failing) ion base layer alongside it.
+
+**Switched the base imagery from OSM to `kitaphoto`** (the user's own
+Martin tileserver at `stars.optgeo.org`, GSI seamless aerial photography,
+CC BY 4.0) — TileJSON confirmed via `curl https://stars.optgeo.org/kitaphoto`:
+`https://stars.optgeo.org/kitaphoto/{z}/{x}/{y}`, JPEG, 512x512 tiles
+(not Cesium's 256x256 default — `tileWidth`/`tileHeight` had to be set
+explicitly or the zoom-level-to-URL mapping would be wrong), minzoom 2,
+maxzoom 12. Confirmed real image data is served (downloaded and
+inspected a sample tile: valid 512x512 JPEG) and that CesiumJS correctly
+issues fetches for it once the `imageryProvider` bug above was fixed.
+**Known cosmetic issue, not fixed:** the console logs "Failed to obtain
+image tile" for level 0/1 (below kitaphoto's minzoom, requested anyway
+despite `minimumLevel: 2` — Cesium's imagery tile pyramid appears to
+probe low levels regardless) and for some level 2 tiles outside
+kitaphoto's actual coverage (server correctly returns 204, not an error,
+for those). Mitigated somewhat by setting the viewer's default startup
+camera to Hokkaido instead of the whole-Earth default (also just a more
+sensible default for a viewer that's only ever about two Hokkaido
+municipalities), which doesn't eliminate the low-level requests but
+reduces how much of the console noise a user would ever see in practice
+since real usage flies straight to a dataset. Not independently
+confirmed by live pixel rendering in this session (same
+`document.visibilityState: "hidden"` limitation as every other viewer
+check this session) — network-level and layer-count checks are solid,
+actual on-screen appearance needs the user's own browser.
+
+**Also disabled `infoBox`** (Cesium's default click-to-inspect popup,
+which would have shown the raw `id`/`BatchId`/`NodeName`/`FileName`
+properties — directly contradicting the point of hiding technical detail
+from the main UI, see below).
+
+**Consumer-facing UI redesign, per explicit user direction ("look and
+feel の大幅な改善", UI language = Japanese, no small print/project
+codename, hide developer-facing diagnostics by default).** Rewrote
+`viewer/index.html`'s panel: Japanese labels throughout (dataset names as
+更別村/室蘭市, status messages, buttons); title changed from
+"plateau-mago-implicit viewer" to "PLATEAU 3D建物ビューア" (no internal
+codename); the outer panel got a minimize toggle (already added earlier
+this session, kept); a *second*, independent collapse — "詳細情報・開発者向け"
+("details / for developers") — now hides the custom-URL input, hint
+text, and the full FPS/heap/tiles-loaded diagnostics readout, collapsed
+by default, so a first-time visitor sees only the dataset picker and a
+status line. `viewer.js`'s `updateDiagnostic()` calls were changed to set
+only the value (the label now comes from CSS `::before` + a `data-label`
+attribute), matching the new layout.
+
+**Reference material prepared, not acted on:** the user asked what
+proportion of file size the `id` property (the meaningless, freshly-random
+UUID discussed extensively above) actually costs, to inform a future
+design decision — not asking for removal yet. Measured directly:
+raw-byte share is 4.66% (Sarabetsu full) / 3.05% (Muroran full), but
+because `id` is the one incompressible (high-entropy) property in the
+schema, its share of **gzip-compressed** size is roughly double that —
+10.07% / 7.16%. Full detail and methodology: `docs/information-retention.md`
+"Reference material: what the `id` property costs in bytes".
+
+**Not yet done:** the footprint/roof z-fighting the user reported (likely
+the same root cause as the earlier LOD0-footprint sibling-branch finding
+from Phase 2 — the LOD0 flat footprint and the LOD1+ solid roof sitting
+at nearly the same height, both loaded together via `refine: ADD`) — the
+user chose "build a CityGML LOD0-stripping preprocessing script" as the
+fix direction, not yet implemented. Ground-surface texture/terrain
+(Mapterhorn elevation tiles the user mentioned) also not yet investigated
+— only kitaphoto (imagery) was addressed this round, not elevation.
+
 ## Tooling gaps closed this session
 
 Two gaps found while first trying to validate/compare real output, both
@@ -453,54 +565,49 @@ re-verified against real data:
 
 ## Next concrete step
 
-**All of Phases 0–6 are done for real, for both municipalities, and all
-8 dataset/mode/profile combinations are published live.** This session's
-commits, in order: viewer VIEWPOINTS repointed at real `tunnel.optgeo.org`
-URLs + formal Phase 3 small-profile determinism (`53075b4`); Phase 2
-hierarchy/geometric-error comparison + LOD↔filename correction +
-subtree-tooling bugfixes (`92c9f7d`); GitHub Pages re-verification notes
-(`77a0c01`); `METADATA_INVALID_LENGTH` spec check + the 14km/2.7km viewer
-camera-target bug fix (`1817ddc`); user-confirmed the camera fix actually
-works (`d0eee89`); Phase 4 full-profile Sarabetsu, this session's biggest
-finding — determinism fails at scale (`214c74e`); Phase 5 small Muroran
-(`531bdce`); Phase 6 full-profile Muroran, confirming Phase 4 generalizes
-(`4a15e47`). **Not yet committed:** publishing all 8 combinations to
-tunnel.optgeo.org + the 4 new `viewer/viewer.js` full-profile entries +
-the confirmed (not just hinted) concurrency-effect follow-up — see above
-for both.
+**Phases 0–6 are done for real, for both municipalities. The viewer went
+through a full round of user-driven cleanup and redesign 2026-08-26**
+(see "Viewer overhaul" above) — this is the freshest, least-settled part
+of the project right now, more than the experiment phases themselves.
 
 The user explicitly said an upstream Mago 3DTiler report is not
 necessarily the goal, so that's optional future work only, not a next
 step.
 
-Immediate next steps:
+Immediate next steps, roughly in priority order (per explicit user
+direction this session):
 
-1. Commit and push: `viewer/viewer.js`/`viewer/index.html` (4 new
-   full-profile dropdown entries + Muroran small no longer marked
-   unpublished), `docs/findings.md`/`docs/determinism.md` (concurrency
-   effect confirmed with a second run pair), this file, plus the 2 new
-   Muroran concurrency=1 build/normalized/comparison manifests under
-   `manifests/`. **Do not commit `.env`** (gitignored, contains the
-   publish target — recreate from this file's "Real public hosting"
-   section if it goes missing again).
-2. Ask the user to spot-check a `*_full` viewer entry in their own
-   browser the same way they confirmed the camera-target fix — this
-   session's automated browser tool couldn't get past the
-   `document.visibilityState: "hidden"` limitation to confirm full-profile
-   pixel rendering itself (URL/fetch/status were confirmed correct, actual
-   rendering wasn't).
-3. Only real remaining measurement gap from `docs/test-plan.md`'s Phase
+1. **Build the LOD0-footprint-stripping CityGML preprocessor** — the
+   user's chosen fix for the footprint/roof z-fighting they reported
+   (screenshot showed a torn-looking red roof with white diagonal
+   streaks, classic z-fighting from two near-coincident surfaces). Needs:
+   a script that strips `lod0FootPrint`/`lod0RoofEdge` (or equivalent)
+   elements from a *working copy* of the source CityGML before handing it
+   to Mago (never touch `data/source/` itself), wired into
+   `scripts/build.sh` as an optional/new step, then full-profile rebuilds
+   + re-publish + re-verify for all 4 combinations. Not started.
+2. **Investigate Mapterhorn elevation tiles for real terrain** — the user
+   asked for this alongside kitaphoto but only kitaphoto (imagery) got
+   done this round. `https://stars.optgeo.org/catalog` was checked for a
+   quantized-mesh/terrain entry and none was obviously present (the
+   Mapterhorn-processed entries found — `japan`, `freetown-mapterhorn` —
+   are `image/webp`, i.e. imagery, not elevation) — needs more digging,
+   possibly at mapterhorn.com directly rather than via stars.optgeo.org.
+3. Ask the user to spot-check the viewer live (kitaphoto rendering, the
+   Japanese redesign, the collapsible panels) in their own browser — this
+   session's automated tooling confirmed network/config correctness but
+   not actual on-screen pixels, per the recurring `document.visibilityState:
+   "hidden"` limitation.
+4. Only real remaining measurement gap from `docs/test-plan.md`'s Phase
    4/6 lists: peak process memory, first-useful-render time, initial
    request count/bytes, navigation responsiveness, geographic-jump
    convergence, and browser long-session memory trend — none measured
-   this session (needs either `docker stats` monitoring during a build or
-   live interactive browser testing this session's automated tooling
-   couldn't reliably do).
-4. If pursued further: check whether the concurrency=4 tile *set* is
+   this session.
+5. If pursued further: check whether the concurrency=4 tile *set* is
    stable run-to-run the way the concurrency=1 5-tile set turned out to
    be, and get a larger sample (5+ pairs per setting) for a firmer effect
    size.
-5. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
+6. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
    and explicitly optional per `docs/scope.md` — the only phase not yet
    run in some form.
 

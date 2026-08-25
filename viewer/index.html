@@ -1,84 +1,175 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>plateau-mago-implicit — 3D Tiles Viewer</title>
+  <title>PLATEAU 3D建物ビューア</title>
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.144/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.144/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: sans-serif; background: #111; color: #eee; }
+    html, body {
+      height: 100%;
+      font-family: "Hiragino Sans", "Yu Gothic", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0b0f16;
+      color: #e7ecf3;
+    }
     #cesiumContainer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+
     #ui {
-      position: absolute; top: 10px; left: 10px; z-index: 100;
-      background: rgba(20,20,30,0.85); padding: 12px; border-radius: 6px;
-      min-width: 260px; max-width: 320px;
+      position: absolute; top: 12px; left: 12px; z-index: 100;
+      width: 280px;
+      background: rgba(17, 22, 33, 0.9);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(120, 150, 200, 0.18);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      transition: width 0.2s ease;
     }
-    #ui h1 { font-size: 13px; margin-bottom: 8px; color: #adf; }
-    #ui label { display: block; font-size: 11px; color: #aaa; margin-top: 6px; }
-    #ui select, #ui button {
-      width: 100%; margin-top: 3px; padding: 5px 8px; font-size: 12px;
-      background: #222; color: #eee; border: 1px solid #555; border-radius: 3px;
+    #ui.collapsed { width: 200px; }
+    #ui.collapsed #uiBody { display: none; }
+
+    #uiHeader {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid rgba(120, 150, 200, 0.15);
     }
-    #ui button { cursor: pointer; background: #334; }
-    #ui button:hover { background: #445; }
+    #ui.collapsed #uiHeader { border-bottom: none; }
+    #uiHeader h1 {
+      font-size: 14px; font-weight: 700;
+      color: #eef4ff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .panelToggle {
+      flex: none; margin-left: 8px;
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      color: #9fb3cc;
+      font-size: 13px;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    #uiHeader:hover .panelToggle { background: rgba(143, 194, 255, 0.15); color: #cfe6ff; }
+
+    #uiBody { padding: 14px; }
+
+    #ui label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: #a9bcd6; margin-bottom: 6px;
+    }
+
+    #ui select, #ui input, #ui button {
+      width: 100%; padding: 9px 10px; font-size: 13px;
+      background: #171d29; color: #e7ecf3;
+      border: 1px solid rgba(120, 150, 200, 0.28);
+      border-radius: 8px;
+      font-family: inherit;
+    }
+    #ui select:focus, #ui input:focus {
+      outline: none; border-color: #6fa8ff;
+      box-shadow: 0 0 0 2px rgba(111, 168, 255, 0.2);
+    }
+
+    #status {
+      font-size: 12.5px; margin-top: 12px; min-height: 18px; line-height: 1.5;
+      color: #ffc38f;
+    }
+
+    /* Technical details — collapsed by default, for people who want it. */
+    #detailsToggle {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 14px; padding-top: 12px;
+      border-top: 1px solid rgba(120, 150, 200, 0.15);
+      font-size: 11.5px; color: #7f8ea3;
+      cursor: pointer; user-select: none;
+    }
+    #detailsToggle:hover { color: #a9bcd6; }
+    #detailsToggle .arrow { transition: transform 0.15s ease; font-size: 9px; }
+    #details.open #detailsToggle .arrow { transform: rotate(90deg); }
+    #detailsBody { display: none; margin-top: 10px; }
+    #details.open #detailsBody { display: block; }
+
+    #details label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: #7f93ad; margin-top: 10px; }
+    #details label:first-child { margin-top: 0; }
+
+    .hint {
+      font-size: 10.5px; color: #7f8ea3; margin-top: 8px; line-height: 1.5;
+    }
+    .hint code {
+      background: rgba(120, 150, 200, 0.12); padding: 1px 4px; border-radius: 3px;
+      font-size: 10px;
+    }
+
     #diagnostics {
-      margin-top: 10px; font-size: 10px; color: #888;
-      border-top: 1px solid #333; padding-top: 8px;
+      margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid rgba(120, 150, 200, 0.15);
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 10.5px; color: #93a5bd;
     }
-    #diagnostics span { display: block; line-height: 1.6; }
-    #status { color: #fa8; font-size: 11px; margin-top: 6px; min-height: 16px; }
+    #diagnostics span { display: flex; justify-content: space-between; line-height: 1.75; gap: 8px; }
+    #diagnostics span::before { content: attr(data-label); color: #5f7089; flex: none; }
+
     #attribution {
-      position: absolute; bottom: 8px; left: 8px; z-index: 100;
-      font-size: 9px; color: #888; max-width: 60%;
+      position: absolute; bottom: 10px; left: 12px; z-index: 100;
+      font-size: 9.5px; color: #6a7a91; max-width: 60%;
+      background: rgba(17, 22, 33, 0.6); padding: 3px 8px; border-radius: 4px;
     }
   </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
   <div id="ui">
-    <h1>plateau-mago-implicit viewer</h1>
-    <label>Dataset</label>
-    <select id="datasetSelect">
-      <option value="">— select dataset —</option>
-      <option value="sarabetsu_explicit_small">Sarabetsu Village — Explicit (small)</option>
-      <option value="sarabetsu_implicit_small">Sarabetsu Village — Implicit (small)</option>
-      <option value="sarabetsu_explicit_full">Sarabetsu Village — Explicit (full, 6,795 buildings)</option>
-      <option value="sarabetsu_implicit_full">Sarabetsu Village — Implicit (full, 6,795 buildings)</option>
-      <option value="muroran_explicit_small">Muroran City — Explicit (small)</option>
-      <option value="muroran_implicit_small">Muroran City — Implicit (small)</option>
-      <option value="muroran_explicit_full">Muroran City — Explicit (full, 55,906 buildings)</option>
-      <option value="muroran_implicit_full">Muroran City — Implicit (full, 55,906 buildings)</option>
-    </select>
-    <label>Custom tileset URL</label>
-    <input id="customUrl" type="text"
-      style="width:100%;margin-top:3px;padding:5px 8px;font-size:11px;background:#222;color:#eee;border:1px solid #555;border-radius:3px;"
-      placeholder="https://your-host/tiles/…/tileset.json">
-    <button id="loadBtn" style="margin-top:4px;">Load tileset</button>
-    <div style="font-size:10px;color:#888;margin-top:6px;line-height:1.4;">
-      This viewer is a static app — it ships with no tile data of its own.
-      The dataset dropdown loads real builds published to
-      <code>tunnel.optgeo.org</code> (see <code>scripts/publish.sh</code>).
-      To view a tileset hosted anywhere else, paste its URL above instead.
+    <div id="uiHeader">
+      <h1>PLATEAU 3D建物ビューア</h1>
+      <div class="panelToggle" id="uiToggle">–</div>
     </div>
-    <div id="status">No tileset loaded.</div>
-    <div id="diagnostics">
-      <span id="d-dataset">Dataset: —</span>
-      <span id="d-cesium">CesiumJS: 1.144</span>
-      <span id="d-url">URL: —</span>
-      <span id="d-tiles-loaded">Tiles loaded: —</span>
-      <span id="d-tiles-pending">Tiles pending: —</span>
-      <span id="d-fps">FPS: —</span>
-      <span id="d-heap">Heap: —</span>
-      <span id="d-first-visible">First visible: —</span>
-      <span id="d-useful-view">Useful view: —</span>
+    <div id="uiBody">
+      <label>表示する都市</label>
+      <select id="datasetSelect">
+        <option value="">— 選択してください —</option>
+        <option value="sarabetsu_explicit_full">更別村 — Explicit（全建物 6,795棟）</option>
+        <option value="sarabetsu_implicit_full">更別村 — Implicit（全建物 6,795棟）</option>
+        <option value="muroran_explicit_full">室蘭市 — Explicit（全建物 55,906棟）</option>
+        <option value="muroran_implicit_full">室蘭市 — Implicit（全建物 55,906棟）</option>
+      </select>
+      <div id="status">表示するデータを選んでください。</div>
+
+      <div id="details">
+        <div id="detailsToggle">
+          <span class="arrow">▶</span>
+          <span>詳細情報・開発者向け</span>
+        </div>
+        <div id="detailsBody">
+          <label>tileset.json のURLを直接指定</label>
+          <input id="customUrl" type="text" placeholder="https://example.com/tileset.json">
+          <button id="loadBtn" style="margin-top:8px;">読み込む</button>
+          <div class="hint">
+            このビューアは静的なアプリで、タイルデータ自体は含んでいません。
+            都市の選択メニューは <code>tunnel.optgeo.org</code> に公開された実データを読み込みます。
+            他の場所にホストされた tileset を見るには、上のURL欄を使ってください。
+          </div>
+          <div id="diagnostics">
+            <span id="d-dataset" data-label="データセット">—</span>
+            <span id="d-cesium" data-label="CesiumJS">1.144</span>
+            <span id="d-url" data-label="URL">—</span>
+            <span id="d-tiles-loaded" data-label="読込済タイル">—</span>
+            <span id="d-tiles-pending" data-label="待機中">—</span>
+            <span id="d-fps" data-label="FPS">—</span>
+            <span id="d-heap" data-label="メモリ">—</span>
+            <span id="d-first-visible" data-label="初期表示">—</span>
+            <span id="d-useful-view" data-label="視点到達">—</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div id="attribution">
-    国土交通省 Project PLATEAU |
-    Viewer: CesiumJS 1.144 (Apache 2.0) |
-    Data: CC BY 4.0
+    国土交通省 Project PLATEAU（建物データ, CC BY 4.0）|
+    国土地理院 シームレス空中写真（背景画像, CC BY 4.0）|
+    Viewer: CesiumJS 1.144 (Apache 2.0)
   </div>
 
   <script src="viewer.js"></script>
