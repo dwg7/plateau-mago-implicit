@@ -124,6 +124,35 @@ LOD1) structure. Not yet re-verified through the actual deployed GitHub
 Pages page (only tested against the edited local files) — that requires
 committing and pushing first.
 
+**(2026-08-25 update, post-push) Re-verified against the real deployed
+GitHub Pages page — no site errors, but a testing-tool caveat worth
+recording.** `gh run watch`/`gh run view` confirmed both the CI and
+"Deploy viewer to GitHub Pages" workflows succeeded. On the live page:
+console had zero errors/warnings throughout; `tileset.json`, the subtree
+JSON, and the content GLB all fetched successfully (200, correct
+content/CORS) via direct `fetch()`; a manually-instantiated
+`Cesium3DTileset` against the live `tunnel.optgeo.org` tileset correctly
+traversed the implicit quadtree down to the exact expected leaf
+(`level=3, x=4, y=2`). **Could not get a manually-driven
+`Cesium3DTileset.statistics.selected` to go above 0 for the *remote*
+host inside this session's automated browser pane** — root-caused to
+`document.visibilityState: "hidden"` (confirmed directly), which Chrome
+uses to pause `requestAnimationFrame` and deprioritize non-loopback
+network requests for backgrounded tabs; the same code against `localhost`
+in the same tool, same session, worked immediately (`selected:1`,
+`tris:14`), which is consistent with loopback requests not being subject
+to that bandwidth-saving throttling. This is a limitation of testing
+through this specific automated browser tool while its pane isn't the
+visible/focused tab — not a defect in the deployed site. (Claude in
+Chrome, a real Chrome instance, was tried as an independent check but its
+extension wasn't connected in this session.) **Takeaway for future
+verification:** if a Claude Code session needs to re-confirm real-host
+content actually renders (not just traverses) via this browser tool,
+either keep the pane genuinely focused/visible throughout, or treat a
+localhost re-test as sufficient corroboration — don't read a stuck
+`selected:0` against a remote host as a site regression without first
+checking `document.visibilityState`.
+
 ## Phase 3 (determinism) is now formally complete for the small profile
 
 Ran the actual `docs/test-plan.md` procedure — two concurrency settings,
