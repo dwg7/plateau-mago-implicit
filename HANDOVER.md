@@ -492,14 +492,46 @@ schema, its share of **gzip-compressed** size is roughly double that —
 10.07% / 7.16%. Full detail and methodology: `docs/information-retention.md`
 "Reference material: what the `id` property costs in bytes".
 
-**Not yet done:** the footprint/roof z-fighting the user reported (likely
-the same root cause as the earlier LOD0-footprint sibling-branch finding
-from Phase 2 — the LOD0 flat footprint and the LOD1+ solid roof sitting
-at nearly the same height, both loaded together via `refine: ADD`) — the
-user chose "build a CityGML LOD0-stripping preprocessing script" as the
-fix direction, not yet implemented. Ground-surface texture/terrain
-(Mapterhorn elevation tiles the user mentioned) also not yet investigated
-— only kitaphoto (imagery) was addressed this round, not elevation.
+**Still not done:** the footprint/roof z-fighting the user reported
+(likely the same root cause as the earlier LOD0-footprint sibling-branch
+finding from Phase 2 — the LOD0 flat footprint and the LOD1+ solid roof
+sitting at nearly the same height, both loaded together via `refine:
+ADD`) — the user chose "build a CityGML LOD0-stripping preprocessing
+script" as the fix direction, not yet implemented.
+
+## Real elevation added: Re:Earth Terrain (Mapterhorn DEM + EGM2008)
+
+Answers the terrain half of the earlier "ground surface" request (only
+kitaphoto, the imagery half, was done in the first pass). Found
+[Re:Earth Terrain](https://terrain.reearth.land/) via web search — a
+public, no-API-key quantized-mesh-1.0 service that blends
+[Mapterhorn](https://mapterhorn.com/)'s global open DEM with the EGM2008
+geoid (so heights land on the WGS84 ellipsoid CesiumJS draws, not just
+mean-sea-level heights). Confirmed real and reachable: `curl
+https://terrain.reearth.land/cesium-mesh/ellipsoid/layer.json` returns
+valid TileJSON (quantized-mesh-1.0, global bounds, minzoom 0/maxzoom 14).
+Wired in via `Cesium.CesiumTerrainProvider.fromUrl(...)` (async — resolves
+after Viewer construction, replacing the placeholder
+`EllipsoidTerrainProvider` set initially), with `requestVertexNormals` and
+`requestWaterMask` both on. Verified at the network level in this
+session's automated browser tool: `viewer.terrainProvider instanceof
+Cesium.CesiumTerrainProvider` is true, `hasWaterMask`/`hasVertexNormals`
+are both true, and real terrain tile requests (`layer.json`, `0/0/0.terrain`,
+`0/1/0.terrain`) succeed with no console errors. Not confirmed by live
+pixel rendering (same limitation as everything else viewer-related this
+session).
+
+**Open question, not investigated:** Mago's building placement uses
+ellipsoid height by default (no terrain-clamping option was passed at
+build time) — in sloped areas, especially Muroran (a port city, not
+flat — `docs/test-plan.md`'s Phase 5 explicitly calls out "slope and
+coastal conditions" as something to watch), a building's base may not
+sit flush with the now-real terrain surface underneath it. Worth checking
+once the user can see it live.
+
+Attribution for the terrain layer (Re:Earth Terrain / Mapterhorn) added
+to `viewer/index.html`'s attribution line, alongside PLATEAU and
+kitaphoto/GSI.
 
 ## Tooling gaps closed this session
 

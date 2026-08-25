@@ -150,6 +150,33 @@ viewer.imageryLayers.addImageryProvider(
   })
 );
 
+// Real elevation via Re:Earth Terrain (https://terrain.reearth.land),
+// a public, no-API-key quantized-mesh-1.0 service that blends Mapterhorn's
+// global open DEM with the EGM2008 geoid so heights land on the WGS84
+// ellipsoid CesiumJS actually draws (not just mean-sea-level heights,
+// which would sit tens of meters off). Confirmed reachable and valid
+// 2026-08-26 via `curl https://terrain.reearth.land/cesium-mesh/ellipsoid/layer.json`
+// (quantized-mesh-1.0, global bounds, minzoom 0/maxzoom 14). Not a Cesium
+// ion asset — `Cesium.Ion.defaultAccessToken` above stays empty. `fromUrl`
+// is async, so this replaces the placeholder EllipsoidTerrainProvider set
+// in the constructor above once it resolves, rather than blocking Viewer
+// construction on a network round trip.
+//
+// Caveat not yet investigated: Mago's building placement uses ellipsoid
+// height by default (no terrain-clamping option was passed at build time),
+// so in sloped areas (Muroran especially — a port city, not flat, per
+// docs/test-plan.md's Phase 5 "slope and coastal conditions" note) a
+// building's base may not sit flush with the now-real terrain surface
+// underneath it. Not confirmed either way by live rendering this session.
+Cesium.CesiumTerrainProvider.fromUrl('https://terrain.reearth.land/cesium-mesh/ellipsoid', {
+  requestVertexNormals: true,
+  requestWaterMask: true,
+}).then((terrain) => {
+  viewer.terrainProvider = terrain;
+}).catch((err) => {
+  console.error('Failed to load Re:Earth Terrain, staying on flat ellipsoid:', err);
+});
+
 viewer.scene.fog.enabled = false;
 viewer.scene.globe.depthTestAgainstTerrain = true;
 
