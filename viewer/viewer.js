@@ -299,9 +299,20 @@ async function loadTileset(url, label) {
     // off-white is a viewer-only style choice — it doesn't touch the
     // GLB data itself, so it doesn't affect Explicit/Implicit comparison
     // or any determinism/validation finding.
+    //
+    // Found 2026-08-27 after the user reported buildings still didn't
+    // look off-white: `tileset.style` alone isn't enough.
+    // `Cesium3DTileset.colorBlendMode` defaults to `HIGHLIGHT`, which
+    // *multiplies* the style color onto the source material rather than
+    // replacing it (confirmed against Cesium's own API docs). Multiplying
+    // the already-saturated orange roof ([1.0, 0.5, 0.25]) by this
+    // near-white style color barely changes it (~[0.95, 0.47, 0.23] —
+    // still visibly orange), which is exactly why it looked unchanged.
+    // `REPLACE` makes the style color the actual rendered color.
     tileset.style = new Cesium.Cesium3DTileStyle({
       color: "color('#F2EFE6')",
     });
+    tileset.colorBlendMode = Cesium.Cesium3DTileColorBlendMode.REPLACE;
 
     tileset.tileLoad.addEventListener(() => {
       if (firstVisibleTime === null) {
