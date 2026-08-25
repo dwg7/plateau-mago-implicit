@@ -12,9 +12,15 @@ the next concrete step," not narrate history (that's what git log and
 PLATEAU buildings were rendering 28-34m buried below the newly-added real
 terrain; root-caused, fixed with a new `japan-geoid`-based build step,
 rebuilt and republished all 4 full-profile combinations. See "Real
-elevation added" below for the full account. Only remaining step is the
-user's own visual reconfirmation (Cloudflare cache may still show the old
-result for a few hours).
+elevation added" below for the full account. Once the user could actually
+see the (now-correct) live site, two more real issues turned up: blurry
+imagery (the tileset in use was a deliberately downsampled, z12-capped
+derivative — switched to the real z1-17 source) and buildings looking too
+dark against real photography (Mago's placeholder orange/gray material
+overridden with a warm off-white style) — see "Viewer polish" below.
+Build-side work is committed+published; the two viewer fixes are
+committed locally but **not yet pushed** (held for confirmation, since
+push triggers a live GitHub Pages deploy).
 
 **Phases 0–6 all run for real against both municipalities, and all 8
 dataset/mode/profile combinations are published live on
@@ -705,6 +711,61 @@ fixed and re-verified same day:
 Also fixed while in the area: `scripts/validate.sh` wasn't gating on the
 validator's own `numErrors` — it printed "VALIDATION PASSED" over a real
 `METADATA_INVALID_LENGTH` finding. Now correctly fails on it.
+
+## Viewer polish, 2026-08-27: imagery was capped at a blurred derivative; buildings looked too dark
+
+Two more issues the user found by actually looking at the live site
+(with the geoid fix above already visible) — both viewer-only changes,
+no build pipeline involvement.
+
+**Imagery was blurry — the user specifically suspected a 512px-tile
+zoom-level mismatch, and was right, just not in the way first assumed.**
+`viewer.js`'s original comment (see "Viewer overhaul" above) asserted
+that a 512px tile at level z is *more* detailed than a standard 256px
+scheme's level z (roughly z+1 equivalent) — true in general, but
+`kitaphoto` (the specific tileset wired in) turned out to be a
+*deliberately downsampled* derivative capped at z12, not the real
+source. Found by reading its own catalog description
+(`curl https://stars.optgeo.org/catalog`): "z13 GSI seamlessphoto512 ...
+downsampled to z2-12 via 2x2 box averaging ... z13+ intentionally not
+included here — served from the original seamlessphoto512.pmtiles
+instead." So `kitaphoto` was both capped (no path past z12 — Cesium
+over-zooms its best-available tile rather than failing, which is exactly
+what reads as "blurry") and, even within z2-12, synthetically softened
+relative to the real per-level source. Switched to `seamlessphoto512`
+(same server, same 512px JPEG format, real "zoom 1-17" per-level detail,
+not a downsample) — confirmed it has genuine, non-blank coverage at both
+municipalities' coordinates up to z17 (`curl` + Pillow pixel-stats check:
+mean brightness 105-139, stdev 27-36, i.e. real photo content, not
+black/empty tiles) before switching. `viewer.js`'s `minimumLevel`/
+`maximumLevel` updated from 2/12 to 1/17 accordingly. Traded away
+`kitaphoto`'s low-zoom satellite-mosaic gap-filling, judged low-risk
+since this viewer only ever shows two specific, well-covered Hokkaido
+municipalities, never an arbitrary global low-zoom view.
+
+**Buildings looked too dark/"sunken" against the real photo basemap.**
+Decoded a real built GLB's materials directly: Mago 3DTiler assigns its
+own placeholder colors per building — a warm orange roof
+(`baseColorFactor [1.0, 0.5, 0.25]`) and light-gray walls (`[0.9, 0.9,
+0.9]`), fully rough/non-metal. Against real aerial photography this read
+as dark/artificial rather than the pale/white cladding common on real
+Hokkaido buildings (the user's own framing). Fixed with a
+`tileset.style = new Cesium.Cesium3DTileStyle({color: "color('#F2EFE6')"})`
+override in `loadTileset()` — a warm off-white, applied uniformly. This
+is a viewer-only style override; it doesn't touch the GLB data, so it
+has no effect on the Explicit/Implicit comparison or any
+determinism/validation finding.
+
+Both changes verified locally (served `viewer/` with a plain
+`python3 -m http.server`, loaded in this session's browser tool):
+imagery provider correctly reports `minimumLevel:1, maximumLevel:17,
+tileWidth:512` pointed at `seamlessphoto512`; loading a real dataset sets
+`currentTileset.style.color.expression === "color('#F2EFE6')"`; zero
+console errors either way. **Not yet visually confirmed by the user** —
+same as every other viewer check, this was verified at the network/API
+level in this session's tooling, not by looking at rendered pixels. Not
+yet pushed to `main` (GitHub Pages auto-deploys `viewer/` on push) — held
+for confirmation since it updates the live public site.
 
 ## The `METADATA_INVALID_LENGTH` validator finding — status: genuinely ambiguous, not "confirmed Mago bug"
 

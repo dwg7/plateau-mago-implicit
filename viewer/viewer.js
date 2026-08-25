@@ -129,24 +129,52 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   creditContainer: document.createElement('div'),
 });
 
-// kitaphoto: GSI seamless aerial photography, re-tiled and gap-filled,
+// seamlessphoto512: GSI seamless aerial photography, re-tiled to 512px,
 // served from the user's own Martin tileserver (stars.optgeo.org) — not a
-// Cesium ion asset, so no API key/token is needed. TileJSON confirmed
-// 2026-08-26 via `curl https://stars.optgeo.org/kitaphoto` (minzoom 2,
-// maxzoom 12; z13+ intentionally not covered by this tileset, per its own
-// description — CesiumJS will upsample beyond z12 rather than fail).
-// Tiles are 512x512 (confirmed by downloading and inspecting one), not
-// Cesium's 256x256 default — tileWidth/tileHeight must be set explicitly
-// or the zoom-level-to-URL mapping is wrong (a 512px tile at level z
-// covers what a standard 256px tiling scheme calls level z+1).
+// Cesium ion asset, so no API key/token is needed.
+//
+// Originally this used a different tileset on the same server,
+// `kitaphoto` (minzoom 2, maxzoom 12). Found 2026-08-27 after the user
+// reported the imagery looked noticeably blurry and suspected a
+// zoom-level mismatch tied to the 512px tile size: `kitaphoto`'s own
+// catalog description (`curl https://stars.optgeo.org/catalog`) says
+// explicitly that it's a *downsampled* derivative — "z13 GSI
+// seamlessphoto512 ... downsampled to z2-12 via 2x2 box averaging ...
+// z13+ intentionally not included here — served from the original
+// seamlessphoto512.pmtiles instead". So `kitaphoto`'s maxzoom-12 cap
+// wasn't just "no higher zoom exists" — it was capping us at a
+// deliberately blurred derivative even at levels 2-12, and had no path
+// past z12 at all (Cesium over-zooms its most-detailed available tile
+// rather than failing, which is what produced the blur).
+//
+// `seamlessphoto512` (same server, same 512px JPEG format, so the
+// tileWidth/tileHeight reasoning below is unchanged) is the real
+// source: "GSI seamlessphoto re-tiled to 512px tiles, zoom 1-17 (from
+// 256px z2-z18)" — genuine per-level detail, not a synthetic downsample,
+// confirmed reachable with real (non-blank) content at Hokkaido
+// coordinates: sampled z14/16/17 tiles at both Sarabetsu and Muroran's
+// coordinates directly (`curl` + Pillow pixel stats), all real aerial
+// photos (mean brightness 105-139, stdev 27-36 — not blank/black).
+// `kitaphoto`'s own low-zoom (2-12) also had extra gap-filling (a
+// satellite-mosaic fallback for missing photo coverage) that
+// `seamlessphoto512` doesn't add — a low-zoom-only resilience feature
+// not expected to matter for this viewer, which only ever shows two
+// specific, well-covered Hokkaido municipalities, not arbitrary global
+// low-zoom views.
+//
+// Tiles are 512x512, not Cesium's 256x256 default — tileWidth/tileHeight
+// must be set explicitly or the zoom-level-to-URL mapping is wrong (a
+// 512px tile at level z covers what a standard 256px tiling scheme calls
+// level z+1) — confirmed correct for this specific tileset by checking
+// its own description ("from 256px z2-z18"), not just assumed.
 viewer.imageryLayers.addImageryProvider(
   new Cesium.UrlTemplateImageryProvider({
-    url: 'https://stars.optgeo.org/kitaphoto/{z}/{x}/{y}',
+    url: 'https://stars.optgeo.org/seamlessphoto512/{z}/{x}/{y}',
     credit: '国土地理院 シームレス空中写真 (GSI seamlessphoto), CC BY 4.0',
     tileWidth: 512,
     tileHeight: 512,
-    minimumLevel: 2,
-    maximumLevel: 12,
+    minimumLevel: 1,
+    maximumLevel: 17,
   })
 );
 
@@ -183,10 +211,11 @@ viewer.scene.globe.depthTestAgainstTerrain = true;
 // Start already looking at Hokkaido, not the default whole-Earth view —
 // this viewer is only ever about Sarabetsu/Muroran, so a global starting
 // view is irrelevant to what it's for, and it also means the initial
-// low-zoom tile requests land inside kitaphoto's actual coverage instead
-// of at levels/areas it doesn't serve (kitaphoto is Japan-focused; the
-// whole-Earth default view logs harmless but noisy "failed to obtain
-// image tile" console errors for level 0/1 and out-of-coverage areas).
+// low-zoom tile requests land inside seamlessphoto512's actual coverage
+// instead of at levels/areas it doesn't serve (its bounds are Japan-only,
+// [122.9-154.0°E, 20.4-45.5°N]; the whole-Earth default view logs
+// harmless but noisy "failed to obtain image tile" console errors for
+// out-of-coverage areas).
 viewer.camera.setView({
   destination: Cesium.Cartesian3.fromDegrees(142.3, 42.5, 400000),
 });
@@ -237,6 +266,20 @@ async function loadTileset(url, label) {
 
     viewer.scene.primitives.add(tileset);
     currentTileset = tileset;
+
+    // Mago 3DTiler assigns its own placeholder material per building —
+    // decoded directly from a real GLB (2026-08-27): a warm orange roof
+    // (baseColorFactor [1.0, 0.5, 0.25]) and a light-gray wall
+    // ([0.9, 0.9, 0.9]), fully rough/non-metal. Against a real aerial
+    // photo basemap this reads as noticeably dark/"sunken" (the user's
+    // word: 沈みすぎている) rather than the pale, often-white cladding
+    // typical of real Hokkaido buildings. Overriding to a flat, warm
+    // off-white is a viewer-only style choice — it doesn't touch the
+    // GLB data itself, so it doesn't affect Explicit/Implicit comparison
+    // or any determinism/validation finding.
+    tileset.style = new Cesium.Cesium3DTileStyle({
+      color: "color('#F2EFE6')",
+    });
 
     tileset.tileLoad.addEventListener(() => {
       if (firstVisibleTime === null) {
