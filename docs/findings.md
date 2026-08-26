@@ -1285,6 +1285,96 @@ do if any doubt remains after visual reconfirmation.
 
 ---
 
+## Cross-phase follow-up: does Implicit actually show a benefit over Explicit? (2026-08-27)
+
+Prompted by the user asking directly, after the geoid and imagery fixes made
+the live viewer usable enough to actually compare. Structural differences
+were already established in Phase 2 (small_file only — see that section for
+the full tree-shape comparison: geometry-fitted bounding volumes and
+explicit per-level `geometricError` for Explicit vs. uniform quadtree-grid
+volumes and client-computed per-level error for Implicit). This section
+adds the full-profile, real-scale numbers that answer "does it help,"
+using the current (post-geoid-fix, post-LOD1-enforcement) builds already
+on disk — no new build was run for this.
+
+### Confirmed
+
+- ✓ **Implicit's designed advantage — a tiny, constant-size initial
+  payload — is real and large.** `tileset.json` size: Sarabetsu Explicit
+  44,766 bytes vs. Implicit 427 bytes (105x smaller); Muroran Explicit
+  286,635 bytes vs. Implicit 432 bytes (663x smaller). Explicit's
+  `tileset.json` must enumerate the *entire* tree explicitly, so it grows
+  with tile count (6.4x more tiles → 6.4x larger file, roughly, comparing
+  the two municipalities); Implicit's stays ~430 bytes regardless of
+  scale, since availability lives in separate subtree files fetched
+  lazily. This is the one place the numbers unambiguously favor Implicit,
+  and the gap should widen further for any larger municipality.
+- ✓ **Total file count and total data size do NOT consistently favor
+  either mode — direction depends on the dataset's building density, not
+  on which mode is "better."** Exact numbers (content `.glb` files / total
+  files incl. subtrees+tileset.json / total bytes):
+  - Sarabetsu (6,795 buildings): Explicit 198 / 199 / 13.78MB — Implicit
+    760 / 1,017 / 15.84MB. Implicit needs **5.1x more files** here.
+  - Muroran (55,906 buildings): Explicit 1,259 / 1,260 / 75.92MB —
+    Implicit 553 / 818 / 73.34MB. Implicit needs **35% fewer files**
+    here — the opposite direction from Sarabetsu.
+  - Subtree files themselves are negligible in size either way (128 pairs
+    / 55,596 bytes for Sarabetsu, 132 pairs / 57,307 bytes for Muroran) —
+    the file-count difference is a request-count concern, not a bytes
+    concern.
+- ✓ **The direction-flip traces to buildings-per-content-tile, which
+  moves in opposite directions between the two modes depending on the
+  dataset:** Sarabetsu goes from 34.3 buildings/tile (Explicit) down to
+  8.9 (Implicit) — Implicit's uniform quadtree subdivides Sarabetsu's
+  sparse, spread-out buildings *more finely* than Mago's adaptive
+  Explicit batching does. Muroran goes the opposite way: 44.4
+  (Explicit) up to 101.1 (Implicit) — Implicit's quadtree cells end up
+  *coarser* (more buildings each) than Explicit's batching for Muroran's
+  denser distribution. Same converter, same two modes, opposite effect —
+  a real, dataset-dependent structural interaction, not noise (though see
+  Not confirmed below for a caveat on run-to-run stability of the exact
+  counts).
+- ✓ **A real, previously-found Implicit downside carries over here, not
+  freshly discovered:** Implicit's root bounding region is padded to the
+  quadtree grid boundary rather than tightly fit to actual building
+  content — confirmed earlier by comparing the two regions directly
+  (Implicit's edge sits 3-6km further out than Explicit's, for both
+  datasets), which is why `viewer/viewer.js`'s predefined viewpoints use
+  Explicit's region for centering even for the Implicit dataset entries.
+  This is a real, measured cost of the uniform-grid approach, not
+  theoretical.
+
+### Not confirmed
+
+- ✗ **The practical-consumption question that would actually settle
+  "does it help in real use" — first-useful-render time and total
+  network requests during realistic pan/zoom — is still unmeasured.**
+  `docs/test-plan.md` calls for exactly this; `HANDOVER.md`'s "Next
+  concrete step" has carried it as an open item across multiple sessions.
+  Everything in this section is static file/byte counts, not observed
+  browser behavior. Implicit's lazy per-subtree fetching *could* mean
+  more total round-trips during an exploration session even where its
+  initial payload is smaller — genuinely unknown without measuring it.
+- ? The exact content-tile counts above come from one build per
+  dataset/mode, not repeated runs. Phase 4/6 already established that
+  full-profile batching is non-deterministic (L3/FAIL) for both modes —
+  so the *exact* counts (198, 760, 1259, 553) could shift somewhat on a
+  rebuild. The qualitative pattern (which mode wins on file count flips
+  between the two datasets) is judged likely to hold, since it tracks a
+  real, large density difference between the municipalities, but this
+  hasn't been re-verified across multiple builds the way Phase 3/5's
+  determinism claims were.
+
+### Next smallest experiment
+
+Measure first-useful-render time and total network request count for a
+realistic session (load + pan across a populated area + zoom to street
+level) for all 4 combinations, in a real (non-headless) browser — the one
+remaining practical-consumption gap `docs/test-plan.md` calls for that
+this project has not yet executed.
+
+---
+
 ## Phase 7: Optional higher-detail tests
 
 *Not started. Phase 7 is optional and separate.*
@@ -1298,6 +1388,6 @@ do if any doubt remains after visual reconfirmation.
 | Conversion feasibility | Partially confirmed | 1, 2, 4, 5, 6 | Explicit fully confirmed for both municipalities' small_files; Implicit generated, geographically correct for both, fully validatable and fully compared against Explicit — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text), so "validates independently" is currently ✗. Both modes also convert both municipalities' full profiles (6,795 and 55,906 buildings) without crashing, and the METADATA_INVALID_LENGTH pattern holds consistently across both municipalities and both scales (4097 combined instances, 100% within the 4-byte-alignment-padding range). **(2026-08-26)** Discovered and fixed a real scope-boundary gap: full-profile builds were feeding Mago LOD0+LOD3 geometry alongside LOD1, contradicting CLAUDE.md's LOD1-only baseline — `tools/strip_higher_lod.py` now enforces this at the source-data level for every build, verified to shrink Sarabetsu's full-profile output 12-13% with no loss of LOD1 content (Muroran's output was already LOD0/LOD1-identical, so unaffected) |
 | Determinism | **Fails at full scale for both municipalities (L3/FAIL); Level 2 holds only for the single-building small profile** | 3, 4, 5, 6 | Phase 3/5 (single-building small profile, Sarabetsu and Muroran, 2 concurrency settings each) confirm L2/PASS after fixing a GLB-UUID tooling false-negative. Phase 4/6 (full municipality, same procedure, both municipalities) contradict this: L3/FAIL at both concurrency settings for both. Sarabetsu's failure traced to one dominant 826-building source file; Muroran's showed no single common file, refining the hypothesis to "batching multiple buildings into one content tile carries non-determinism risk in general," not a one-file defect. **(2026-08-26)** Stripping that same file's LOD3 geometry (a plausible alternate explanation) left the non-determinism completely unchanged — same tile count, same coordinates — ruling out LOD-complexity as the cause and further confirming batch size/count is the real driver. Small-profile results were correct but never generalizable; full-scale is the honest answer for this claim, for both municipalities |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
-| Practical consumption | Partially confirmed | 2 | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but only tested with the tiniest possible dataset (1 building); navigation/memory/long-session behavior at any real scale is still untested |
+| Practical consumption | Partially confirmed | 2, cross-phase (Implicit vs Explicit) | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but only tested with the tiniest possible dataset (1 building); navigation/memory/long-session behavior at any real scale is still untested. **(2026-08-27)** Static file/byte comparison of Implicit vs Explicit at full scale: Implicit's initial `tileset.json` payload is 105-663x smaller and constant-size regardless of building count (a real, designed advantage), but total file count and total bytes don't consistently favor either mode — direction flips between the two municipalities depending on building density. First-useful-render time and total network requests during realistic use — the numbers that would actually settle "does Implicit help" — remain unmeasured |
 
 Do not pre-fill conclusions. Record only evidence-based findings.
