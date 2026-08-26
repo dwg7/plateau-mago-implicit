@@ -129,51 +129,37 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   creditContainer: document.createElement('div'),
 });
 
-// seamlessphoto512: GSI seamless aerial photography, re-tiled to 512px,
+// kitaphoto17: GSI seamless aerial photography, re-tiled to 512px,
 // served from the user's own Martin tileserver (stars.optgeo.org) — not a
 // Cesium ion asset, so no API key/token is needed.
 //
-// Originally this used a different tileset on the same server,
-// `kitaphoto` (minzoom 2, maxzoom 12). Found 2026-08-27 after the user
-// reported the imagery looked noticeably blurry and suspected a
-// zoom-level mismatch tied to the 512px tile size: `kitaphoto`'s own
-// catalog description (`curl https://stars.optgeo.org/catalog`) says
-// explicitly that it's a *downsampled* derivative — "z13 GSI
-// seamlessphoto512 ... downsampled to z2-12 via 2x2 box averaging ...
-// z13+ intentionally not included here — served from the original
-// seamlessphoto512.pmtiles instead". So `kitaphoto`'s maxzoom-12 cap
-// wasn't just "no higher zoom exists" — it was capping us at a
-// deliberately blurred derivative even at levels 2-12, and had no path
-// past z12 at all (Cesium over-zooms its most-detailed available tile
-// rather than failing, which is what produced the blur).
-//
-// `seamlessphoto512` (same server, same 512px JPEG format, so the
-// tileWidth/tileHeight reasoning below is unchanged) is the real
-// source: "GSI seamlessphoto re-tiled to 512px tiles, zoom 1-17 (from
-// 256px z2-z18)" — genuine per-level detail, not a synthetic downsample,
-// confirmed reachable with real (non-blank) content at Hokkaido
-// coordinates: sampled z14/16/17 tiles at both Sarabetsu and Muroran's
-// coordinates directly (`curl` + Pillow pixel stats), all real aerial
-// photos (mean brightness 105-139, stdev 27-36 — not blank/black).
-// `kitaphoto`'s own low-zoom (2-12) also had extra gap-filling (a
-// satellite-mosaic fallback for missing photo coverage) that
-// `seamlessphoto512` doesn't add — a low-zoom-only resilience feature
-// not expected to matter for this viewer, which only ever shows two
-// specific, well-covered Hokkaido municipalities, not arbitrary global
-// low-zoom views.
+// History: this went kitaphoto (a downsampled, z12-capped derivative,
+// blurry) -> seamlessphoto512 (real per-level detail to z17, but its own
+// low zoom shows GSI's raw multi-survey photo patchwork — visible seams/
+// color shifts, inconsistent when zoomed out) -> kitaphoto17, a merged
+// PMTiles file combining kitaphoto's smoothed z2-12 with
+// seamlessphoto512's real z13-17, built 2026-08-27 because Cesium has no
+// built-in way to swap imagery sources by zoom and a two-layer
+// `show`-toggle approach was judged too complex. Spatially cropped to
+// Hokkaido + the Northern Territories (bbox 137.8125,40.979898,151.875,
+// 47.040182 — z7-tile-aligned, so the crop is exact/clean at
+// every zoom level, not just an arbitrary lat/lon box) since the
+// unscoped merge would have needed ~715GB, far past the server's free
+// disk; this viewer never shows anywhere else. Verified byte-for-byte
+// identical to both source archives across 14 spot-check tiles (both
+// municipalities, z2 through z17) before deploying.
 //
 // Tiles are 512x512, not Cesium's 256x256 default — tileWidth/tileHeight
 // must be set explicitly or the zoom-level-to-URL mapping is wrong (a
 // 512px tile at level z covers what a standard 256px tiling scheme calls
-// level z+1) — confirmed correct for this specific tileset by checking
-// its own description ("from 256px z2-z18"), not just assumed.
+// level z+1).
 viewer.imageryLayers.addImageryProvider(
   new Cesium.UrlTemplateImageryProvider({
-    url: 'https://stars.optgeo.org/seamlessphoto512/{z}/{x}/{y}',
+    url: 'https://stars.optgeo.org/kitaphoto17/{z}/{x}/{y}',
     credit: '国土地理院 シームレス空中写真 (GSI seamlessphoto), CC BY 4.0',
     tileWidth: 512,
     tileHeight: 512,
-    minimumLevel: 1,
+    minimumLevel: 2,
     maximumLevel: 17,
   })
 );
