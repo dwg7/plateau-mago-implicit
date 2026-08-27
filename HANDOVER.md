@@ -8,19 +8,52 @@ the next concrete step," not narrate history (that's what git log and
 
 ## Status as of 2026-08-25/26/27
 
-**2026-08-27 in one line:** found and fixed a real vertical-datum bug —
-PLATEAU buildings were rendering 28-34m buried below the newly-added real
-terrain; root-caused, fixed with a new `japan-geoid`-based build step,
-rebuilt and republished all 4 full-profile combinations. See "Real
-elevation added" below for the full account. Once the user could actually
-see the (now-correct) live site, two more real issues turned up: blurry
-imagery (the tileset in use was a deliberately downsampled, z12-capped
-derivative — switched to the real z1-17 source) and buildings looking too
-dark against real photography (Mago's placeholder orange/gray material
-overridden with a warm off-white style) — see "Viewer polish" below.
-Build-side work is committed+published; the two viewer fixes are
-committed locally but **not yet pushed** (held for confirmation, since
-push triggers a live GitHub Pages deploy).
+**2026-08-27, updated end-of-session:** found and fixed a real
+vertical-datum bug — PLATEAU buildings were rendering 28-34m buried below
+the newly-added real terrain; root-caused, fixed with a new
+`japan-geoid`-based build step, rebuilt and republished all 4 full-profile
+combinations (see "Real elevation added" below). Once the user could
+actually see the live site, a run of real, user-reported issues followed,
+all found, fixed, and pushed the same session:
+- Blurry imagery → the tileset in use (`kitaphoto`) was a deliberately
+  downsampled, z12-capped derivative; switched to `seamlessphoto512`
+  (real per-level data to z17).
+- `seamlessphoto512` alone showed GSI's raw multi-survey patchwork at low
+  zoom (visible seams, inconsistent) → built **`kitaphoto17.pmtiles`**, a
+  custom-merged basemap (kitaphoto's smooth low-zoom + seamlessphoto512's
+  real high-zoom, Hokkaido+Northern-Territories-scoped) after `go-pmtiles
+  extract` repeatedly OOM'd on the target host; see "kitaphoto17" below
+  for the full build story.
+- Buildings looked dark against real photography → styled off-white, but
+  the first attempt silently did nothing because `Cesium3DTileset`'s
+  `colorBlendMode` defaults to multiply (`HIGHLIGHT`), not replace — fixed
+  by setting `colorBlendMode = REPLACE`.
+- Roof/wall shimmer on a large building → investigated (duplicate
+  geometry ruled out via direct GLB decode: only 2/21,794 triangles were
+  true duplicates), traced to CesiumJS's logarithmic depth buffer per
+  Cesium's own engineering blog; mitigated with
+  `logarithmicDepthFarToNearRatio = 1e5`.
+- Added a MapLibre-style URL hash (dataset + camera pose) for
+  bookmarking/sharing a view.
+
+**All of the above is committed and pushed** (`b1a4e59` through `921083a`
+on `main`). **None of it has been visually reconfirmed by the user yet**
+— same `document.visibilityState: "hidden"` limitation as always; a real
+attempt this session to break through it (manual `scene.render()` pumping
+after `camera.setView()`) sometimes worked but was non-deterministic, so
+it wasn't relied on for anything visual, only used for a separate
+practical-consumption measurement attempt (also abandoned as unreliable —
+see `docs/findings.md`).
+
+Also done this session: a full Implicit-vs-Explicit structural/size
+comparison at full profile, at the user's direct request — recorded in
+`docs/findings.md` "Cross-phase follow-up: does Implicit actually show a
+benefit over Explicit?". Short answer: Implicit's tiny constant-size
+`tileset.json` is a real, large advantage (105-663x smaller); total file
+count and bytes don't consistently favor either mode (direction flips
+between the two municipalities by building density); the number that
+would actually settle "does it help in real use" (render time/request
+count) remains unmeasured after a real attempt.
 
 **Phases 0–6 all run for real against both municipalities, and all 8
 dataset/mode/profile combinations are published live on
@@ -873,14 +906,15 @@ re-verified against real data:
 
 ## Next concrete step
 
-**Phases 0–6 are done for real, for both municipalities. The viewer went
-through a full round of user-driven cleanup, a real bug fix, and a
-redesign on 2026-08-26** (see "Viewer overhaul", "Real elevation added",
-and "LOD1-baseline enforcement" above) — this is the freshest,
-least-settled part of the project right now, more than the experiment
-phases themselves. **As of this update, everything described above is
-implemented, tested against real data, and committed+pushed+deployed
-(CI/Pages green) unless a section explicitly says otherwise.**
+**Phases 0–6 are done for real, for both municipalities. The viewer has
+now been through two full rounds of user-driven fixes** (2026-08-26 and
+2026-08-27 — see "Viewer overhaul", "Real elevation added", "LOD1-baseline
+enforcement", "Viewer polish", "Roof/wall shimmer and a URL hash feature",
+and "kitaphoto17" above) — this is the freshest, least-settled part of the
+project, more than the experiment phases themselves. **Everything
+described above is implemented, tested against real data or config, and
+committed+pushed (CI/Pages green) unless a section explicitly says
+otherwise.**
 
 The user explicitly said an upstream Mago 3DTiler report is not
 necessarily the goal, so that's optional future work only, not a next
@@ -888,21 +922,24 @@ step.
 
 Immediate next steps, roughly in priority order:
 
-1. **Ask the user to spot-check the viewer live** — kitaphoto imagery,
-   Re:Earth Terrain elevation (now expected to show buildings buried
-   ~28-34m below ground, per point 2 below — not just misaligned),
-   the Japanese consumer-facing redesign, the collapsible panels, and
-   (the actual motivating question) whether the LOD1-baseline fix
-   resolved the "torn texture" look on the large Sarabetsu building.
-   This session's automated browser tooling confirmed network/config
-   correctness for all of these (right provider types, real tile
-   fetches succeeding, no console errors) but never got past the
-   recurring `document.visibilityState: "hidden"` limitation to confirm
-   actual on-screen pixels — every visual claim above is grounded in
-   network/data-level checks, not a screenshot. Claude in Chrome (a real,
-   visible browser) was tried again this session as a workaround but had
-   no browser connected — still needs either that connection or the
-   user's own eyes.
+1. **Ask the user to spot-check the viewer live — this is now the single
+   most important open item, covering everything from both 2026-08-26
+   and 2026-08-27's viewer work.** Specifically: does the site look right
+   overall (buildings sitting on terrain, not buried); is `kitaphoto17`
+   imagery sharp at high zoom and visually calm at low zoom (no more
+   blur, no more raw-photo-patchwork flicker); are buildings actually
+   off-white now (not still Mago's orange/gray — the first style attempt
+   silently failed due to `colorBlendMode`, now fixed); is the
+   roof/wall shimmer on the large Sarabetsu building better (mitigated
+   via `logarithmicDepthFarToNearRatio`, unconfirmed); does the URL hash
+   update when panning and restore correctly on reload. **None of this
+   has been visually confirmed** — every fix this session was verified at
+   the network/config level only (`document.visibilityState: "hidden"`
+   still blocks this session's browser tool from real rendering; a real,
+   documented attempt this session to force it via manual
+   `scene.render()` pumping sometimes worked but was non-deterministic —
+   see `docs/findings.md`). Claude in Chrome remains unconnected — still
+   needs either that connection or the user's own eyes.
 2. **Terrain/building vertical datum mismatch — root-caused, fixed, AND
    published; only visual reconfirmation remains.** Root cause: PLATEAU's
    `bldg:lod1Solid` heights are referenced to Tokyo Bay mean sea level
@@ -924,11 +961,15 @@ Immediate next steps, roughly in priority order:
    added" below for the exact cache-busting workaround). Full detail:
    `docs/findings.md` "Cross-phase follow-up: terrain/building vertical
    datum mismatch."
-3. Only real remaining measurement gap from `docs/test-plan.md`'s Phase
-   4/6 lists: peak process memory, first-useful-render time, initial
-   request count/bytes, navigation responsiveness, geographic-jump
-   convergence, and browser long-session memory trend — none measured
-   this session.
+3. Remaining measurement gap from `docs/test-plan.md`'s Phase 4/6 lists:
+   peak process memory, navigation responsiveness, geographic-jump
+   convergence, browser long-session memory trend — still unmeasured.
+   **First-useful-render time and initial request count/bytes were
+   attempted 2026-08-27** (at the user's direct request) but abandoned as
+   unreliable — see `docs/findings.md`'s "Cross-phase follow-up: does
+   Implicit actually show a benefit over Explicit?" for the full account
+   and a real, partially-working lead (manual `scene.render()` pumping)
+   worth retrying from a genuinely visible browser.
 4. If pursued further: check whether the concurrency=4 tile *set* is
    stable run-to-run the way the concurrency=1 5-tile set turned out to
    be, and get a larger sample (5+ pairs per setting) for a firmer effect
