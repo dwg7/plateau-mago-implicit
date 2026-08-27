@@ -984,7 +984,19 @@ Immediate next steps, roughly in priority order:
    "Cross-phase follow-up: additional determinism sampling." Not yet
    done: pushing past n=3 to the originally-floated 5+ pairs, and
    checking whether the 7-tile "extra instability" pattern is typical
-   or was specific to that one build.
+   or was specific to that one build. **Update 2026-08-28**: pushed to
+   n=4 pairs at concurrency=4 — refined finding, not just more
+   confirmation: the 19-tile "core" turns out to be size-stable but NOT
+   identity-stable across independent samples (16/19 tiles shared
+   between the old and new 4-pair intersections, 3 unique to each) —
+   concurrency=4's non-determinism is a broad pool of ~19-32
+   individually-high-probability-unstable tiles, not a fixed guaranteed
+   set the way concurrency=1's exact 5 tiles are. This is now
+   well-evidenced for Muroran; Sarabetsu hasn't been sampled this deeply
+   yet (only Phase 4's original single pair) — the natural next
+   extension if this is revisited. Full detail: `docs/findings.md`
+   "Cross-phase follow-up: the 19-tile core survives a real pipeline
+   change."
 5. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
    and explicitly optional per `docs/scope.md` — the only phase not yet
    run in some form. Note: Phase 7, if ever pursued, would need to

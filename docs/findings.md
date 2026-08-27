@@ -1539,23 +1539,61 @@ against the older, differently-configured sample.
   one unusual build — though n=2 still isn't enough to call this
   confidently.
 
-### Not confirmed
+### Not confirmed (at the time of writing — superseded below)
 
 - ✗ n=2 for the new-pipeline sample (this pair) is not enough on its
   own to firm up the "how often does the extra-instability edge appear"
   question either — it corroborates the earlier n=1 (`T3304`) rather
   than replacing the need for more trials.
 
+### Update: extended to n=4 pairs under the new pipeline (same session)
+
+Built 2 more concurrency=4 pairs (`20260827T191514Z`/`T191834Z`,
+`20260827T192221Z`/`T192718Z`), all confirmed same-pipeline (`git
+a6d382f` vs the first pair's `git 214b1c7` — different hashes, but
+diffing `scripts/`, `tools/`, `config/`, `Dockerfile` between the two
+commits is empty: the only difference was a docs/manifests-only commit
+in between, so all 4 pairs are legitimately comparable despite the
+differing `git_commit`. Worth noting as a refinement of the "check
+`git_commit` matches" heuristic: what actually matters is whether the
+*build-relevant* files changed, not the literal commit hash — matching
+hashes is a sufficient but not necessary condition, checkable directly
+with `git diff <a> <b> -- scripts/ tools/ config/ Dockerfile`).
+
+Computed the intersection across all 4 comparisons (2 internal pairs +
+1 cross-pair `T1514` vs `T2221`, mirroring the earlier 3-comparison
+methodology): individual per-comparison totals 25/28/24/25 geometry-diff
+tiles; **4-way intersection is 19 tiles again** — same *size* as the
+earlier 3-pair core, but **not the identical set**: 16 tiles are shared
+between the old (subtreeLevels=4) and new (subtreeLevels=3) 19-tile
+cores, with 3 tiles unique to each (`R/4/11/5`, `R/4/12/5`, `R/4/13/5`
+only in the old core; `R/3/7/3`, `R/4/13/6`, `R/4/14/6` only in the new
+one). Union across all 4 new-pipeline comparisons: 32 tiles, with only
+2 tiles appearing in just one single comparison each (not a repeated
+"one build is unusually noisy" pattern like `T3304` before).
+
+**This refines, rather than contradicts, the "stable core" framing
+above — a more honest characterization: there is no perfectly fixed
+identity-level core the way concurrency=1's exact-same-5-tiles is.**
+Instead there's a broader pool of tiles (union ~32 and likely growing
+slowly with more trials) each individually unstable with high but
+not-quite-100% probability across trials; which ~19 of them happen to
+appear in *every* comparison in a given small sample depends partly on
+which specific trials were run, not a fixed guaranteed set. Concurrency=4's
+non-determinism is real, large, and reproducibly *sized* (~19-32 tiles
+out of 553), but not reproducibly *identical* the way concurrency=1's
+is — a genuine, qualitative difference between the two settings, now
+resting on real multi-sample evidence rather than a single pair's
+observation.
+
 ### Next smallest experiment
 
-Two independent paths forward, either useful: (a) build 1-2 more
-concurrency=4 pairs under the *current* pipeline to build a proper
-same-config n=3+ sample (mirroring what the earlier 3-pair study did for
-the old config), or (b) treat "core survives a real pipeline change,
-edge instability recurs at a similar ~6-7 tile magnitude across two
-independent samples" as sufficient characterization for now and move on
-— the marginal value of more pairs here is smaller than it was before
-this cross-config confirmation landed.
+The remaining natural extension — same-size trials for **Sarabetsu**
+(only Muroran has been sampled this deeply at concurrency=4) — would
+show whether "core-with-fuzzy-edges rather than fixed-identity" is a
+Muroran-specific texture or a general property of concurrency=4's
+non-determinism, mirroring how Phase 6 originally generalized Phase 4's
+Sarabetsu-only finding.
 
 ---
 
