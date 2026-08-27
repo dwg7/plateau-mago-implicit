@@ -961,12 +961,26 @@ Immediate next steps, roughly in priority order:
 3. Remaining measurement gap from `docs/test-plan.md`'s Phase 4/6 lists:
    peak process memory, navigation responsiveness, geographic-jump
    convergence, browser long-session memory trend — still unmeasured.
-   **First-useful-render time and initial request count/bytes were
-   attempted 2026-08-27** (at the user's direct request) but abandoned as
-   unreliable — see `docs/findings.md`'s "Cross-phase follow-up: does
-   Implicit actually show a benefit over Explicit?" for the full account
-   and a real, partially-working lead (manual `scene.render()` pumping)
-   worth retrying from a genuinely visible browser.
+   **First-useful-render time and request count are now measured for
+   real** (2026-08-28): the automated in-session browser tool's
+   `document.visibilityState: "hidden"` blocker was never solvable from
+   inside that tool (a real render-pump workaround was found 2026-08-27
+   but proved non-deterministic), so instead of fighting it further, the
+   user ran a provided instrumentation script directly in their own
+   Brave browser (Chromium-based, no Claude-in-Chrome/Chrome-specific
+   tooling needed) and reported the console output back. Result: Implicit
+   needs 56-65% fewer requests and reaches a useful view 13-25% faster
+   than Explicit, for both municipalities (n=1 trial each — real
+   human-observed data, not an automated measurement, but not yet
+   repeated for variance either). Byte totals came back unmeasurable
+   (`Timing-Allow-Origin` zeroes cross-origin `transferSize` — an
+   instrumentation gap, not a real "zero bytes" finding). Full numbers
+   and analysis: `docs/findings.md`'s "Cross-phase follow-up: does
+   Implicit actually show a benefit over Explicit?", "Update
+   (2026-08-28)". The remaining Phase 4/6 metrics (memory, navigation
+   responsiveness, geographic-jump convergence, long-session trend)
+   could use the same low-friction "paste a script into your own
+   browser" method if pursued further.
 4. ~~Check whether the concurrency=4 tile set is stable run-to-run~~
    **Done 2026-08-27** (at the user's request): 3 more Muroran Implicit
    full builds each at concurrency=1 and =4. Concurrency=1's 5-tile
