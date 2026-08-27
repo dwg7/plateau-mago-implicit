@@ -1348,13 +1348,48 @@ on disk — no new build was run for this.
 
 - ✗ **The practical-consumption question that would actually settle
   "does it help in real use" — first-useful-render time and total
-  network requests during realistic pan/zoom — is still unmeasured.**
-  `docs/test-plan.md` calls for exactly this; `HANDOVER.md`'s "Next
-  concrete step" has carried it as an open item across multiple sessions.
-  Everything in this section is static file/byte counts, not observed
-  browser behavior. Implicit's lazy per-subtree fetching *could* mean
-  more total round-trips during an exploration session even where its
-  initial payload is smaller — genuinely unknown without measuring it.
+  network requests during realistic pan/zoom — remains unmeasured, after
+  a real attempt.** `docs/test-plan.md` calls for exactly this;
+  `HANDOVER.md`'s "Next concrete step" carried it as an open item across
+  multiple sessions. Everything else in this section is static file/byte
+  counts, not observed browser behavior. Implicit's lazy per-subtree
+  fetching *could* mean more total round-trips during an exploration
+  session even where its initial payload is smaller — genuinely unknown
+  without measuring it.
+
+  **(2026-08-27) Actually tried, real progress made, ultimately
+  abandoned as unreliable — worth recording since it's the first session
+  to get partway past this project's long-standing
+  `document.visibilityState: "hidden"` blocker.** Found that calling
+  `viewer.camera.setView(...)` (not `flyTo`, which itself depends on the
+  paused render loop to animate) followed by manually pumping
+  `viewer.scene.render()` in a tight synchronous loop *sometimes*
+  drives a real `Cesium3DTileset` traversal forward even in a
+  backgrounded/hidden tab — reached a genuine useful-render state twice
+  (`selected: 4`, 165 features, 25,599 triangles, real GLB content
+  fetched from `tunnel.optgeo.org` and decoded) for
+  `sarabetsu_explicit_full`. Ruled out several other candidate
+  explanations first: `document.visibilityState` spoofing via
+  `Object.defineProperty` had no effect (confirms real browser-engine
+  throttling, not a self-imposed JS-level check Cesium could be tricked
+  out of); `viewer.cesiumWidget.render()` and `scene.forceRender()`
+  behaved identically to plain `scene.render()`; the actual blocker in
+  earlier attempts turned out to be `flyTo`'s animation never
+  completing (camera stuck at the default startup view), not the
+  render-pump technique itself. **But repeating the *exact* same
+  minimal sequence on a fresh tab immediately afterward failed
+  (`visited: 0` after hundreds of render calls)** — the effect is
+  real but non-deterministic, most likely a genuine race against
+  Chrome's own background-tab scheduling jitter, not something
+  controllable from the page's JS. Not reliable enough to produce
+  trustworthy timed measurements across 4 combinations. **Decision
+  (user, 2026-08-27): leave this metric unmeasured for now** rather
+  than report numbers from an unreliable method — static comparisons
+  above stand as the current evidence. If a future session revisits
+  this, the render-pump + `setView` technique is a real, partially-
+  working lead worth trying again (ideally from a genuinely visible
+  browser — Claude in Chrome or the user's own — rather than fighting
+  this tool's headless throttling further).
 - ? The exact content-tile counts above come from one build per
   dataset/mode, not repeated runs. Phase 4/6 already established that
   full-profile batching is non-deterministic (L3/FAIL) for both modes —
