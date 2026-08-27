@@ -922,26 +922,23 @@ step.
 
 Immediate next steps, roughly in priority order:
 
-1. **Ask the user to spot-check the viewer live — this is now the single
-   most important open item, covering everything from both 2026-08-26
-   and 2026-08-27's viewer work.** Specifically: does the site look right
-   overall (buildings sitting on terrain, not buried); is `kitaphoto17`
-   imagery sharp at high zoom and visually calm at low zoom (no more
-   blur, no more raw-photo-patchwork flicker); are buildings actually
-   off-white now (not still Mago's orange/gray — the first style attempt
-   silently failed due to `colorBlendMode`, now fixed); is the
-   roof/wall shimmer on the large Sarabetsu building better (mitigated
-   via `logarithmicDepthFarToNearRatio`, unconfirmed); does the URL hash
-   update when panning and restore correctly on reload. **None of this
-   has been visually confirmed** — every fix this session was verified at
-   the network/config level only (`document.visibilityState: "hidden"`
-   still blocks this session's browser tool from real rendering; a real,
-   documented attempt this session to force it via manual
+1. ~~Ask the user to spot-check the viewer live~~ **Done — user confirmed
+   in their own browser (2026-08-27) that the fixes work**: terrain
+   placement, `kitaphoto17` imagery, off-white buildings, and (implicitly,
+   no complaint raised) the shimmer mitigation and URL hash. This closes
+   out the last "unconfirmed" item from both 2026-08-26 and 2026-08-27's
+   viewer work — every fix listed in this file's "Status" section above
+   is now real, not just network/config-verified. (Historical note, kept
+   for context: every fix this session was verified at the network/config
+   level only before this confirmation — `document.visibilityState:
+   "hidden"` still blocks this session's own browser tool from real
+   rendering; a documented attempt this session to force it via manual
    `scene.render()` pumping sometimes worked but was non-deterministic —
-   see `docs/findings.md`). Claude in Chrome remains unconnected — still
-   needs either that connection or the user's own eyes.
-2. **Terrain/building vertical datum mismatch — root-caused, fixed, AND
-   published; only visual reconfirmation remains.** Root cause: PLATEAU's
+   see `docs/findings.md`.) Claude in Chrome remains unconnected — not
+   needed now that the user confirmed directly, but still worth pursuing
+   for future automated visual checks.
+2. **Terrain/building vertical datum mismatch — root-caused, fixed,
+   published, AND now visually confirmed (see point 1).** Root cause: PLATEAU's
    `bldg:lod1Solid` heights are referenced to Tokyo Bay mean sea level
    (orthometric), not the ellipsoid, despite EPSG:6697 being nominally
    ellipsoidal — confirmed against PLATEAU's own documentation and by
