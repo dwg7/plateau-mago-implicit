@@ -995,14 +995,39 @@ Immediate next steps, roughly in priority order:
 
 Lower-priority, tracked but not blocking:
 
-- Pin `validators.tiles_validator_version` for real (recorded in config,
-  not actually read by `scripts/validate.sh`).
-- `tools/inspect_subtree.py`/`tools/normalize.py` still duplicate
-  subtree-parsing logic across two files.
-- `config/common.yml`'s `tiling.subtree_levels: 3` isn't wired into
-  `scripts/build.sh` (Mago's default of 4 is always used).
+- ~~Pin `validators.tiles_validator_version` for real~~ **Done
+  2026-08-28**: `scripts/validate.sh` now reads it from
+  `config/common.yml` and runs `npx --yes 3d-tiles-validator@<version>`
+  instead of the unpinned form. Re-verified against an existing build:
+  same known 687-error `METADATA_INVALID_LENGTH` result, unchanged.
+- ~~`tools/inspect_subtree.py`/`tools/normalize.py` still duplicate
+  subtree-parsing logic~~ **Done 2026-08-28**: extracted
+  `tools/subtree_common.py` (bit-counting, `find_subtree_levels()`,
+  `is_subtree_json()`, binary/JSON+bin container parsing, availability
+  counting) — both tools now import from it. Verified byte-identical
+  output before/after on 4 real builds (Sarabetsu/Muroran, small/full,
+  with/without the new non-default `subtreeLevels`) — pure refactor, no
+  behavior change. One real gotcha hit and fixed along the way: a bare
+  `import subtree_common` only resolves when the script's own directory
+  is on `sys.path` (true for direct `python3 tools/foo.py` execution,
+  false for `tests/run-tests.sh`'s `import tools.foo` style) — fixed by
+  explicitly adding the script's own directory to `sys.path` before the
+  import, in both files.
+- ~~`config/common.yml`'s `tiling.subtree_levels: 3` isn't wired into
+  `scripts/build.sh`~~ **Done 2026-08-28**: Mago does expose a real flag,
+  `-isl`/`--implicitSubtreeLevels` (confirmed via `docker run <image>
+  --help`, marked "[Experimental]" by Mago itself), now passed through
+  for implicit-mode builds. Verified end-to-end: a fresh small-profile
+  Sarabetsu Implicit build's `tileset.json` now declares
+  `subtreeLevels: 3` (was 4), correctly produces 2 subtree files instead
+  of 1 (levels 0-2 in the root subtree, level 3 in a child), and
+  `make validate` decodes both correctly. **Not yet applied to the live
+  published full-profile builds** — this only affects *future* builds;
+  the 4 currently-published combinations still use Mago's default of 4
+  and were not rebuilt/republished for this change (out of scope for a
+  "small, safe fix").
 - Optionally bisect which CesiumJS release between 1.117 and 1.144 fixed
-  the implicit-tiling bug.
+  the implicit-tiling bug — still not done, still genuinely low priority.
 
 ## Where things live
 

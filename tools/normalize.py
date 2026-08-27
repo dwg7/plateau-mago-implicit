@@ -30,6 +30,15 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Make the sibling tools/subtree_common.py importable regardless of how
+# this script is invoked — both `python3 tools/normalize.py` (which puts
+# tools/ itself on sys.path) and `import tools.normalize` from a context
+# with only the repo root on sys.path (e.g. tests/run-tests.sh) need to
+# resolve the same bare `import subtree_common`.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import subtree_common  # noqa: E402
+from subtree_common import find_subtree_levels, is_subtree_json  # noqa: E402
 
 TIMESTAMP_PATTERN = re.compile(
     r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?"
@@ -68,95 +77,22 @@ def normalize_tileset(tileset_path: Path) -> dict:
     return normalize_json_value(data)
 
 
-def count_subtree_bits(data: bytes, max_bits: int) -> int:
-    """Count set bits in the first max_bits of data."""
-    count = 0
-    for i in range(min(max_bits, len(data) * 8)):
-        byte_idx = i // 8
-        bit_idx = i % 8
-        if (data[byte_idx] >> bit_idx) & 1:
-            count += 1
-    return count
-
-
-def find_subtree_levels(input_dir: Path) -> int | None:
-    """Read implicitTiling.subtreeLevels from the build's tileset.json.
-
-    Subtree files themselves never declare this field — per the 3D Tiles
-    1.1 spec it's inherited from the tileset's implicitTiling block, not
-    encoded in the subtree JSON/binary header. Previously this looked for
-    `header.get("subtreeLevels", 1)` on the *subtree* file itself, which
-    silently defaulted to 1 for every real mago-3d-tiler subtree (verified:
-    none embed this key) — undercounting total_tiles and, by extension,
-    tile/content availability counts. See docs/findings.md Phase 2."""
-    tileset_path = input_dir / "tileset.json"
-    if not tileset_path.exists():
-        return None
-    try:
-        data = json.loads(tileset_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return None
-
-    def _search(tile):
-        if not isinstance(tile, dict):
-            return None
-        implicit = tile.get("implicitTiling")
-        if implicit and "subtreeLevels" in implicit:
-            return implicit["subtreeLevels"]
-        for child in tile.get("children", []) or []:
-            found = _search(child)
-            if found is not None:
-                return found
-        return None
-
-    return _search(data.get("root", {}))
-
-
 def _subtree_availability(header: dict, binary: bytes, subtree_levels: int) -> dict:
-    """Shared availability-decoding logic for both subtree encodings."""
+    """Shared availability-decoding logic for both subtree encodings, built
+    on the low-level primitives in tools/subtree_common.py."""
     total_tiles = sum(4**i for i in range(subtree_levels))
-
-    def get_bv_data(bv_index):
-        bvs = header.get("bufferViews", [])
-        if bv_index is None or bv_index >= len(bvs):
-            return None
-        bv = bvs[bv_index]
-        off = bv.get("byteOffset", 0)
-        length = bv.get("byteLength", 0)
-        return binary[off : off + length]
-
-    def avail_count(avail_obj, max_bits):
-        if not avail_obj:
-            return None
-        constant = avail_obj.get("constant")
-        if constant is not None:
-            return max_bits if constant == 1 else 0
-        bv_data = get_bv_data(avail_obj.get("bitstream"))
-        if bv_data is None:
-            return None
-        return count_subtree_bits(bv_data, max_bits)
-
-    def avail_count_multi(avail_obj, max_bits):
-        # contentAvailability is an array (one entry per content per tile,
-        # e.g. multiple LODs) per the 3D Tiles 1.1 spec — mago-3d-tiler
-        # emits it as a one-element list even for a single content slot.
-        # Treating it like tileAvailability/childSubtreeAvailability's
-        # single-object shape previously crashed with 'list' object has no
-        # attribute 'get', silently caught and recorded as an opaque
-        # "error" string in every normalized manifest. See
-        # docs/findings.md Phase 2.
-        if isinstance(avail_obj, list):
-            return sum(avail_count(a, max_bits) or 0 for a in avail_obj)
-        return avail_count(avail_obj, max_bits)
+    buffer_views = header.get("bufferViews", [])
 
     return {
         "subtree_levels": subtree_levels,
-        "tile_availability": avail_count(header.get("tileAvailability", {}), total_tiles),
-        "content_availability": avail_count_multi(
-            header.get("contentAvailability", {}), total_tiles
+        "tile_availability": subtree_common.count_availability(
+            header.get("tileAvailability", {}), total_tiles, buffer_views, binary
         ),
-        "child_subtree_availability": avail_count(
-            header.get("childSubtreeAvailability", {}), 4**subtree_levels
+        "content_availability": subtree_common.count_availability_multi(
+            header.get("contentAvailability", {}), total_tiles, buffer_views, binary
+        ),
+        "child_subtree_availability": subtree_common.count_availability(
+            header.get("childSubtreeAvailability", {}), 4**subtree_levels, buffer_views, binary
         ),
     }
 
@@ -169,42 +105,21 @@ def inspect_subtree_counts(subtree_path: Path, subtree_levels: int) -> dict:
             return {"error": "too small"}
         if raw[0:4] != b"subt":
             return {"error": "bad magic"}
-        json_len = struct.unpack_from("<Q", raw, 8)[0]
-        bin_len = struct.unpack_from("<Q", raw, 16)[0]
-        json_str = raw[24 : 24 + json_len].rstrip(b"\x00").decode("utf-8")
-        header = json.loads(json_str)
-        binary = raw[24 + json_len : 24 + json_len + bin_len]
-        result = _subtree_availability(header, binary, subtree_levels)
+        parsed = subtree_common.parse_binary_subtree(subtree_path)
+        if parsed["header"] is None:
+            return {"error": "; ".join(parsed["errors"]) or "unknown parse error"}
+        result = _subtree_availability(parsed["header"], parsed["binary_data"], subtree_levels)
         result["format"] = "binary"
         return result
     except Exception as exc:  # noqa: BLE001
         return {"error": str(exc)}
 
 
-SUBTREE_JSON_KEYS = {"tileAvailability", "contentAvailability", "childSubtreeAvailability"}
-
-
-def is_subtree_json(data) -> bool:
-    """Detect a real mago-3d-tiler-style subtree JSON by content shape, since
-    these files have no fixed name (e.g. "0.json") — path/filename can't
-    distinguish them from any other JSON output. See docs/findings.md
-    Phase 1/2: mago-3d-tiler 1.16.2 emits this JSON+external-.bin form
-    instead of the combined binary .subtree format above; both are legal
-    per the 3D Tiles 1.1 spec."""
-    return isinstance(data, dict) and bool(SUBTREE_JSON_KEYS & data.keys())
-
-
 def inspect_subtree_json_bin(json_path: Path, subtree_levels: int) -> dict:
     """Decode a subtree delivered as JSON + external .bin buffer."""
     try:
-        header = json.loads(json_path.read_text(encoding="utf-8"))
-        binary = b""
-        buffers = header.get("buffers", [])
-        if buffers:
-            bin_path = json_path.parent / buffers[0].get("uri", "")
-            if bin_path.exists():
-                binary = bin_path.read_bytes()
-        result = _subtree_availability(header, binary, subtree_levels)
+        loaded = subtree_common.load_json_bin_subtree(json_path)
+        result = _subtree_availability(loaded["header"], loaded["binary_data"], subtree_levels)
         result["format"] = "json+bin"
         return result
     except Exception as exc:  # noqa: BLE001

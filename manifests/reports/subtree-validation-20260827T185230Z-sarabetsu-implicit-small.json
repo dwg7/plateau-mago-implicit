@@ -1,0 +1,109 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-27T18:52:50.316373+00:00",
+  "input_dir": "/Users/hfu/plateau-mago-implicit/data/output/sarabetsu/implicit/small/20260827T185230Z-sarabetsu-implicit-small",
+  "subtree_file_count": 2,
+  "error_count": 0,
+  "subtrees": [
+    {
+      "path": "/Users/hfu/plateau-mago-implicit/data/output/sarabetsu/implicit/small/20260827T185230Z-sarabetsu-implicit-small/subtrees/R/0/0/0.json",
+      "size_bytes": 366,
+      "valid": true,
+      "format": "json+bin",
+      "json_header": {
+        "buffers": [
+          {
+            "uri": "0.bin",
+            "byteLength": 24
+          }
+        ],
+        "bufferViews": [
+          {
+            "buffer": 0,
+            "byteOffset": 0,
+            "byteLength": 3
+          },
+          {
+            "buffer": 0,
+            "byteOffset": 8,
+            "byteLength": 3
+          },
+          {
+            "buffer": 0,
+            "byteOffset": 16,
+            "byteLength": 8
+          }
+        ],
+        "tileAvailability": {
+          "bitstream": 0,
+          "availableCount": 3
+        },
+        "contentAvailability": [
+          {
+            "bitstream": 1,
+            "availableCount": 0
+          }
+        ],
+        "childSubtreeAvailability": {
+          "bitstream": 2,
+          "availableCount": 1
+        }
+      },
+      "tile_availability_count": 3,
+      "content_availability_count": 0,
+      "child_subtree_availability_count": 1,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "/Users/hfu/plateau-mago-implicit/data/output/sarabetsu/implicit/small/20260827T185230Z-sarabetsu-implicit-small/subtrees/R/3/4/2.json",
+      "size_bytes": 366,
+      "valid": true,
+      "format": "json+bin",
+      "json_header": {
+        "buffers": [
+          {
+            "uri": "2.bin",
+            "byteLength": 24
+          }
+        ],
+        "bufferViews": [
+          {
+            "buffer": 0,
+            "byteOffset": 0,
+            "byteLength": 3
+          },
+          {
+            "buffer": 0,
+            "byteOffset": 8,
+            "byteLength": 3
+          },
+          {
+            "buffer": 0,
+            "byteOffset": 16,
+            "byteLength": 8
+          }
+        ],
+        "tileAvailability": {
+          "bitstream": 0,
+          "availableCount": 1
+        },
+        "contentAvailability": [
+          {
+            "bitstream": 1,
+            "availableCount": 1
+          }
+        ],
+        "childSubtreeAvailability": {
+          "bitstream": 2,
+          "availableCount": 0
+        }
+      },
+      "tile_availability_count": 1,
+      "content_availability_count": 1,
+      "child_subtree_availability_count": 0,
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}

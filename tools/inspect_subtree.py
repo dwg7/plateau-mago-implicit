@@ -25,65 +25,27 @@ from __future__ import annotations
 
 import argparse
 import json
-
-import struct
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Make the sibling tools/subtree_common.py importable regardless of how
+# this script is invoked — both `python3 tools/inspect_subtree.py` (which
+# puts tools/ itself on sys.path) and `import tools.inspect_subtree` from
+# a context with only the repo root on sys.path (e.g. tests/run-tests.sh)
+# need to resolve the same bare `import subtree_common`.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-SUBTREE_MAGIC = b"subt"
-SUBTREE_VERSION = 1
-
-
-def count_bits(data: bytes, bit_count: int) -> int:
-    """Count the number of set bits in the first bit_count bits of data."""
-    count = 0
-    for i in range(bit_count):
-        byte_idx = i // 8
-        bit_idx = i % 8
-        if byte_idx < len(data) and (data[byte_idx] >> bit_idx) & 1:
-            count += 1
-    return count
-
-
-def find_subtree_levels(input_dir: Path) -> int | None:
-    """Read implicitTiling.subtreeLevels from the build's tileset.json.
-
-    Subtree files themselves never declare this field — per the 3D Tiles
-    1.1 spec it's inherited from the tileset's implicitTiling block, not
-    encoded in the subtree JSON/binary header. A previous version of this
-    tool read `header.get("subtreeLevels", 1)` on the *subtree* file,
-    which silently defaulted to 1 for every real mago-3d-tiler subtree
-    (verified: none embed this key) — undercounting total_tiles and, by
-    extension, tile/content availability counts. See docs/findings.md
-    Phase 2 for the concrete before/after (tiles=1/content=0 vs the
-    correct tiles=4/content=1 for the Sarabetsu small_file build)."""
-    tileset_path = input_dir / "tileset.json"
-    if not tileset_path.exists():
-        return None
-    try:
-        data = json.loads(tileset_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return None
-
-    def _search(tile):
-        if not isinstance(tile, dict):
-            return None
-        implicit = tile.get("implicitTiling")
-        if implicit and "subtreeLevels" in implicit:
-            return implicit["subtreeLevels"]
-        for child in tile.get("children", []) or []:
-            found = _search(child)
-            if found is not None:
-                return found
-        return None
-
-    return _search(data.get("root", {}))
+import subtree_common  # noqa: E402
+from subtree_common import (  # noqa: E402
+    count_availability_multi as _count_availability_multi,
+    find_subtree_levels,
+    is_subtree_json,
+)
 
 
 def decode_subtree(subtree_path: Path, subtree_levels: int) -> dict:
-    """Decode a single .subtree file."""
+    """Decode a single .subtree file (combined-binary format)."""
     result = {
         "path": str(subtree_path),
         "size_bytes": subtree_path.stat().st_size,
@@ -101,100 +63,56 @@ def decode_subtree(subtree_path: Path, subtree_levels: int) -> dict:
     }
 
     try:
-        data = subtree_path.read_bytes()
+        parsed = subtree_common.parse_binary_subtree(subtree_path)
+        result["magic"] = parsed["magic"]
+        result["version"] = parsed["version"]
+        result["json_byte_length"] = parsed["json_byte_length"]
+        result["binary_byte_length"] = parsed["binary_byte_length"]
+        result["json_header"] = parsed["header"]
 
-        if len(data) < 24:
-            result["errors"].append(f"File too small: {len(data)} bytes (minimum 24)")
+        if parsed["magic"] is None:
+            result["errors"].extend(parsed["errors"])  # too-small file
             return result
 
-        # Header: magic (4), version (4), json_byte_length (8), binary_byte_length (8)
-        magic = data[0:4]
-        result["magic"] = magic.decode("ascii", errors="replace")
-
-        if magic != SUBTREE_MAGIC:
+        # Preserve the original error-ordering: magic check first, then
+        # version warning, then parse_binary_subtree's own structural
+        # errors (size mismatch / JSON parse failure) — matters for
+        # byte-identical output, not just semantic equivalence.
+        if parsed["magic"] != subtree_common.SUBTREE_MAGIC.decode("ascii"):
             result["errors"].append(
-                f"Invalid magic bytes: {magic!r} (expected {SUBTREE_MAGIC!r})"
+                f"Invalid magic bytes: {parsed['magic']!r} "
+                f"(expected {subtree_common.SUBTREE_MAGIC!r})"
             )
-
-        version = struct.unpack_from("<I", data, 4)[0]
-        result["version"] = version
-        if version != SUBTREE_VERSION:
+        if parsed["version"] != subtree_common.SUBTREE_VERSION:
             result["warnings"].append(
-                f"Unexpected version: {version} (expected {SUBTREE_VERSION})"
+                f"Unexpected version: {parsed['version']} "
+                f"(expected {subtree_common.SUBTREE_VERSION})"
             )
+        result["errors"].extend(parsed["errors"])
 
-        json_byte_length = struct.unpack_from("<Q", data, 8)[0]
-        binary_byte_length = struct.unpack_from("<Q", data, 16)[0]
-        result["json_byte_length"] = json_byte_length
-        result["binary_byte_length"] = binary_byte_length
+        header = parsed["header"]
+        if header is None:
+            return result  # JSON header parse error; already recorded
 
-        header_size = 24
-        expected_size = header_size + json_byte_length + binary_byte_length
-        if len(data) < expected_size:
-            result["errors"].append(
-                f"File size mismatch: {len(data)} bytes, expected {expected_size}"
-            )
-
-        # Parse JSON header
-        json_bytes = data[header_size : header_size + json_byte_length]
-        try:
-            json_str = json_bytes.rstrip(b"\x00").decode("utf-8")
-            header = json.loads(json_str)
-            result["json_header"] = header
-        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            result["errors"].append(f"JSON header parse error: {exc}")
-            return result
-
-        # Parse binary buffer
-        binary_offset = header_size + json_byte_length
-        binary_data = data[binary_offset : binary_offset + binary_byte_length]
-
-        # Decode availability bitstreams
+        binary_data = parsed["binary_data"]
         buffer_views = header.get("bufferViews", [])
-
-        def get_buffer_view_data(bv_index: int) -> bytes | None:
-            if bv_index is None or bv_index >= len(buffer_views):
-                return None
-            bv = buffer_views[bv_index]
-            buf_idx = bv.get("buffer", 0)
-            byte_offset = bv.get("byteOffset", 0)
-            byte_length = bv.get("byteLength", 0)
-            if buf_idx == 0 and len(binary_data) >= byte_offset + byte_length:
-                return binary_data[byte_offset : byte_offset + byte_length]
-            return None
-
-        def count_availability(availability_obj: dict, max_tiles: int) -> int | None:
-            if availability_obj is None:
-                return None
-            constant = availability_obj.get("constant")
-            if constant is not None:
-                return max_tiles if constant == 1 else 0
-            bv_index = availability_obj.get("bitstream")
-            bv_data = get_buffer_view_data(bv_index)
-            if bv_data is None:
-                return None
-            return count_bits(bv_data, max_tiles)
 
         # Total tiles in subtree: sum of 4^i for i in range(subtreeLevels)
         total_tiles = sum(4**i for i in range(subtree_levels))
         # Child subtrees: 4^subtreeLevels
         child_subtree_count = 4**subtree_levels
 
-        tile_avail = header.get("tileAvailability", {})
-        content_avail = header.get("contentAvailability", {})
-        child_avail = header.get("childSubtreeAvailability", {})
-
-        result["tile_availability_count"] = count_availability(tile_avail, total_tiles)
-        if isinstance(content_avail, list):
-            result["content_availability_count"] = sum(
-                count_availability(ca, total_tiles) or 0 for ca in content_avail
-            )
-        else:
-            result["content_availability_count"] = count_availability(
-                content_avail, total_tiles
-            )
-        result["child_subtree_availability_count"] = count_availability(
-            child_avail, child_subtree_count
+        result["tile_availability_count"] = subtree_common.count_availability(
+            header.get("tileAvailability", {}), total_tiles, buffer_views, binary_data
+        )
+        result["content_availability_count"] = _count_availability_multi(
+            header.get("contentAvailability", {}), total_tiles, buffer_views, binary_data
+        )
+        result["child_subtree_availability_count"] = subtree_common.count_availability(
+            header.get("childSubtreeAvailability", {}),
+            child_subtree_count,
+            buffer_views,
+            binary_data,
         )
 
         if not result["errors"]:
@@ -204,17 +122,6 @@ def decode_subtree(subtree_path: Path, subtree_levels: int) -> dict:
         result["errors"].append(f"Unexpected error: {exc}")
 
     return result
-
-
-SUBTREE_JSON_KEYS = {"tileAvailability", "contentAvailability", "childSubtreeAvailability"}
-
-
-def is_subtree_json(data) -> bool:
-    """Detect a real mago-3d-tiler-style subtree JSON by content shape —
-    these files have no fixed name. Duplicates tools/normalize.py's
-    identically-named function; not yet merged into a shared module (see
-    HANDOVER.md's tracked follow-ups)."""
-    return isinstance(data, dict) and bool(SUBTREE_JSON_KEYS & data.keys())
 
 
 def decode_subtree_json_bin(json_path: Path, subtree_levels: int) -> dict:
@@ -234,58 +141,28 @@ def decode_subtree_json_bin(json_path: Path, subtree_levels: int) -> dict:
         "warnings": [],
     }
     try:
-        header = json.loads(json_path.read_text(encoding="utf-8"))
+        loaded = subtree_common.load_json_bin_subtree(json_path)
+        header = loaded["header"]
         result["json_header"] = header
+        result["errors"].extend(loaded["errors"])
 
-        binary_data = b""
-        buffers = header.get("buffers", [])
-        if buffers:
-            bin_path = json_path.parent / buffers[0].get("uri", "")
-            if bin_path.exists():
-                binary_data = bin_path.read_bytes()
-            else:
-                result["errors"].append(f"Referenced buffer not found: {bin_path}")
-
+        binary_data = loaded["binary_data"]
         buffer_views = header.get("bufferViews", [])
-
-        def get_buffer_view_data(bv_index):
-            if bv_index is None or bv_index >= len(buffer_views):
-                return None
-            bv = buffer_views[bv_index]
-            off = bv.get("byteOffset", 0)
-            length = bv.get("byteLength", 0)
-            if len(binary_data) >= off + length:
-                return binary_data[off : off + length]
-            return None
-
-        def count_availability(availability_obj, max_tiles):
-            if availability_obj is None:
-                return None
-            constant = availability_obj.get("constant")
-            if constant is not None:
-                return max_tiles if constant == 1 else 0
-            bv_data = get_buffer_view_data(availability_obj.get("bitstream"))
-            if bv_data is None:
-                return None
-            return count_bits(bv_data, max_tiles)
 
         total_tiles = sum(4**i for i in range(subtree_levels))
         child_subtree_count = 4**subtree_levels
 
-        result["tile_availability_count"] = count_availability(
-            header.get("tileAvailability", {}), total_tiles
+        result["tile_availability_count"] = subtree_common.count_availability(
+            header.get("tileAvailability", {}), total_tiles, buffer_views, binary_data
         )
-        content_avail = header.get("contentAvailability", {})
-        if isinstance(content_avail, list):
-            result["content_availability_count"] = sum(
-                count_availability(ca, total_tiles) or 0 for ca in content_avail
-            )
-        else:
-            result["content_availability_count"] = count_availability(
-                content_avail, total_tiles
-            )
-        result["child_subtree_availability_count"] = count_availability(
-            header.get("childSubtreeAvailability", {}), child_subtree_count
+        result["content_availability_count"] = _count_availability_multi(
+            header.get("contentAvailability", {}), total_tiles, buffer_views, binary_data
+        )
+        result["child_subtree_availability_count"] = subtree_common.count_availability(
+            header.get("childSubtreeAvailability", {}),
+            child_subtree_count,
+            buffer_views,
+            binary_data,
         )
 
         if not result["errors"]:

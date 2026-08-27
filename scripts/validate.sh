@@ -23,6 +23,23 @@ OUTPUT_BASE="$REPO_ROOT/data/output/${DATASET}/${MODE}/${PROFILE}"
 LOG_DIR="$REPO_ROOT/manifests/reports"
 mkdir -p "$LOG_DIR"
 
+# Read validators.tiles_validator_version from config/common.yml — recorded
+# there for provenance but never actually enforced (npx resolved whatever
+# was current at run time). Same awk approach scripts/build.sh uses for its
+# own config fields, kept standalone here rather than factored into a
+# shared lib for two scripts.
+CONFIG_COMMON="$REPO_ROOT/config/common.yml"
+TILES_VALIDATOR_VERSION="$(awk '
+    /^validators:/ { in_section=1; next }
+    in_section && /^[^ ]/ { in_section=0 }
+    in_section && index($0, "  tiles_validator_version:") == 1 {
+        sub("  tiles_validator_version: *", "");
+        gsub(/"/, "");
+        print;
+        exit
+    }
+' "$CONFIG_COMMON")"
+
 # Find most recent build (exclude $OUTPUT_BASE itself)
 LATEST_BUILD="$(find "$OUTPUT_BASE" -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
 if [ -z "$LATEST_BUILD" ]; then
@@ -112,9 +129,15 @@ fi
 # Run 3d-tiles-validator if available
 if command -v npx &>/dev/null; then
     echo ""
-    echo "  Running 3d-tiles-validator..."
+    if [ -z "$TILES_VALIDATOR_VERSION" ]; then
+        echo "  ⚠ validators.tiles_validator_version not set in config/common.yml — running unpinned"
+        VALIDATOR_PACKAGE="3d-tiles-validator"
+    else
+        VALIDATOR_PACKAGE="3d-tiles-validator@${TILES_VALIDATOR_VERSION}"
+    fi
+    echo "  Running $VALIDATOR_PACKAGE..."
     VALIDATOR_LOG="$LOG_DIR/3dtiles-validator-${BUILD_ID}.log"
-    npx 3d-tiles-validator \
+    npx --yes "$VALIDATOR_PACKAGE" \
         --tilesetFile "$TILESET" \
         2>&1 | tee "$VALIDATOR_LOG" | sed 's/^/    /' || WARNINGS=$((WARNINGS + 1))
     echo "  Validator log: $VALIDATOR_LOG"

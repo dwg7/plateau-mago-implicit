@@ -223,6 +223,19 @@ check_tbd "$MAGO_PROJ" "crs.mago_proj in config/${DATASET}.yml"
 MAGO_OPTS=(--input /data/input --output /data/output --inputType citygml --proj "$MAGO_PROJ")
 if [ "$MODE" = "implicit" ]; then
     MAGO_OPTS+=(--tilingMode implicit)
+
+    # config/common.yml's tiling.subtree_levels was recorded but never
+    # actually passed to Mago (every build to date used Mago's own
+    # default of 4, confirmed via decoded subtree files in
+    # docs/findings.md's Phase 2). Mago does expose a real flag for this
+    # — `-isl, --implicitSubtreeLevels <arg>` — confirmed via
+    # `docker run <image> --help`, but it's marked "[Experimental]" by
+    # Mago itself, so treat any resulting structural change as expected,
+    # not a bug, if this is ever compared against pre-change builds.
+    SUBTREE_LEVELS="$(get_config_field tiling subtree_levels)"
+    if [ -n "$SUBTREE_LEVELS" ] && [ "$SUBTREE_LEVELS" != "TBD_VERIFIED_SOURCE_REQUIRED" ]; then
+        MAGO_OPTS+=(--implicitSubtreeLevels "$SUBTREE_LEVELS")
+    fi
 elif [ "$MODE" = "explicit" ]; then
     : # explicit is mago-3d-tiler's default tilingMode; nothing to add
 else

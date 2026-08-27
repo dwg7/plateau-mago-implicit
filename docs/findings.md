@@ -559,9 +559,13 @@ the implicit-tiling traversal bug, by checking that version's CHANGES.md
 — useful context (not blocking) if this project ever needs to state a
 minimum supported CesiumJS version precisely.
 
-↓ Wire `config/common.yml`'s `tiling.subtree_levels` into
-`scripts/build.sh`'s Mago invocation (`--implicitSubtreeLevels`) — currently
-unused, so Mago's default of 4 is used regardless of what's configured.
+↓ (2026-08-28: done — see "Cross-phase follow-up: small fixes" near the
+end of this file. Re-confirmed the flag name via a fresh `docker run
+<image> --help`, not just this note, before wiring it in — it's marked
+"[Experimental]" by Mago itself.) Wire `config/common.yml`'s
+`tiling.subtree_levels` into `scripts/build.sh`'s Mago invocation
+(`--implicitSubtreeLevels`) — currently unused, so Mago's default of 4 is
+used regardless of what's configured.
 
 ↓ (2026-08-25: superseded — see Phase 1 Upstream candidates, spec text now
 checked.) If pursued further, prepare a minimal reproduction of the
@@ -1492,6 +1496,62 @@ something that shows up in roughly 1-in-3 concurrency=4 builds, or was
 `T3304` unusual? A few more concurrency=4 pairs (comparing each new
 build against the existing 19-tile core, not just internally) would
 answer this without needing a full new large-n study from scratch.
+
+---
+
+## Cross-phase follow-up: small fixes — validator pin, subtree_levels wiring, tooling dedup (2026-08-28)
+
+Three small, no-scope-risk items from the project's own tracked
+follow-ups, done as the first step of a broader remaining-work roadmap.
+
+### Confirmed
+
+- ✓ **`validators.tiles_validator_version` is now actually enforced.**
+  `scripts/validate.sh` previously read it from `config/common.yml` but
+  never passed it to `npx`, which resolved whatever was current at run
+  time. Now runs `npx --yes 3d-tiles-validator@<pinned-version>`.
+  Confirmed the resolved version (0.6.1) already matched the pin before
+  this change (`npm view 3d-tiles-validator version`), so this protects
+  against *future* drift rather than changing anything retroactively —
+  re-ran validation on an existing build and got the identical known
+  687-error result.
+- ✓ **`config/common.yml`'s `tiling.subtree_levels: 3` is now wired into
+  Mago's invocation.** Confirmed the real flag name empirically first
+  (`docker run <mago-image> --help`) rather than trusting this file's own
+  earlier "Next smallest experiment" note blindly: `-isl,
+  --implicitSubtreeLevels <arg>`, marked "[Experimental]" by Mago itself.
+  Wired in for implicit-mode builds only (the concept doesn't apply to
+  Explicit). Verified end-to-end on a fresh Sarabetsu Implicit
+  small-profile build: `tileset.json` now declares `subtreeLevels: 3`
+  (was 4), correctly producing 2 subtree files instead of 1 (root
+  subtree covers levels 0-2, a child subtree covers level 3), and
+  `make validate` decodes both without error. **Not applied
+  retroactively** — the 4 live published full-profile builds still use
+  Mago's default of 4 and were not rebuilt for this.
+- ✓ **De-duplicated subtree-parsing logic between `tools/inspect_subtree.py`
+  and `tools/normalize.py`** into a new shared `tools/subtree_common.py`
+  (bit-counting, `find_subtree_levels()`, `is_subtree_json()`,
+  binary/JSON+bin container parsing, availability counting — the exact
+  logic that needed the same two bugs fixed independently in both files
+  during Phase 2). Verified as a genuinely behavior-preserving refactor,
+  not just "looks equivalent": ran both tools on 4 real builds (Sarabetsu
+  full + small, Muroran full, one with the new non-default
+  `subtreeLevels: 3`) before and after the refactor and diffed the
+  JSON output — byte-identical except the `generated_at` timestamp, in
+  every case. `make validate` and the full `make test` suite both
+  re-confirmed passing after.
+- ? **Real gotcha caught by `make test`, not by the manual verification
+  above:** a bare `import subtree_common` only resolves when the
+  importing script's own directory is on `sys.path` — true for direct
+  `python3 tools/inspect_subtree.py` execution (Python adds the script's
+  own directory automatically), but false for how
+  `tests/run-tests.sh` imports these tools (`import tools.inspect_subtree`
+  with only the repo root on `sys.path`, so `tools/` itself is never
+  added). Fixed by explicitly inserting the script's own directory into
+  `sys.path` before the import, in both files. A reminder that "ran it
+  directly and it worked" isn't sufficient verification for a refactor
+  touching how a script is imported — `make test` catching this the way
+  it did is exactly what it's for.
 
 ---
 
