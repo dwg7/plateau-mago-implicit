@@ -1011,13 +1011,23 @@ Immediate next steps, roughly in priority order:
    extension if this is revisited. Full detail: `docs/findings.md`
    "Cross-phase follow-up: the 19-tile core survives a real pipeline
    change."
-5. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
-   and explicitly optional per `docs/scope.md` — the only phase not yet
-   run in some form. Note: Phase 7, if ever pursued, would need to
-   deliberately *bypass* `tools/strip_higher_lod.py` (which now runs
-   unconditionally in `scripts/build.sh` for every Phase 1-6 build) since
-   Phase 7 is specifically about the higher-LOD content that script now
-   strips — that bypass doesn't exist yet.
+5. ~~Phase 7 (optional higher-detail/LOD2+/texture tests) remains
+   untouched~~ **LOD3 sub-goal run 2026-08-28** (user approved crossing
+   this scope boundary first, per `CLAUDE.md`). `scripts/build.sh` now
+   has an opt-in `PHASE7=1` env var that bypasses
+   `tools/strip_higher_lod.py` (defaults off, verified byte-identical
+   Phase 1-6 output via SHA-256 with it unset). Extracted the 4 real
+   LOD3-bearing buildings from Sarabetsu's `63437175_bldg_6697_op.gml`
+   and ran both modes directly through Mago: both convert cleanly (147 /
+   57 tile contents), correct geographic placement, no new validator
+   error class beyond the already-known `METADATA_INVALID_LENGTH`
+   pattern. **Texture sub-goal explicitly marked not-evaluable** — zero
+   texture elements in either dataset or the CI fixture, would need a
+   third data source (a separate scope question, not decided). Full
+   detail, exact commands, kept strictly separate from the Phase 1-6
+   summary per `docs/test-plan.md`: `docs/findings.md` "Phase 7: Optional
+   higher-detail tests." Not done: the deeper structural tree comparison
+   Phase 2 did for LOD1-only content, applied to this LOD3 case.
 
 Lower-priority, tracked but not blocking:
 

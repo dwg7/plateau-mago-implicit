@@ -152,21 +152,36 @@ fi
 # overlapping representations of the same building for the handful that
 # carry LOD0+LOD1+LOD3 simultaneously — see docs/findings.md). CLAUDE.md's
 # scope boundary is explicit that this project's baseline is LOD1 only;
-# this enforces that boundary at the source-data level, always, not as an
-# opt-in flag — there's no baseline scenario where feeding Mago non-LOD1
-# geometry is correct. Never touches data/source/ itself — always reads
-# from there and writes into a per-build staging directory.
+# this enforces that boundary at the source-data level for Phase 1-6.
+#
+# Phase 7 (docs/scope.md: "Optional higher-detail (LOD2+, textures)",
+# explicitly separate from and not invalidating Phase 1-6) is the one
+# legitimate exception, requested and approved by the user 2026-08-28 —
+# not a routine bypass. PHASE7=1 skips this stripping step entirely
+# (opt-in, defaults off, loud about it) so higher-LOD geometry reaches
+# Mago unmodified. Never touches data/source/ itself either way — always
+# reads from there and writes into a per-build staging directory.
 STAGING_DIR="$REPO_ROOT/data/.build-staging/${DATASET}/${BUILD_ID}"
 mkdir -p "$STAGING_DIR"
 STAGED_FILES=()
-for src in "${SOURCE_FILES[@]}"; do
-    dest="$STAGING_DIR/$(basename "$src")"
-    python3 "$REPO_ROOT/tools/strip_higher_lod.py" "$src" "$dest" || {
-        echo "ERROR: tools/strip_higher_lod.py failed on $src" >&2
-        exit 1
-    }
-    STAGED_FILES+=("$dest")
-done
+if [ "${PHASE7:-}" = "1" ]; then
+    echo "*** PHASE7 mode: higher-LOD geometry included, this is OUT OF the LOD1 baseline. ***" >&2
+    echo "*** Results from this build must not be compared against or merged into Phase 1-6. ***" >&2
+    for src in "${SOURCE_FILES[@]}"; do
+        dest="$STAGING_DIR/$(basename "$src")"
+        cp "$src" "$dest"
+        STAGED_FILES+=("$dest")
+    done
+else
+    for src in "${SOURCE_FILES[@]}"; do
+        dest="$STAGING_DIR/$(basename "$src")"
+        python3 "$REPO_ROOT/tools/strip_higher_lod.py" "$src" "$dest" || {
+            echo "ERROR: tools/strip_higher_lod.py failed on $src" >&2
+            exit 1
+        }
+        STAGED_FILES+=("$dest")
+    done
+fi
 
 # Second staging pass: PLATEAU's building heights are referenced to Tokyo
 # Bay mean sea level (orthometric), not the ellipsoid, even though

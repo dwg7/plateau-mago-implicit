@@ -1728,7 +1728,118 @@ follow-ups, done as the first step of a broader remaining-work roadmap.
 
 ## Phase 7: Optional higher-detail tests
 
-*Not started. Phase 7 is optional and separate.*
+**Status: LOD3 sub-goal run for real, 2026-08-28. Texture sub-goal marked
+not-evaluable, not attempted. Explicitly optional and separate — per
+`docs/test-plan.md`, failure here does not invalidate Phase 1-6, and per
+`CLAUDE.md`'s scope boundary, this section's results are never merged
+into the Phase 1-6 summary table below.**
+
+Run at the user's explicit request and sign-off (`CLAUDE.md`: "Phase 7
+is the only place higher detail is allowed... requires the user's
+explicit sign-off" — asked and approved before any code change, see
+chat history 2026-08-28).
+
+### What's actually testable — checked before running anything
+
+- **Higher LOD (LOD3): real, testable.** Neither dataset has LOD2
+  (`tools/strip_higher_lod.py`'s own docstring: "no lod2 elements were
+  found in either dataset"). Sarabetsu's `63437175_bldg_6697_op.gml` (the
+  826-building file already central to Phase 4 and the LOD1-enforcement
+  finding) has 4 buildings with genuine LOD3 detail: 92, 2004, 2682, and
+  2514 `lod3MultiSurface` elements respectively (`bldg_3ac5d900...`,
+  `bldg_88f31791...`, `bldg_ad16daa0...`, `bldg_e9a284d3...`).
+- **Textures: not evaluable with current project data, not attempted.**
+  Re-confirmed zero `app:ParameterizedTexture`/`app:Appearance` elements
+  in both full datasets and in the committed CI fixture
+  (`data/fixtures/test_building.gml`). Testing texture support for real
+  would need a third data source, itself a separate scope question
+  (`CLAUDE.md`: "two municipalities only... do not add a third without
+  the user asking") — not decided as part of this task.
+
+### Method
+
+Not run through `make build` — this is a deliberately small, isolated
+test, not a Phase-1-6-style full pipeline run. `scripts/build.sh` gained
+an opt-in `PHASE7=1` env var (defaults off, prints a loud warning when
+set) that skips `tools/strip_higher_lod.py` entirely, letting higher-LOD
+geometry reach Mago unmodified; **verified this doesn't touch Phase 1-6
+behavior** by rebuilding `sarabetsu/implicit/small` with `PHASE7` unset
+and confirming the root `tileset.json` SHA-256 is byte-identical to the
+pre-change build.
+
+For the actual Phase 7 test: extracted just the 4 LOD3-bearing buildings
+from `63437175_bldg_6697_op.gml` into a standalone 8.9MB CityGML document
+(kept out of the repo — see "Not confirmed" below for why), ran it
+through `tools/geoid_correct.py` (a real, always-needed correction,
+unrelated to LOD scope — see the vertical-datum-mismatch finding above)
+but *not* `tools/strip_higher_lod.py`, then invoked Mago directly for
+both modes with the same flags `scripts/build.sh` itself uses:
+
+```
+docker run --rm -v <input>:/data/input -v <output>:/data/output \
+  plateau-mago-implicit-tiler:1.16.2 \
+  --input /data/input --output /data/output --inputType citygml \
+  --proj "+proj=longlat +datum=WGS84 +axis=neu +no_defs" \
+  --multiThreadCount 1
+# (Implicit mode additionally: --tilingMode implicit --implicitSubtreeLevels 3)
+```
+
+### Confirmed
+
+- ✓ **Mago 3DTiler converts real LOD3 geometry without crashing, in both
+  modes.** Explicit: 147 tile contents, 9.4s. Implicit: 57 tile contents,
+  10.3s. Both completed cleanly — no exceptions, no silent truncation
+  (147/57 tile contents from just 4 buildings is far more geometric
+  complexity than a LOD1-only file of this building count would ever
+  produce, consistent with the real LOD3 detail actually being
+  processed, not dropped).
+- ✓ **Geographic placement is correct.** Root bounding region decodes to
+  143.193-143.194°E / 42.645-42.647°N (both modes) — squarely inside
+  Sarabetsu's known extent, and the geoid-corrected height range
+  (214.9-226.1m) is plausible for that inland plateau area, consistent
+  with other Sarabetsu elevation samples this project has taken.
+- ✓ **No new validator error class.** `3d-tiles-validator@0.6.1` against
+  both outputs shows only the already-documented, ambiguous-not-confirmed
+  `METADATA_INVALID_LENGTH` alignment-padding pattern (see "The
+  `METADATA_INVALID_LENGTH` validator finding" above) — nothing LOD3-
+  specific or new.
+- ✓ **The `PHASE7=1` bypass is genuinely inert by default.** Confirmed
+  via SHA-256 comparison, not just "looks like it should be," per this
+  project's own standard for claiming something works.
+
+### Not confirmed
+
+- ✗ **No structural tree comparison against Phase 2's methodology done
+  yet** (Explicit's per-LOD sibling branch shape, Implicit's subtree
+  availability decode) — this run only confirmed conversion succeeds and
+  validates the same as every other build, not the detailed tree-shape
+  analysis Phase 2 did for the LOD1-only case.
+- ✗ **The 8.9MB extracted test file was not committed to the repo** —
+  it doesn't fit `CLAUDE.md`'s "only the small synthetic fixture
+  `data/fixtures/test_building.gml` is checked in" convention, and this
+  was a one-off manual invocation (not wired into `make build`/`make
+  test`), so it isn't reproducible by running a single command the way
+  Phase 1-6 builds are. Reproducible by re-running the extraction
+  described above against the same source file with the same 4
+  `gml:id`s, which *is* committed (`data/source/` is fetched via `make
+  fetch`, checksummed).
+- ✗ **Texture support remains completely untested** — not a finding,
+  a scope decision (see above).
+- ✗ Determinism, full-profile behavior, and practical-consumption
+  metrics were not evaluated for Phase 7 content — out of scope for
+  what `docs/test-plan.md` actually asks ("test higher LOD and texture
+  support if LOD1 baseline is stable"), and explicitly not proposed when
+  this was approved.
+
+### Next smallest experiment
+
+If Phase 7 is revisited: the structural tree comparison Phase 2 did for
+LOD1-only content, applied here — does Explicit now show 3 sibling
+branches (LOD0/LOD1/LOD3) instead of 2, and does Implicit's merged
+content tile's `propertyTable` grow accordingly? Would directly answer
+whether Mago's Implicit merging behavior (already confirmed to combine
+multiple LODs into one content tile for the LOD0+LOD1 case, Phase 2)
+extends cleanly to a third LOD.
 
 ---
 
