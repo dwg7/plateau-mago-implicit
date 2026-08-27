@@ -1499,6 +1499,66 @@ answer this without needing a full new large-n study from scratch.
 
 ---
 
+## Cross-phase follow-up: the 19-tile core survives a real pipeline change (2026-08-28)
+
+Attempting to push the concurrency=4 sample toward n=5 hit the *exact*
+same class of trap as the geoid-fix boundary lesson above, caught before
+it produced a false result: the two new builds
+(`20260827T190046Z`, `20260827T190435Z`) were built *after*
+`git 214b1c7` (this session's roadmap §1 work, which wired
+`config/common.yml`'s `tiling.subtree_levels` into Mago's
+`--implicitSubtreeLevels` flag) — a different `git_commit` from the
+existing n=3 concurrency=4 sample (`git 8bfae0b` and earlier), and a
+real structural change: `subtreeLevels` went from Mago's default 4 to
+the configured 3, changing subtree file layout (818 → 636 total output
+files for the same dataset/mode/profile). Checked `git_commit` in both
+manifests *before* comparing this time, per the lesson from two days
+ago — the new pair is only compared against each other, not naively
+against the older, differently-configured sample.
+
+### Confirmed
+
+- ✓ **The new pair still fails determinism (L3/FAIL)**, as expected.
+- ✓ **The previous 19-tile "hard core" reproduces 100% under the new
+  subtreeLevels=3 configuration** — all 19 tiles from the earlier
+  3-pair intersection appear again, exactly, in this new pair's 25
+  geometry-diff tiles. Strong evidence the non-determinism lives
+  entirely in Mago's content-tile generation (batching/triangulation),
+  genuinely independent of how the implicit quadtree gets grouped into
+  subtree files — a real config change didn't move the core at all,
+  the same way the concurrency=1 baseline survived the geoid-fix
+  boundary.
+- ✓ **A second, independent "extra instability beyond the core"
+  observation, similar in size to the first.** This new pair's 25 tiles
+  include 6 beyond the 19-tile core (`R/5/9/7`, `R/3/7/3`, `R/3/3/1`,
+  `R/4/14/6`, `R/4/13/6`, `R/4/3/9`) — not the same 6 tiles as the
+  earlier 7-tile anomaly traced to build `T3304`, but a similar
+  magnitude (6 vs 7). Two independent occurrences of "core plus ~6-7
+  extra" is a real hint that this edge instability is a recurring
+  feature of concurrency=4 builds in general, not a one-off fluke from
+  one unusual build — though n=2 still isn't enough to call this
+  confidently.
+
+### Not confirmed
+
+- ✗ n=2 for the new-pipeline sample (this pair) is not enough on its
+  own to firm up the "how often does the extra-instability edge appear"
+  question either — it corroborates the earlier n=1 (`T3304`) rather
+  than replacing the need for more trials.
+
+### Next smallest experiment
+
+Two independent paths forward, either useful: (a) build 1-2 more
+concurrency=4 pairs under the *current* pipeline to build a proper
+same-config n=3+ sample (mirroring what the earlier 3-pair study did for
+the old config), or (b) treat "core survives a real pipeline change,
+edge instability recurs at a similar ~6-7 tile magnitude across two
+independent samples" as sufficient characterization for now and move on
+— the marginal value of more pairs here is smaller than it was before
+this cross-config confirmation landed.
+
+---
+
 ## Cross-phase follow-up: small fixes — validator pin, subtree_levels wiring, tooling dedup (2026-08-28)
 
 Three small, no-scope-risk items from the project's own tracked
