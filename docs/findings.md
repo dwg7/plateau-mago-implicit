@@ -998,6 +998,13 @@ confirms the concurrency effect with 2 pairs at each setting rather than
 concurrency=4 tile *set* is stable run-to-run the way the concurrency=1
 set is would be the natural next question.)
 
+↓ (2026-08-27: this question now has an answer — see "Cross-phase
+follow-up: additional determinism sampling" near the end of this file.
+Short version: concurrency=4 has a stable 19-tile core across 3 pairs,
+plus some build-specific extra instability at the edges — not perfectly
+rock-solid like concurrency=1's exact-same-5-tiles-every-time, but not
+random either.)
+
 ↓ If a minimal reproduction is ever pursued (per Phase 4's note, not
 committed to), Muroran's diffuse multi-file pattern is actually easier to
 reason about for isolating "does batch size alone predict non-determinism
@@ -1407,6 +1414,84 @@ realistic session (load + pan across a populated area + zoom to street
 level) for all 4 combinations, in a real (non-headless) browser — the one
 remaining practical-consumption gap `docs/test-plan.md` calls for that
 this project has not yet executed.
+
+---
+
+## Cross-phase follow-up: additional determinism sampling — is the concurrency=4 tile set stable? (2026-08-27)
+
+Answers Phase 6's own "Next smallest experiment" (repeated concurrency
+trials for a firmer effect size; is the concurrency=4 tile set stable
+run-to-run the way concurrency=1's is). Built 2 more `CONCURRENCY=4`
+pairs and 1 more `CONCURRENCY=1` pair for Muroran Implicit full profile
+(6 new builds total: `20260827T132457Z`, `20260827T132741Z`,
+`20260827T133030Z`, `20260827T133304Z` at concurrency=4;
+`20260827T133725Z`, `20260827T134001Z` at concurrency=1).
+
+### A methodological trap, caught before it produced a false finding
+
+The very first cross-pair comparison run — new concurrency=4 build
+`20260827T132457Z` against the *original* Phase 6 concurrency=4 build
+`20260825T141104Z` — showed **553/553 tiles differing in geometry**,
+i.e. every single tile. Read naively, this would have looked like a
+dramatic new non-determinism finding. It isn't one: `20260825T141104Z`
+was built *before* this session's `tools/geoid_correct.py` fix (see
+"Cross-phase follow-up: terrain/building vertical datum mismatch"
+above) was wired into `scripts/build.sh`, and every one of today's
+builds includes it. Geoid correction deterministically shifts every
+building's Z coordinate by the local geoid undulation (~33m for
+Muroran) — comparing across that boundary compares two *intentionally*
+different, both-correct outputs, not a determinism failure. **Lesson
+for any future determinism comparison: only compare builds made with
+the same pipeline version** (in practice, same git commit / same day
+this session, until build manifests record a pipeline-version hash
+explicitly — they currently record `git_commit`, so this is
+checkable, just wasn't checked before running the comparison here).
+All comparisons below are same-day (2026-08-27), same-pipeline,
+apples-to-apples.
+
+### Confirmed
+
+- ✓ **Concurrency=1's 5-tile baseline is now confirmed across 3
+  independent pairs, including one spanning a real pipeline change.**
+  The new pair (`20260827T133725Z` vs `20260827T134001Z`) shows exactly
+  **5** geometry-diff tiles, and they are the *exact same 5* found in
+  both original Aug 25 pairs: `R/2/2/0`, `R/2/2/1`, `R/3/4/1`, `R/3/5/2`,
+  `R/4/7/2`. Zero variation across 3 pairs, one of which used
+  geoid-corrected coordinates the other two didn't — about as strong as
+  a reproducibility result gets without exhaustive trials.
+- ✓ **Concurrency=4 has a stable core, but it's not perfectly rock-solid
+  like concurrency=1 — a real, previously-unmeasured distinction.**
+  Comparing all 3 same-day concurrency=4 pairings (`T2457` vs `T2741`;
+  `T3030` vs `T3304`; and cross-pair `T2457` vs `T3030`) as a 3-way
+  intersection: **19 tiles appear as geometry-different in all three
+  comparisons** — a hard, reproducible core, and it fully contains the
+  concurrency=1 5-tile set (consistent with Phase 6's original "adds on
+  top of the baseline" framing). But there's also a soft edge: **7
+  additional tiles appear only in the `T3030` vs `T3304` comparison**
+  (`R/3/1/4`, `R/3/2/1`, `R/4/13/6`, `R/4/14/6`, `R/4/3/9`, `R/5/26/12`,
+  `R/5/28/12`), and since none of them show up in `T2457` vs `T3030`
+  either, the extra instability traces specifically to build `T3304`
+  itself, not to the pairing. Individual per-pair totals were 23, 28,
+  and 23 tiles — in the same ballpark as Phase 6's original single-pair
+  observation of 25, but now known to have a reproducible ~19-tile core
+  plus some build-specific variability at the edges, not a flat "25
+  every time."
+
+### Not confirmed
+
+- ✗ Still not a large-n study — 3 pairs at concurrency=4, 3 at
+  concurrency=1 (2 original + 1 new each), not the "5+ pairs" originally
+  floated as a target. The 7-tile "extra instability in one build"
+  observation is based on a single occurrence; whether that's typical
+  variance or unusual would need more pairs to say confidently.
+
+### Next smallest experiment
+
+The remaining open question from here: is the 7-tile "extra" pattern
+something that shows up in roughly 1-in-3 concurrency=4 builds, or was
+`T3304` unusual? A few more concurrency=4 pairs (comparing each new
+build against the existing 19-tile core, not just internally) would
+answer this without needing a full new large-n study from scratch.
 
 ---
 

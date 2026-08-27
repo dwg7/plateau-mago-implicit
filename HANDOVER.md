@@ -967,12 +967,24 @@ Immediate next steps, roughly in priority order:
    Implicit actually show a benefit over Explicit?" for the full account
    and a real, partially-working lead (manual `scene.render()` pumping)
    worth retrying from a genuinely visible browser.
-4. If pursued further: check whether the concurrency=4 tile *set* is
-   stable run-to-run the way the concurrency=1 5-tile set turned out to
-   be, and get a larger sample (5+ pairs per setting) for a firmer effect
-   size on Phase 4/6's determinism finding (LOD1-enforcement ruled out
-   LOD-complexity as the cause, but didn't change what's left to
-   investigate about the concurrency effect itself).
+4. ~~Check whether the concurrency=4 tile set is stable run-to-run~~
+   **Done 2026-08-27** (at the user's request): 3 more Muroran Implicit
+   full builds each at concurrency=1 and =4. Concurrency=1's 5-tile
+   baseline reconfirmed exactly (3rd independent pair, zero variation,
+   even across the geoid-fix pipeline change). Concurrency=4 has a
+   stable 19-tile core across all 3 pairs, plus some build-specific
+   extra instability at the edges (7 tiles traced to one specific
+   build) — real, but not as clean as concurrency=1. Caught a real
+   methodological trap along the way: comparing builds across the
+   geoid-fix boundary (different `git_commit`, different pipeline
+   version) produces near-total apparent divergence that's actually the
+   *intentional* Z-shift, not non-determinism — future determinism
+   comparisons should check build manifests' `git_commit` matches
+   before trusting a result. Full detail: `docs/findings.md`
+   "Cross-phase follow-up: additional determinism sampling." Not yet
+   done: pushing past n=3 to the originally-floated 5+ pairs, and
+   checking whether the 7-tile "extra instability" pattern is typical
+   or was specific to that one build.
 5. Phase 7 (optional higher-detail/LOD2+/texture tests) remains untouched
    and explicitly optional per `docs/scope.md` — the only phase not yet
    run in some form. Note: Phase 7, if ever pursued, would need to
