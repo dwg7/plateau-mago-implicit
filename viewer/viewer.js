@@ -348,6 +348,29 @@ async function loadTileset(url, label) {
   }
 }
 
+// Marks "useful view reached" — the camera has settled on its target and
+// the scene is interactive (docs/test-plan.md's "First useful view").
+// Called from both camera-movement paths: flyTo's animated completion
+// (dropdown selection) and setView's instant positioning (URL hash
+// restore, restoreFromHash() below) — both are real "useful view reached"
+// moments, they just differ in whether there's an animation to wait for.
+// Originally only wired into flyTo's completion; the hash-restore path
+// used setView without this call, silently leaving
+// window.__practicalConsumptionDiagnostics.ready (and thus
+// viewer/measure_practical_consumption.js) permanently unset for anyone
+// loading a viewpoint via #dataset=<key> instead of the dropdown — found
+// 2026-08-28 when a real Sapporo measurement via the hash-load path timed
+// out waiting for a completion that was never going to fire.
+function markUsefulView() {
+  if (usefulViewTime === null && currentTileset) {
+    usefulViewTime = performance.now() - loadStartTime;
+    updateDiagnostic('d-useful-view', formatMs(usefulViewTime));
+    window.__practicalConsumptionDiagnostics = window.__practicalConsumptionDiagnostics || {};
+    window.__practicalConsumptionDiagnostics.usefulViewTime = usefulViewTime;
+    window.__practicalConsumptionDiagnostics.ready = true;
+  }
+}
+
 // Fly to predefined viewpoint
 function flyTo(destination, orientation) {
   viewer.camera.flyTo({
@@ -355,13 +378,7 @@ function flyTo(destination, orientation) {
     orientation,
     duration: 2.0,
     complete: () => {
-      if (usefulViewTime === null && currentTileset) {
-        usefulViewTime = performance.now() - loadStartTime;
-        updateDiagnostic('d-useful-view', formatMs(usefulViewTime));
-        window.__practicalConsumptionDiagnostics = window.__practicalConsumptionDiagnostics || {};
-        window.__practicalConsumptionDiagnostics.usefulViewTime = usefulViewTime;
-        window.__practicalConsumptionDiagnostics.ready = true;
-      }
+      markUsefulView();
       setStatus('');
     },
   });
@@ -465,6 +482,7 @@ function cameraFromHashParams(params) {
     currentDatasetKey = datasetKey;
     loadTileset(vp.tilesetUrl, vp.label).then(() => {
       viewer.camera.setView(cam || { destination: vp.destination, orientation: vp.orientation });
+      markUsefulView();
       hashRestoring = false;
     });
   } else if (customUrl) {
@@ -472,6 +490,7 @@ function cameraFromHashParams(params) {
     currentCustomUrl = customUrl;
     loadTileset(customUrl, customUrl).then(() => {
       if (cam) viewer.camera.setView(cam);
+      markUsefulView();
       hashRestoring = false;
     });
   } else {

@@ -2103,18 +2103,54 @@ checksum matched on re-verification). `make inspect DATASET=sapporo`
   fast because `flyTo`'s completion is camera-animation-based, not
   tile-render-based, consistent with how the diagnostic is defined).
 
+### Confirmed (continued) — real-browser measurement, first pass
+
+The user ran `viewer/measure_practical_consumption.js` for real, in
+their own Brave, against both published Sapporo URLs
+(`#dataset=sapporo_explicit_full` / `..._implicit_full`) once GitHub
+Pages redeployed:
+
+| Dataset | mode | firstVisibleTime (ms) | usefulViewTime (ms) | requests |
+|---|---|---|---|---|
+| Sapporo | Explicit | 494.7 | *(see below)* | 250 |
+| Sapporo | Implicit | 198.8 | *(see below)* | 228 |
+
+- ✓ **`firstVisibleTime` and `requestCount` are real and valid.**
+  Implicit reaches first content 2.5x faster (198.8ms vs 494.7ms) and
+  needs fewer requests (228 vs 250, an 8.8% reduction) — same direction
+  as the Sarabetsu/Muroran finding, though a much smaller request-count
+  gap than the 56-65% seen there. Whether that gap genuinely narrows at
+  this scale, or is a single-trial artifact, isn't distinguishable from
+  one measurement — flagged honestly, not smoothed over.
+- ? **`usefulViewTime` came back `null` for both — a real bug in this
+  session's own tooling, not a Sapporo-specific finding.** Root cause:
+  `viewer/measure_practical_consumption.js`'s own usage instructions
+  say to load a dataset via the `#dataset=<key>` URL hash. But
+  `viewer.js`'s hash-restore path (`restoreFromHash()`) positioned the
+  camera with `viewer.camera.setView(...)` — an instant snap with no
+  completion callback — while the diagnostic that sets `usefulViewTime`
+  was only ever wired into `flyTo()`'s animated `complete` callback,
+  which only the dropdown-selection code path calls. Loading via hash
+  (exactly what the script instructed) could therefore never set
+  `usefulViewTime`, and the script correctly timed out after 30s waiting
+  for a callback that was never going to fire. **Fixed same-day**:
+  extracted the diagnostic-marking logic into a shared `markUsefulView()`
+  function (`viewer/viewer.js`) and call it from both the `flyTo`
+  completion and immediately after `setView()` in the hash-restore path
+  — verified working locally (`window.__practicalConsumptionDiagnostics`
+  now reports `ready: true` with a real `usefulViewTime` when loaded via
+  hash). This also means the earlier 2026-08-26/27 Sarabetsu/Muroran
+  `usefulViewTime` numbers were necessarily measured via the
+  dropdown-selection path, not the hash-URL path this script's
+  instructions describe — worth knowing if anyone tries to reproduce
+  those numbers directly.
+
 ### Not confirmed
 
-- ✗ **Practical-consumption measurement not yet run.** This is the
-  actual point of Phase 8 and needs the user's own browser (same
-  blocker, same workaround as the 2026-08-26/27 measurement —
-  `document.visibilityState: "hidden"` prevents this session's browser
-  tool from forcing real tile rendering). `viewer/measure_practical_consumption.js`
-  (new — closes the "never saved" gap from the earlier ad hoc DevTools
-  snippet) is ready to paste into DevTools against
-  `https://dwg7.github.io/plateau-mago-implicit/#dataset=sapporo_explicit_full`
-  and `..._implicit_full` once the viewer changes are deployed to
-  GitHub Pages.
+- ✗ **`usefulViewTime` for Sapporo still needs a second real-browser
+  measurement pass**, now that the bug above is fixed. The
+  `firstVisibleTime`/`requestCount` numbers above don't need re-measuring
+  — only `usefulViewTime` was affected.
 - ✗ **Implicit's byte-total advantage does not hold at this scale, on
   raw output size** — Implicit's full build is 440MB vs Explicit's
   145MB, the opposite of what "Implicit wins on requests" might suggest
@@ -2128,18 +2164,14 @@ checksum matched on re-verification). `make inspect DATASET=sapporo`
   Phase 2 — explicitly out of scope for "demonstrate scale advantage"
   (Phase 6 already generalized the batching-driven non-determinism
   finding across two municipalities; a third would be a separate ask).
-- ✗ Viewer changes verified locally but not yet deployed — the public
-  GitHub Pages viewer (`dwg7.github.io/plateau-mago-implicit`) still
-  serves the pre-Sapporo `viewer.js`/`index.html` until this work is
-  committed and pushed.
 
 ### Next smallest experiment
 
-Commit and push the viewer/config/docs changes, confirm the GitHub Pages
-deployment picks them up, then hand the two dataset URLs and
-`viewer/measure_practical_consumption.js` to the user for the actual
-measurement — the same handoff that produced real numbers on 2026-08-28
-for Sarabetsu/Muroran.
+Commit and push the `markUsefulView()` fix, confirm GitHub Pages
+redeploys, then ask the user to re-run
+`viewer/measure_practical_consumption.js` against both Sapporo URLs one
+more time to get a real `usefulViewTime` — everything else about this
+sub-goal is already done.
 
 ---
 
