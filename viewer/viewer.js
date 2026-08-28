@@ -127,6 +127,21 @@ let usefulViewTime = null;
 let loadStartTime = null;
 let currentTileset = null;
 
+// Newly-loaded-tile flash: briefly recolors a tile's content pale yellow
+// when it finishes loading, fading back to the normal off-white — lets a
+// viewer tell "just loaded" apart from "always been here" apart from
+// "not loaded yet" (which stays empty/transparent, Cesium draws nothing
+// for it — there's no supported way to show a placeholder for a tile
+// that hasn't loaded yet: Cesium3DTilesetBaseTraversal only calls
+// selectTile — which is what raises tileVisible — for tiles where
+// tile.contentAvailable is already true, confirmed against the actual
+// pinned Cesium 1.144 source; the only way around that is private,
+// unstable internals, not worth relying on). User request, 2026-08-29.
+const BUILDING_BASE_COLOR = Cesium.Color.fromCssColorString('#F2EFE6');
+const TILE_FLASH_COLOR = Cesium.Color.fromCssColorString('#FFF59D');
+const TILE_FLASH_DURATION_MS = 600;
+let flashingTiles = [];
+
 // Initialise Cesium viewer without ion token requirement
 Cesium.Ion.defaultAccessToken = '';
 
@@ -290,6 +305,7 @@ async function loadTileset(url, label) {
   firstVisibleTime = null;
   usefulViewTime = null;
   loadStartTime = performance.now();
+  flashingTiles = [];
   window.__practicalConsumptionDiagnostics = { url, label, ready: false };
 
   setStatus(`読み込み中: ${label || url}`);
@@ -332,12 +348,28 @@ async function loadTileset(url, label) {
     });
     tileset.colorBlendMode = Cesium.Cesium3DTileColorBlendMode.REPLACE;
 
-    tileset.tileLoad.addEventListener(() => {
+    tileset.tileLoad.addEventListener((tile) => {
       if (firstVisibleTime === null) {
         firstVisibleTime = performance.now() - loadStartTime;
         updateDiagnostic('d-first-visible', formatMs(firstVisibleTime));
         window.__practicalConsumptionDiagnostics = window.__practicalConsumptionDiagnostics || {};
         window.__practicalConsumptionDiagnostics.firstVisibleTime = firstVisibleTime;
+      }
+
+      // Flash: tint every feature in the just-loaded tile pale yellow;
+      // postRender below fades it back to BUILDING_BASE_COLOR. Setting a
+      // feature's .color (not creating an entity/primitive) is explicitly
+      // fine to do from a tileLoad handler per Cesium's own docs.
+      const content = tile.content;
+      if (content && content.featuresLength > 0) {
+        for (let i = 0; i < content.featuresLength; i++) {
+          content.getFeature(i).color = TILE_FLASH_COLOR;
+        }
+        flashingTiles.push({
+          content,
+          featuresLength: content.featuresLength,
+          startTime: performance.now(),
+        });
       }
     });
 
@@ -508,6 +540,27 @@ viewer.clock.onTick.addEventListener(() => {
   updateDiagnostic('d-tiles-pending',
     currentTileset.statistics ? String(currentTileset.statistics.numberOfPendingRequests) : '—'
   );
+});
+
+// Fade out flashing (just-loaded) tiles toward the normal building color.
+// Runs every frame (unlike the FPS/heap block below, which is throttled
+// to 1Hz) since a 600ms color fade needs finer granularity than that.
+viewer.scene.postRender.addEventListener(() => {
+  if (flashingTiles.length === 0) return;
+  const now = performance.now();
+  flashingTiles = flashingTiles.filter(({ content, featuresLength, startTime }) => {
+    const t = Math.min((now - startTime) / TILE_FLASH_DURATION_MS, 1.0);
+    const color = Cesium.Color.lerp(
+      TILE_FLASH_COLOR,
+      BUILDING_BASE_COLOR,
+      t,
+      new Cesium.Color()
+    );
+    for (let i = 0; i < featuresLength; i++) {
+      content.getFeature(i).color = color;
+    }
+    return t < 1.0;
+  });
 });
 
 // FPS and heap update
