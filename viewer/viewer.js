@@ -263,10 +263,19 @@ viewer.scene.globe.depthTestAgainstTerrain = true;
 // Intensity raised 0.35 → 1.0 and the building color brightened toward
 // pure white (see BUILDING_BASE_COLOR/style below) after the user
 // reported the first pass too dark and asked for a bright white,
-// Corbusier-like look — 2026-08-29.
+// Corbusier-like look — 2026-08-29. Still reported too dark at 1.0
+// (the user noted even the bright tile-flash yellow looked dim, not
+// just the white building color — pointing at the light itself, not
+// the base color). Cesium's PBR shader normalizes Lambertian diffuse
+// by 1/π, so at intensity 1.0 a fully-diffuse white surface reflects
+// at most ~32% of it back — physically consistent with looking dim
+// regardless of how bright the base color is. imageBasedLightingFactor
+// (ambient) is already at Cesium's own maximum, (1.0, 1.0) — no
+// headroom there — so intensity is the only remaining lever. Raised to
+// 3.5, close to π, to compensate for that normalization.
 viewer.scene.light = new Cesium.DirectionalLight({
   direction: new Cesium.Cartesian3(0.35, -0.85, -0.35),
-  intensity: 1.0,
+  intensity: 3.5,
 });
 
 // Mitigate the roof/wall shimmer the user reported (2026-08-27) on real
