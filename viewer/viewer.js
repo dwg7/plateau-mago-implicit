@@ -346,7 +346,13 @@ async function loadTileset(url, label) {
   flashingTiles = [];
   window.__practicalConsumptionDiagnostics = { url, label, ready: false };
 
-  setStatus(`読み込み中: ${label || url}`);
+  // Routine "loading.../loaded, moving to viewpoint..." narration removed
+  // 2026-08-29 at the user's request (UI polish pass) — judged as clutter
+  // for a general viewer, not load-bearing information (the dropdown
+  // already shows which dataset is selected). setStatus() itself is kept
+  // for genuinely useful cases: the initial "pick a dataset" hint, the
+  // custom-URL empty-field validation message, and real errors below —
+  // only the two purely-narrative progress messages were removed.
   updateDiagnostic('d-dataset', label || url);
   updateDiagnostic('d-url', url);
   updateDiagnostic('d-first-visible', '—');
@@ -417,7 +423,10 @@ async function loadTileset(url, label) {
       }
     });
 
-    setStatus(`読み込み完了。視点へ移動しています…`);
+    // Clears any stale error text left over from a previous failed load —
+    // the "loaded, moving to viewpoint..." narration this replaced was
+    // removed 2026-08-29 (see the loadTileset() comment above).
+    setStatus('');
   } catch (err) {
     setStatus(`エラー: ${err.message || err}`);
     console.error('Tileset load error:', err);
