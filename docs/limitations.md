@@ -2,7 +2,9 @@
 
 ## Declared scope limitations
 
-- Tests two municipalities only (Sarabetsu Village and Muroran City)
+- Tests three municipalities (Sarabetsu Village, Muroran City, and Sapporo
+  City — the last added 2026-08-28 specifically for scale, not texture;
+  see `docs/findings.md` Phase 8)
 - No planet-scale capability is claimed
 - LOD1 buildings only in baseline
 - Feature scope: building features only
@@ -83,6 +85,17 @@ Expanding feature scope requires separate investigation.
 - Height offset handling and PLATEAU URO extension attribute support have
   not yet been specifically investigated (only geometry/coordinates so
   far) — remains open for Phase 1–2 follow-up.
+- **CityGML texture/appearance data (`app:ParameterizedTexture`) is not
+  converted.** Confirmed both empirically (Phase 7b: a real textured
+  Sapporo building produced a GLB with no `images`/`textures`, only a flat
+  default material) and against Mago's own source
+  (`CityGmlConverter.java`, 1.16.2, contains no texture/appearance-handling
+  code) and upstream maintainer statements
+  ([Gaia3D/mago-3d-tiler#81](https://github.com/Gaia3D/mago-3d-tiler/issues/81),
+  [#73](https://github.com/Gaia3D/mago-3d-tiler/issues/73)): *"At the
+  moment, CityGML texturing is not yet fully supported in
+  mago-3d-tiler."* Geometry conversion itself (including LOD2/LOD3) is
+  unaffected. See `docs/findings.md` Phase 7b.
 
 ## Validation limitations
 
@@ -102,7 +115,7 @@ Expanding feature scope requires separate investigation.
 - That the tested approach is production-ready
 - That Mago 3DTiler is the best or only suitable converter
 - That CesiumJS is the only suitable client
-- That two municipalities represent all PLATEAU data behavior
+- That three municipalities represent all PLATEAU data behavior
 - That open-source tools equal commercial service quality at scale
 
 ## Non-goals

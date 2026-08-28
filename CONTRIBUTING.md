@@ -18,7 +18,8 @@ Appropriate contributions include:
 
 Out of scope:
 
-- Adding new datasets beyond the two declared municipalities
+- Adding new datasets beyond the three declared municipalities (Sarabetsu
+  Village, Muroran City, Sapporo City)
 - Adding support for feature types other than buildings (in the baseline)
 - Replacing Mago 3DTiler with a different converter (without first establishing the baseline)
 - Adding a spatial database or dynamic tile server
@@ -66,6 +67,7 @@ in a document, include its Japanese name in parentheses, for example:
 
 - Muroran City (室蘭市)
 - Sarabetsu Village (更別村)
+- Sapporo City (札幌市)
 - Ministry of Land, Infrastructure, Transport and Tourism (国土交通省)
 
 After the first appearance, the English name may be used alone.

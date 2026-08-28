@@ -1,0 +1,59 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-27T22:43:17.109921+00:00",
+  "input_dir": "/Users/hfu/plateau-mago-implicit/data/output/sapporo/implicit/small/20260827T224307Z-sapporo-implicit-small",
+  "subtree_file_count": 1,
+  "error_count": 0,
+  "subtrees": [
+    {
+      "path": "/Users/hfu/plateau-mago-implicit/data/output/sapporo/implicit/small/20260827T224307Z-sapporo-implicit-small/subtrees/R/0/0/0.json",
+      "size_bytes": 366,
+      "valid": true,
+      "format": "json+bin",
+      "json_header": {
+        "buffers": [
+          {
+            "uri": "0.bin",
+            "byteLength": 24
+          }
+        ],
+        "bufferViews": [
+          {
+            "buffer": 0,
+            "byteOffset": 0,
+            "byteLength": 3
+          },
+          {
+            "buffer": 0,
+            "byteOffset": 8,
+            "byteLength": 3
+          },
+          {
+            "buffer": 0,
+            "byteOffset": 16,
+            "byteLength": 8
+          }
+        ],
+        "tileAvailability": {
+          "bitstream": 0,
+          "availableCount": 3
+        },
+        "contentAvailability": [
+          {
+            "bitstream": 1,
+            "availableCount": 1
+          }
+        ],
+        "childSubtreeAvailability": {
+          "bitstream": 2,
+          "availableCount": 0
+        }
+      },
+      "tile_availability_count": 3,
+      "content_availability_count": 1,
+      "child_subtree_availability_count": 0,
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}

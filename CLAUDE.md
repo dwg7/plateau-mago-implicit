@@ -23,8 +23,14 @@ These are deliberate, documented constraints (see `docs/scope.md`,
 `docs/limitations.md`, `CONTRIBUTING.md`). Treat any change that crosses one of
 these as a scope change to flag, not a routine edit:
 
-- **Two municipalities only**: Sarabetsu Village and Muroran City. Do not add a
-  third without the user asking for it.
+- **Three municipalities**: Sarabetsu Village, Muroran City, and Sapporo City
+  (札幌市). Sapporo was added 2026-08-28 at the user's explicit request,
+  specifically to demonstrate Implicit's practical-consumption advantage at
+  real metropolitan scale (~1.96M population, vs Muroran's ~90K) — not for
+  texture testing (Phase 7b, `docs/findings.md`, established that Mago
+  3DTiler 1.16.2's CityGML importer does not support texture conversion at
+  all, confirmed against upstream source and maintainer statements). Do not
+  add a fourth without the user asking for it.
 - **Building features only, LOD1 in baseline.** Roads, terrain, bridges,
   vegetation, land use, water bodies, underground structures, and higher LOD /
   textures are explicitly out of scope for the baseline (Phase 7 is the only

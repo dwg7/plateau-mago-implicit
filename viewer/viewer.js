@@ -88,6 +88,37 @@ const VIEWPOINTS = {
       roll: 0,
     },
   },
+  // Sapporo City (札幌市) — third municipality, added 2026-08-28 to
+  // demonstrate Implicit's practical-consumption advantage at real
+  // metropolitan scale (646,474 buildings, ~11.6x Muroran's count).
+  // destination/orientation computed the same way as the other entries
+  // above: real full-profile Explicit build's own tileset.json bounding
+  // region (fit to actual building extent, ~31km x 32km — much larger
+  // than Sarabetsu/Muroran), center at lon 141.312568 / lat 43.040184.
+  // Altitude kept at 6000m, matching Sarabetsu's exact value and well
+  // below the ~19.8km distance at which this dataset's root
+  // geometricError (460.05) would stop refining at the default 16px SSE
+  // threshold — same reasoning as the comment block above.
+  sapporo_explicit_full: {
+    label: '札幌市 — Explicit（全建物 646,474棟）',
+    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sapporo/explicit/full/latest/tileset.json',
+    destination: Cesium.Cartesian3.fromDegrees(141.312568, 43.040184, 6000),
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-90),
+      roll: 0,
+    },
+  },
+  sapporo_implicit_full: {
+    label: '札幌市 — Implicit（全建物 646,474棟）',
+    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sapporo/implicit/full/latest/tileset.json',
+    destination: Cesium.Cartesian3.fromDegrees(141.312568, 43.040184, 6000),
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-90),
+      roll: 0,
+    },
+  },
 };
 
 // Diagnostics state
@@ -259,6 +290,7 @@ async function loadTileset(url, label) {
   firstVisibleTime = null;
   usefulViewTime = null;
   loadStartTime = performance.now();
+  window.__practicalConsumptionDiagnostics = { url, label, ready: false };
 
   setStatus(`読み込み中: ${label || url}`);
   updateDiagnostic('d-dataset', label || url);
@@ -304,6 +336,8 @@ async function loadTileset(url, label) {
       if (firstVisibleTime === null) {
         firstVisibleTime = performance.now() - loadStartTime;
         updateDiagnostic('d-first-visible', formatMs(firstVisibleTime));
+        window.__practicalConsumptionDiagnostics = window.__practicalConsumptionDiagnostics || {};
+        window.__practicalConsumptionDiagnostics.firstVisibleTime = firstVisibleTime;
       }
     });
 
@@ -324,6 +358,9 @@ function flyTo(destination, orientation) {
       if (usefulViewTime === null && currentTileset) {
         usefulViewTime = performance.now() - loadStartTime;
         updateDiagnostic('d-useful-view', formatMs(usefulViewTime));
+        window.__practicalConsumptionDiagnostics = window.__practicalConsumptionDiagnostics || {};
+        window.__practicalConsumptionDiagnostics.usefulViewTime = usefulViewTime;
+        window.__practicalConsumptionDiagnostics.ready = true;
       }
       setStatus('');
     },

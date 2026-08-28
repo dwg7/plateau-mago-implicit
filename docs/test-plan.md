@@ -169,6 +169,33 @@ Do not collapse into one overall pass or fail.
 
 Phase 7 is separate. Failure here does not invalidate Phase 1–6 results.
 
+Sub-goals: 7a (LOD3, Sarabetsu) confirmed Mago converts higher LOD
+geometry cleanly. 7b (texture, Sapporo) confirmed real texture data
+exists in PLATEAU source but Mago 3DTiler 1.16.2 does not convert it —
+confirmed against upstream source and maintainer statements, not
+revisited further.
+
+---
+
+## Phase 8: Sapporo City — scale demonstration
+
+**Goal:** Demonstrate whether Implicit's practical-consumption advantage
+(established at Sarabetsu/Muroran scale, cross-phase finding) holds or
+widens at real metropolitan scale (~1.96M population). LOD1 baseline
+only — texture support is not re-tested here (see Phase 7b).
+
+**Steps:**
+1. Small-profile validation (same methodology as Phase 1/2/5)
+2. Full-profile build, both modes
+3. Publish and measure practical consumption in a real browser, same
+   methodology as the Sarabetsu/Muroran cross-phase measurement
+
+**Pass criteria:** Same as Phase 4/6 (conversion feasibility at scale),
+plus a recorded practical-consumption comparison against
+Sarabetsu/Muroran. No determinism or structural-comparison depth-match
+required — those claims already generalized across two municipalities
+in Phase 6.
+
 ---
 
 ## Validation tools

@@ -1,0 +1,450 @@
+Validating tileset /private/tmp/claude-501/-Users-hfu-plateau-mago-implicit/e8bc93e2-e1bf-4cb2-aba6-e69a654f76b0/scratchpad/sapporo/output-explicit/tileset.json
+Validation result:
+{
+  "date": "2026-08-27T20:57:03.970Z",
+  "numErrors": 5,
+  "numWarnings": 0,
+  "numInfos": 0,
+  "issues": [
+    {
+      "type": "CONTENT_VALIDATION_ERROR",
+      "path": "data/RC12.glb",
+      "message": "data/RC12.glb caused validation errors",
+      "severity": "ERROR",
+      "causes": [
+        {
+          "type": "CONTENT_VALIDATION_INFO",
+          "path": "data/RC12.glb",
+          "message": "Content data/RC12.glb caused validation infos",
+          "severity": "INFO",
+          "causes": [
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/0",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_mesh_features'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/1",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_structural_metadata'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/5",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/6",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/7",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/8",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/9",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/10",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/11",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/12",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            }
+          ]
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/RC12.glb/properties/BatchId/values",
+          "message": "The 'values' buffer view of property 'BatchId' stores the values of strings. The last 'stringOffsets' value indicates that there should be 1 bytes in these strings. But the buffer view with index 7 has a byteLength of 4.",
+          "severity": "ERROR"
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/RC12.glb/properties/FileName/values",
+          "message": "The 'values' buffer view of property 'FileName' stores the values of strings. The last 'stringOffsets' value indicates that there should be 33 bytes in these strings. But the buffer view with index 9 has a byteLength of 36.",
+          "severity": "ERROR"
+        }
+      ]
+    },
+    {
+      "type": "CONTENT_VALIDATION_ERROR",
+      "path": "data/RC100.glb",
+      "message": "data/RC100.glb caused validation errors",
+      "severity": "ERROR",
+      "causes": [
+        {
+          "type": "CONTENT_VALIDATION_INFO",
+          "path": "data/RC100.glb",
+          "message": "Content data/RC100.glb caused validation infos",
+          "severity": "INFO",
+          "causes": [
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/0",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_mesh_features'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/1",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_structural_metadata'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/5",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/6",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/7",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/8",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/9",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/10",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/11",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/12",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            }
+          ]
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/RC100.glb/properties/BatchId/values",
+          "message": "The 'values' buffer view of property 'BatchId' stores the values of strings. The last 'stringOffsets' value indicates that there should be 1 bytes in these strings. But the buffer view with index 7 has a byteLength of 4.",
+          "severity": "ERROR"
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/RC100.glb/properties/FileName/values",
+          "message": "The 'values' buffer view of property 'FileName' stores the values of strings. The last 'stringOffsets' value indicates that there should be 33 bytes in these strings. But the buffer view with index 9 has a byteLength of 36.",
+          "severity": "ERROR"
+        }
+      ]
+    },
+    {
+      "type": "CONTENT_VALIDATION_ERROR",
+      "path": "data/RC1000.glb",
+      "message": "data/RC1000.glb caused validation errors",
+      "severity": "ERROR",
+      "causes": [
+        {
+          "type": "CONTENT_VALIDATION_INFO",
+          "path": "data/RC1000.glb",
+          "message": "Content data/RC1000.glb caused validation infos",
+          "severity": "INFO",
+          "causes": [
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/0",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_mesh_features'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/1",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_structural_metadata'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/5",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/6",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/7",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/8",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/9",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/10",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/11",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/12",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            }
+          ]
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/RC1000.glb/properties/BatchId/values",
+          "message": "The 'values' buffer view of property 'BatchId' stores the values of strings. The last 'stringOffsets' value indicates that there should be 1 bytes in these strings. But the buffer view with index 7 has a byteLength of 4.",
+          "severity": "ERROR"
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/RC1000.glb/properties/FileName/values",
+          "message": "The 'values' buffer view of property 'FileName' stores the values of strings. The last 'stringOffsets' value indicates that there should be 33 bytes in these strings. But the buffer view with index 9 has a byteLength of 36.",
+          "severity": "ERROR"
+        }
+      ]
+    },
+    {
+      "type": "CONTENT_VALIDATION_ERROR",
+      "path": "data/RC000.glb",
+      "message": "data/RC000.glb caused validation errors",
+      "severity": "ERROR",
+      "causes": [
+        {
+          "type": "CONTENT_VALIDATION_INFO",
+          "path": "data/RC000.glb",
+          "message": "Content data/RC000.glb caused validation infos",
+          "severity": "INFO",
+          "causes": [
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/0",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_mesh_features'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/1",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_structural_metadata'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/5",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/6",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/7",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/8",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/9",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/10",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/11",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/12",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            }
+          ]
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/RC000.glb/properties/BatchId/values",
+          "message": "The 'values' buffer view of property 'BatchId' stores the values of strings. The last 'stringOffsets' value indicates that there should be 1 bytes in these strings. But the buffer view with index 7 has a byteLength of 4.",
+          "severity": "ERROR"
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/RC000.glb/properties/FileName/values",
+          "message": "The 'values' buffer view of property 'FileName' stores the values of strings. The last 'stringOffsets' value indicates that there should be 33 bytes in these strings. But the buffer view with index 9 has a byteLength of 36.",
+          "severity": "ERROR"
+        }
+      ]
+    },
+    {
+      "type": "CONTENT_VALIDATION_ERROR",
+      "path": "data/RC0000.glb",
+      "message": "data/RC0000.glb caused validation errors",
+      "severity": "ERROR",
+      "causes": [
+        {
+          "type": "CONTENT_VALIDATION_INFO",
+          "path": "data/RC0000.glb",
+          "message": "Content data/RC0000.glb caused validation infos",
+          "severity": "INFO",
+          "causes": [
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/0",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_mesh_features'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/extensionsUsed/1",
+              "message": "Cannot validate an extension as it is not supported by the validator: 'EXT_structural_metadata'.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/5",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/6",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/7",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/8",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/9",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/10",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/11",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            },
+            {
+              "type": "CONTENT_VALIDATION_INFO",
+              "path": "/bufferViews/12",
+              "message": "This object may be unused.",
+              "severity": "INFO"
+            }
+          ]
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/RC0000.glb/properties/BatchId/values",
+          "message": "The 'values' buffer view of property 'BatchId' stores the values of strings. The last 'stringOffsets' value indicates that there should be 1 bytes in these strings. But the buffer view with index 7 has a byteLength of 4.",
+          "severity": "ERROR"
+        },
+        {
+          "type": "METADATA_INVALID_LENGTH",
+          "path": "data/RC0000.glb/properties/FileName/values",
+          "message": "The 'values' buffer view of property 'FileName' stores the values of strings. The last 'stringOffsets' value indicates that there should be 33 bytes in these strings. But the buffer view with index 9 has a byteLength of 36.",
+          "severity": "ERROR"
+        }
+      ]
+    }
+  ]
+}

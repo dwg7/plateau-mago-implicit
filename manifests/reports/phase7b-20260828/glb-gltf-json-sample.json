@@ -1,0 +1,54 @@
+{
+  "asset": {
+    "copyright": "Gaia3D, Inc.",
+    "generator": "mago-3d-tiler",
+    "version": "2.0"
+  },
+  "materials": [
+    {
+      "name": "COLOR_MATERIAL",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.9,
+          0.9,
+          0.9,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 1.0
+      },
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    }
+  ],
+  "images": null,
+  "textures": null,
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "extensions": {
+            "EXT_mesh_features": {
+              "featureIds": [
+                {
+                  "featureCount": 1,
+                  "attribute": 0,
+                  "propertyTable": 0
+                }
+              ]
+            }
+          },
+          "attributes": {
+            "COLOR_0": 3,
+            "POSITION": 1,
+            "_FEATURE_ID_0": 4,
+            "NORMAL": 2
+          },
+          "indices": 0,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ]
+}

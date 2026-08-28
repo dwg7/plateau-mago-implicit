@@ -1,0 +1,24 @@
+schema_version: "1"
+build_id: "20260827T224307Z-sapporo-implicit-small"
+municipality: "sapporo"
+mode: "implicit"
+profile: "small"
+mago_version: "1.16.2"
+mago_image: "plateau-mago-implicit-tiler:1.16.2"
+mago_jar_url: "https://github.com/Gaia3D/mago-3d-tiler/releases/download/v1.16.2/mago-3d-tiler-1.16.2.jar"
+mago_jar_sha256: "d37e58b634e91d7ce7ca046168b1db2cf950cd9b2ffacb826fd3b10a8d31f7e2"
+concurrency: 1
+input_dir: "/Users/hfu/plateau-mago-implicit/data/.build-staging-geoid/sapporo/20260827T224307Z-sapporo-implicit-small"
+output_dir: "/Users/hfu/plateau-mago-implicit/data/output/sapporo/implicit/small/20260827T224307Z-sapporo-implicit-small"
+command: "docker run --rm -v /Users/hfu/plateau-mago-implicit/data/.build-staging-geoid/sapporo/20260827T224307Z-sapporo-implicit-small:/data/input -v /Users/hfu/plateau-mago-implicit/data/output/sapporo/implicit/small/20260827T224307Z-sapporo-implicit-small:/data/output -e JAVA_OPTS=-Xmx4g plateau-mago-implicit-tiler:1.16.2 --input /data/input --output /data/output --inputType citygml --proj +proj=longlat +datum=WGS84 +axis=neu +no_defs --tilingMode implicit --implicitSubtreeLevels 3 --multiThreadCount 1"
+started_at: "2026-08-27T22:43:08Z"
+ended_at: "2026-08-27T22:43:09Z"
+duration_seconds: 1
+return_code: 0
+output_file_count: 4
+output_total_bytes: 5383
+root_tileset_sha256: "3e22dbe1d54d20bdf5cb70880ba8f752ab1a01f8777bdbb851f5ec436b4306d8"
+root_tileset_bytes:      425
+validation_status: "not-run"
+git_commit: "50153c3a7c89c55a81fbec89d7750355e04fb762"
+git_dirty: true

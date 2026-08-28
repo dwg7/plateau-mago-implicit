@@ -1728,11 +1728,13 @@ follow-ups, done as the first step of a broader remaining-work roadmap.
 
 ## Phase 7: Optional higher-detail tests
 
-**Status: LOD3 sub-goal run for real, 2026-08-28. Texture sub-goal marked
-not-evaluable, not attempted. Explicitly optional and separate — per
-`docs/test-plan.md`, failure here does not invalidate Phase 1-6, and per
-`CLAUDE.md`'s scope boundary, this section's results are never merged
-into the Phase 1-6 summary table below.**
+**Status: LOD3 sub-goal (Sarabetsu) run for real, 2026-08-28. Texture
+sub-goal (Sapporo, see "Phase 7b" below) also run for real, 2026-08-28,
+after the user explicitly asked for it as a separately-staged follow-up.
+Explicitly optional and separate — per `docs/test-plan.md`, failure here
+does not invalidate Phase 1-6, and per `CLAUDE.md`'s scope boundary, this
+section's results are never merged into the Phase 1-6 summary table
+below.**
 
 Run at the user's explicit request and sign-off (`CLAUDE.md`: "Phase 7
 is the only place higher detail is allowed... requires the user's
@@ -1748,13 +1750,17 @@ chat history 2026-08-28).
   finding) has 4 buildings with genuine LOD3 detail: 92, 2004, 2682, and
   2514 `lod3MultiSurface` elements respectively (`bldg_3ac5d900...`,
   `bldg_88f31791...`, `bldg_ad16daa0...`, `bldg_e9a284d3...`).
-- **Textures: not evaluable with current project data, not attempted.**
-  Re-confirmed zero `app:ParameterizedTexture`/`app:Appearance` elements
-  in both full datasets and in the committed CI fixture
+- **Textures: not evaluable with current project data, not attempted (as
+  of this LOD3 sub-goal run).** Re-confirmed zero
+  `app:ParameterizedTexture`/`app:Appearance` elements in both full
+  datasets and in the committed CI fixture
   (`data/fixtures/test_building.gml`). Testing texture support for real
   would need a third data source, itself a separate scope question
   (`CLAUDE.md`: "two municipalities only... do not add a third without
-  the user asking") — not decided as part of this task.
+  the user asking") — not decided as part of this task. **Update
+  2026-08-28: the user explicitly asked for this, staged separately from
+  a possible full third-municipality integration — see "Phase 7b: texture
+  sub-goal" below.**
 
 ### Method
 
@@ -1841,15 +1847,309 @@ whether Mago's Implicit merging behavior (already confirmed to combine
 multiple LODs into one content tile for the LOD0+LOD1 case, Phase 2)
 extends cleanly to a third LOD.
 
+### Phase 7b: texture sub-goal (Sapporo City, 札幌市 — 2026-08-28)
+
+**Status: Run for real. Explicitly optional and separate, same as the
+LOD3 sub-goal above — never merged into the Phase 1-6 summary table, and
+does not change the "two municipalities" baseline declared in
+`CLAUDE.md`/`docs/scope.md`.** Run at the user's explicit request in
+chat, staged deliberately separately from a possible future full
+third-municipality integration (see "Not confirmed" below).
+
+Real, verified source data (not fabricated): Sapporo City (札幌市)
+PLATEAU CityGML, dataset `01100_sapporo-shi_city_2020`, archive
+`01100_sapporo-shi_city_2020_citygml_7_op.zip`, downloaded from
+`https://assets.cms.plateau.reearth.io/assets/be/3b8cfb-5459-4f9d-b08c-fb4ab72fbdbd/01100_sapporo-shi_city_2020_citygml_7_op.zip`,
+2,718,857,710 bytes (HEAD-confirmed before download, byte-identical
+after), SHA-256
+`bc0f3d9de76b5f298741a5c0cac747293fbff8ec07de8a4dbf7c8d944dd8ac72`
+(computed on download, not published anywhere to cross-check against —
+same trust-on-first-fetch model as Sarabetsu/Muroran's original
+checksums). Catalog:
+`https://www.geospatial.jp/ckan/dataset/plateau-01100-sapporo-shi-2020`.
+2020 catalog year, V4 spec. License/attribution same as Sarabetsu/Muroran
+(CC BY 4.0, 国土交通省 Project PLATEAU). Full provenance note in
+`docs/data-selection.md`.
+
+### Method
+
+Same out-of-pipeline approach as the LOD3 sub-goal: not run through
+`make build`/`make fetch`, no `config/sapporo.yml`, no
+`data/input-manifest.yml` entry — a deliberately isolated, manual test
+that leaves the formal per-dataset pipeline (confirmed generic/reusable
+for a real third dataset, but not invoked here) untouched.
+
+1. Downloaded the full archive (its own distribution unit — PLATEAU does
+   not offer partial/per-feature downloads), listed its contents without
+   full extraction (`unzip -l`), found 604 `udx/bldg/*.gml` mesh files,
+   of which exactly 14 have a paired `_appearance/` subdirectory
+   containing real JPEG textures (confirms Sapporo's declared 3.27 km²
+   LOD2 coverage is not textured uniformly — texturing is scoped to
+   specific mesh cells).
+2. Extracted and inspected 3 of those 14 mesh files
+   (`64414293`, `64414279`, `64414380` — chosen for a range of texture
+   complexity: 3, 23, and 38 `_appearance/*.jpg` files respectively).
+   Each turned out to contain **exactly one** `app:ParameterizedTexture`-
+   referencing building, out of 2,548 / 1,449 / 796 total buildings in
+   those files — real evidence, not assumed, that Sapporo applies LOD2
+   texturing to selected landmark buildings within the coverage area,
+   not blanket citywide.
+3. Verified CRS/axis order empirically against the extract's own
+   `gml:pos` values before running `tools/geoid_correct.py` (which
+   assumes lat/lon/height order, `tools/geoid_correct.py:42-45`) —
+   confirmed `srsName="http://www.opengis.net/def/crs/EPSG/0/6697"` and
+   coordinates in `(lat≈43.0-43.1, lon≈141.29, height)` order, identical
+   to Sarabetsu/Muroran, so the tool's hardcoded assumption held without
+   modification.
+4. Merged the 3 buildings' `<core:cityObjectMember>` (geometry) and
+   `<app:appearanceMember>` (texture reference) blocks into one 657KB
+   standalone CityGML document (kept out of the repo, same as the LOD3
+   extract — see `docs/data-selection.md`'s Phase 7b note for exact
+   reproduction steps).
+5. Ran the extract through `tools/geoid_correct.py` (corrected 177
+   coordinate triplets across the 3 buildings) but skipped
+   `tools/strip_higher_lod.py` (would have stripped the LOD2/texture
+   geometry this test exists to check), then invoked Mago directly for
+   both modes, same flags as the LOD3 sub-goal:
+   ```
+   docker run --rm -v <input>:/data/input -v <output>:/data/output \
+     plateau-mago-implicit-tiler:1.16.2 \
+     --input /data/input --output /data/output --inputType citygml \
+     --proj "+proj=longlat +datum=WGS84 +axis=neu +no_defs" \
+     --multiThreadCount 1
+   # (Implicit mode additionally: --tilingMode implicit --implicitSubtreeLevels 3)
+   ```
+
+### Confirmed
+
+- ✓ **Mago 3DTiler converts the extract cleanly in both modes.** Explicit:
+  5 tile contents, 1.6s. Implicit: 3 tile contents, 1.3s. No crash, no
+  exceptions.
+- ✓ **Geographic placement is correct.** Root bounding region decodes to
+  lon 141.29-141.38°E / lat 43.06-43.15°N (both modes) — inside Sapporo's
+  real municipal extent (~43.0-43.2°N, 141.2-141.5°E), not accidentally
+  reusing Sarabetsu/Muroran's coordinate range. Height range (45.7-75.7m
+  ellipsoidal) is plausible for central Sapporo after geoid correction.
+- ✓ **No new validator error class.** `3d-tiles-validator@0.6.1` against
+  both outputs shows only the already-documented
+  `METADATA_INVALID_LENGTH` pattern (same as every other build in this
+  project) — nothing texture- or LOD2-specific.
+- ✓ **Mago 3DTiler's CityGML import path does not preserve
+  `app:ParameterizedTexture`/`app:Appearance` texture data into the
+  output GLB — confirmed definitively, not just observed.** Directly
+  inspected the decoded glTF JSON of the LOD2 content tile (`RC12.glb`,
+  Explicit build): `images` and `textures` are both absent; every tile
+  instead gets one flat default `COLOR_MATERIAL`
+  (`baseColorFactor: [0.9, 0.9, 0.9, 1.0]`, an off-white gray) regardless
+  of whether the source building had real texture data. Saved as
+  `manifests/reports/phase7b-20260828/glb-gltf-json-sample.json`. Ruled
+  out one alternate code path: `--photogrammetry`
+  (`[Experimental] Generate b3dm with the compatibility-focused
+  photogrammetry pipeline`) does not accept `citygml` input at all —
+  threw `TileProcessingException: tileInfos is empty` immediately.
+
+  **2026-08-28, follow-up investigation — root cause and upstream
+  confirmation, both real:**
+  - Cloned `github.com/Gaia3D/mago-3d-tiler` at commit `58fa970`
+    (verified identical to tag `v1.16.2`, the exact version this project
+    runs). `mago-io/src/main/java/com/gaia3d/converter/citygml/CityGmlConverter.java`
+    (63,714 bytes) contains **zero** references to `texture`,
+    `appearance`, `imageURI`, or `ParameterizedTexture` (case-insensitive
+    grep, whole file, whole repo). Meanwhile the *output* writer
+    (`mago-io/.../gltf/GltfWriter.java`) and the Assimp-based
+    OBJ/FBX/3DS importer (`AssimpConverter.java`) both do reference
+    texture handling — i.e. Mago's 3D Tiles/glTF writer is texture-capable
+    in general; the CityGML *importer* specifically never populates any
+    texture data for it to write. A structural gap in one input path,
+    not a product-wide limitation.
+  - **A Gaia3D maintainer confirms this directly.** GitHub issue
+    [Gaia3D/mago-3d-tiler#81](https://github.com/Gaia3D/mago-3d-tiler/issues/81)
+    ("CityGML Texture Issue: 'No surface found for city object' when
+    using appearance with .tif textures", opened 2026-04-08) got this
+    reply from maintainer `znkim` on 2026-04-13: *"At the moment, CityGML
+    texturing is not yet fully supported in mago-3d-tiler... the current
+    CityGML parser does not yet fully handle all geometry and appearance
+    mappings required to bake textures correctly... I'll mention you once
+    this is improved in a future release."* A second issue,
+    [#73](https://github.com/Gaia3D/mago-3d-tiler/issues/73) ("How to
+    make buildings have textures?"), got a similar answer from
+    maintainer `sdson` for SHP input: *"mago-3d-tiles does not support
+    textures for geometries built from shp. May be in the future we
+    develop the texture version."* Consistent pattern across two
+    different input formats, both confirmed by the people who wrote the
+    code, not inferred.
+
+  **Conclusion: this is a known, currently-unimplemented feature in
+  Mago 3DTiler 1.16.2's CityGML import path — not a flag this project
+  is missing, not a misconfiguration, and not something
+  `--photogrammetry` or any other tested option works around.** Reported
+  here as the specific, reproducible, version-pinned fact it is, per
+  this project's tone conventions — not as criticism of the upstream
+  project, which has already acknowledged the gap and stated an intent
+  to improve it.
+
+### Not confirmed
+
+- ✗ Same scope as the LOD3 sub-goal: no structural tree comparison, no
+  determinism, no full-profile build, no practical-consumption
+  measurement — this is a small isolated conversion-and-inspect test,
+  not a full phase.
+
+### Conclusion and disposition
+
+Per the user's explicit instruction (2026-08-28, after reviewing this
+GitHub-sourced confirmation): **all further texture-dependent work is
+discarded.** No upstream issue will be filed by this project (issues #81
+and #73 already cover it, and Gaia3D is already aware). No further
+CLI-flag exploration, no revisit of this sub-goal. The user's second,
+separately-staged Sapporo motivation — demonstrating Implicit's
+practical-consumption advantage at real scale — is **not affected** by
+this finding (it never depended on texture support) and proceeds next as
+the project's declared "Stage 2," a genuine third-municipality
+integration. See the entry below this Phase 7 section once that work
+lands.
+
+---
+
+## Phase 8: Sapporo City (札幌市) — scale demonstration
+
+**Status: Fetch, inspect, small/full build, and validate all complete and
+real, 2026-08-28. Full builds published to the same public host as
+Sarabetsu/Muroran. Practical-consumption measurement handed off to the
+user — same real-browser methodology as the 2026-08-26/27 cross-phase
+measurement, blocked here for the same reason
+(`document.visibilityState: "hidden"` prevents this session's own
+browser tool from forcing real tile rendering).**
+
+Run at the user's explicit request, after Phase 7b established Mago does
+not support CityGML texture conversion — Sapporo's role here is scale
+only, using the LOD1 baseline, same as Sarabetsu/Muroran. This is a real,
+deliberate crossing of the "two municipalities only" boundary
+(`CLAUDE.md`), done through the formal `config/`/`data/input-manifest.yml`
+pipeline this time (not an isolated manual test like Phase 7), because
+the goal — comparing practical consumption at real scale — needs the
+actual publish/viewer path, not a hand-extracted sample.
+
+### Source data (real, verified)
+
+Dataset `01100_sapporo-shi_city_2020`, archive
+`01100_sapporo-shi_city_2020_citygml_7_op.zip`, 2,718,857,710 bytes,
+SHA-256 `bc0f3d9de76b5f298741a5c0cac747293fbff8ec07de8a4dbf7c8d944dd8ac72`
+(same file Phase 7b used, re-fetched through `make fetch` this time —
+checksum matched on re-verification). `make inspect DATASET=sapporo`
+(`manifests/reports/inspect-sapporo.json`):
+
+- 2,816 CityGML/XML files (whole-archive scan, same methodology as
+  Sarabetsu/Muroran — most are non-building layers)
+- **646,474 buildings** — 95x Sarabetsu's 6,795, 11.6x Muroran's 55,906
+- 2,079,121 `gml:id`s, 67,363,086 polygons
+- LODs present: [1, 2, 4] (LOD4 on a building feature is unusual but
+  real, not a parsing artifact — irrelevant to the LOD1 baseline either
+  way, since `tools/strip_higher_lod.py` strips everything except LOD1
+  regardless of which higher LODs exist)
+- 3,649 texture references (not used — Phase 7b already answered the
+  texture question)
+- Single CRS across the whole dataset: EPSG:6697, same as
+  Sarabetsu/Muroran
+- bbox: lat 42.781-43.192°N, lon 140.991-141.512°E
+
+### Confirmed
+
+- ✓ **Small-profile validation passed** (mirrors Phase 1/2/5): both
+  modes built from the smallest single-building file
+  (`udx/bldg/64413140_bldg_6697_op.gml`, 11,517 bytes), correct
+  geographic placement (root region decodes to exactly the source
+  file's own bbox, 42.956°N/141.130°E), only the already-documented
+  `METADATA_INVALID_LENGTH` validator pattern (no new error class).
+- ✓ **Full-profile Explicit build succeeds at this scale.** 15,001 tile
+  contents, 152,242,012 bytes output, 53m38s build time, root
+  `tileset.json` 3MB. Validator: 13,519 errors, all the same
+  `CONTENT_VALIDATION_ERROR`-wrapped `METADATA_INVALID_LENGTH` pattern
+  seen at every other scale in this project — confirmed by checking the
+  distinct error `type` values directly (only 3 types total:
+  `CONTENT_VALIDATION_ERROR`, `CONTENT_VALIDATION_INFO`,
+  `METADATA_INVALID_LENGTH`) — no new class introduced by this dataset's
+  much larger scale.
+- ✓ **Full-profile Implicit build succeeds at this scale.** 6,450 tile
+  contents (2.3x fewer than Explicit's 15,001, consistent with the
+  content-merging behavior established in Phase 2), 440,093,344 bytes
+  output (larger than Explicit's here — see "Not confirmed" below, this
+  cuts against the file-count/byte-total pattern from Sarabetsu/Muroran),
+  33m27s build time (faster than Explicit's), root `tileset.json` 436
+  bytes (**7,032x smaller** than Explicit's 3MB — even more pronounced
+  than the 105-663x range found at Sarabetsu/Muroran scale). Validator:
+  6,067 errors, same pattern, no new class.
+- ✓ **Geographic placement correct at full scale.** Explicit build's
+  root region (fit to actual building extent) decodes to lon
+  141.120-141.505°E / lat 42.896-43.184°N — squarely inside Sapporo's
+  real municipal extent, ~31km × 32km (the largest extent of any dataset
+  in this project — Sarabetsu was ~22km, Muroran ~15.5km).
+- ✓ **Both full builds published to the real public host**
+  (`tunnel.optgeo.org`, same target as Sarabetsu/Muroran), verified
+  reachable via `curl -I` (200 OK, correct `content-length` for each).
+- ✓ **Viewer wiring verified working**, without relying on the blocked
+  full-rendering path: added `sapporo_explicit_full`/
+  `sapporo_implicit_full` entries to `viewer/viewer.js`'s `VIEWPOINTS`
+  (destination computed from the real Explicit build's bounding region,
+  same convention as the existing entries — center lon 141.312568/lat
+  43.040184, altitude 6000m, chosen the same way as Sarabetsu's 6000m:
+  well below the ~19.8km distance at which this dataset's root
+  geometricError (460.05) would stop refining at the default 16px SSE
+  threshold) and matching `<option>`s in `viewer/index.html`. Loaded both
+  in a local static-server preview and confirmed: correct dataset label,
+  correct published tileset URL resolved, zero console errors, and the
+  diagnostic hooks (`window.__practicalConsumptionDiagnostics`) fired
+  correctly for the Implicit entry (useful-view time recorded: 96.6ms —
+  fast because `flyTo`'s completion is camera-animation-based, not
+  tile-render-based, consistent with how the diagnostic is defined).
+
+### Not confirmed
+
+- ✗ **Practical-consumption measurement not yet run.** This is the
+  actual point of Phase 8 and needs the user's own browser (same
+  blocker, same workaround as the 2026-08-26/27 measurement —
+  `document.visibilityState: "hidden"` prevents this session's browser
+  tool from forcing real tile rendering). `viewer/measure_practical_consumption.js`
+  (new — closes the "never saved" gap from the earlier ad hoc DevTools
+  snippet) is ready to paste into DevTools against
+  `https://dwg7.github.io/plateau-mago-implicit/#dataset=sapporo_explicit_full`
+  and `..._implicit_full` once the viewer changes are deployed to
+  GitHub Pages.
+- ✗ **Implicit's byte-total advantage does not hold at this scale, on
+  raw output size** — Implicit's full build is 440MB vs Explicit's
+  145MB, the opposite of what "Implicit wins on requests" might suggest
+  and consistent with the earlier finding that "total file count/bytes
+  don't consistently favor either mode" (Sarabetsu/Muroran cross-phase
+  finding). Worth flagging plainly rather than only reporting the
+  numbers that support the hypothesis: raw published size is not the
+  claim under test here — request count and time-to-useful-view are
+  (same distinction the original practical-consumption finding drew).
+- ✗ No determinism study, no structural tree-comparison depth-match to
+  Phase 2 — explicitly out of scope for "demonstrate scale advantage"
+  (Phase 6 already generalized the batching-driven non-determinism
+  finding across two municipalities; a third would be a separate ask).
+- ✗ Viewer changes verified locally but not yet deployed — the public
+  GitHub Pages viewer (`dwg7.github.io/plateau-mago-implicit`) still
+  serves the pre-Sapporo `viewer.js`/`index.html` until this work is
+  committed and pushed.
+
+### Next smallest experiment
+
+Commit and push the viewer/config/docs changes, confirm the GitHub Pages
+deployment picks them up, then hand the two dataset URLs and
+`viewer/measure_practical_consumption.js` to the user for the actual
+measurement — the same handoff that produced real numbers on 2026-08-28
+for Sarabetsu/Muroran.
+
 ---
 
 ## Summary table
 
 | Claim | Status | Phase evaluated | Notes |
 |---|---|---|---|
-| Conversion feasibility | Partially confirmed | 1, 2, 4, 5, 6 | Explicit fully confirmed for both municipalities' small_files; Implicit generated, geographically correct for both, fully validatable and fully compared against Explicit — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text), so "validates independently" is currently ✗. Both modes also convert both municipalities' full profiles (6,795 and 55,906 buildings) without crashing, and the METADATA_INVALID_LENGTH pattern holds consistently across both municipalities and both scales (4097 combined instances, 100% within the 4-byte-alignment-padding range). **(2026-08-26)** Discovered and fixed a real scope-boundary gap: full-profile builds were feeding Mago LOD0+LOD3 geometry alongside LOD1, contradicting CLAUDE.md's LOD1-only baseline — `tools/strip_higher_lod.py` now enforces this at the source-data level for every build, verified to shrink Sarabetsu's full-profile output 12-13% with no loss of LOD1 content (Muroran's output was already LOD0/LOD1-identical, so unaffected) |
+| Conversion feasibility | Partially confirmed | 1, 2, 4, 5, 6, 8 | Explicit fully confirmed for both municipalities' small_files; Implicit generated, geographically correct for both, fully validatable and fully compared against Explicit — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text), so "validates independently" is currently ✗. Both modes also convert both municipalities' full profiles (6,795 and 55,906 buildings) without crashing, and the METADATA_INVALID_LENGTH pattern holds consistently across both municipalities and both scales (4097 combined instances, 100% within the 4-byte-alignment-padding range). **(2026-08-26)** Discovered and fixed a real scope-boundary gap: full-profile builds were feeding Mago LOD0+LOD3 geometry alongside LOD1, contradicting CLAUDE.md's LOD1-only baseline — `tools/strip_higher_lod.py` now enforces this at the source-data level for every build, verified to shrink Sarabetsu's full-profile output 12-13% with no loss of LOD1 content (Muroran's output was already LOD0/LOD1-identical, so unaffected). **(2026-08-28, Phase 8)** Both modes also convert Sapporo's 646,474-building full profile (11.6x Muroran's scale) without crashing — 53m38s/33m27s build times, same already-documented METADATA_INVALID_LENGTH pattern only, no new error class at this larger scale |
 | Determinism | **Fails at full scale for both municipalities (L3/FAIL); Level 2 holds only for the single-building small profile** | 3, 4, 5, 6 | Phase 3/5 (single-building small profile, Sarabetsu and Muroran, 2 concurrency settings each) confirm L2/PASS after fixing a GLB-UUID tooling false-negative. Phase 4/6 (full municipality, same procedure, both municipalities) contradict this: L3/FAIL at both concurrency settings for both. Sarabetsu's failure traced to one dominant 826-building source file; Muroran's showed no single common file, refining the hypothesis to "batching multiple buildings into one content tile carries non-determinism risk in general," not a one-file defect. **(2026-08-26)** Stripping that same file's LOD3 geometry (a plausible alternate explanation) left the non-determinism completely unchanged — same tile count, same coordinates — ruling out LOD-complexity as the cause and further confirming batch size/count is the real driver. Small-profile results were correct but never generalizable; full-scale is the honest answer for this claim, for both municipalities |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
-| Practical consumption | Partially confirmed | 2, cross-phase (Implicit vs Explicit) | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but navigation/memory/long-session behavior at scale is still untested. **(2026-08-27)** Static file/byte comparison: Implicit's initial `tileset.json` payload is 105-663x smaller and constant-size regardless of building count, but total file count/bytes don't consistently favor either mode. **(2026-08-28)** Real-browser measurement (user's own Brave, one trial per combination): Implicit needs 56-65% fewer network requests and reaches a useful view 13-25% faster than Explicit for both municipalities' full profiles — the practical-consumption question this project set out to answer now has a real, if single-trial, answer favoring Implicit. Byte totals still unmeasured (blocked by `Timing-Allow-Origin`, an instrumentation gap, not a data gap) |
+| Practical consumption | Partially confirmed | 2, 8, cross-phase (Implicit vs Explicit) | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but navigation/memory/long-session behavior at scale is still untested. **(2026-08-27)** Static file/byte comparison: Implicit's initial `tileset.json` payload is 105-663x smaller and constant-size regardless of building count, but total file count/bytes don't consistently favor either mode. **(2026-08-28)** Real-browser measurement (user's own Brave, one trial per combination): Implicit needs 56-65% fewer network requests and reaches a useful view 13-25% faster than Explicit for both municipalities' full profiles — the practical-consumption question this project set out to answer now has a real, if single-trial, answer favoring Implicit. Byte totals still unmeasured (blocked by `Timing-Allow-Origin`, an instrumentation gap, not a data gap). **(2026-08-28, Phase 8)** Sapporo City (646,474 buildings, 11.6x Muroran) built and published to test whether this gap widens at real metropolitan scale — root `tileset.json` gap widened further (7,032x smaller for Implicit, vs 105-663x at Sarabetsu/Muroran scale), but raw published output size does NOT favor Implicit here (440MB vs Explicit's 145MB, the opposite direction) — a reminder that byte totals and the actual practical-consumption claim (requests/time-to-useful-view) are different things. Real-browser request-count/timing measurement for Sapporo not yet run — same user-in-the-loop handoff as before |
 
 Do not pre-fill conclusions. Record only evidence-based findings.

@@ -43,6 +43,31 @@ datasets:
       terrain variation, coastal and sloped areas, larger output volume,
       subtree organization, and CesiumJS behavior.
 
+  sapporo:
+    municipality_name_en: "Sapporo City"
+    municipality_name_ja: "札幌市"
+    municipality_code: "01100"
+    plateau_identifier: "01100_sapporo-shi_city_2020"
+    catalog_url: "https://www.geospatial.jp/ckan/dataset/plateau-01100-sapporo-shi-2020"
+    download_url: "https://assets.cms.plateau.reearth.io/assets/be/3b8cfb-5459-4f9d-b08c-fb4ab72fbdbd/01100_sapporo-shi_city_2020_citygml_7_op.zip"
+    archive_name: "01100_sapporo-shi_city_2020_citygml_7_op.zip"
+    archive_sha256: "bc0f3d9de76b5f298741a5c0cac747293fbff8ec07de8a4dbf7c8d944dd8ac72"
+    archive_size_bytes: "2718857710"
+    dataset_year: "2020"
+    plateau_version: "4"
+    citygml_version: "2.0"
+    license: "CC BY 4.0"
+    attribution: "国土交通省 Project PLATEAU"
+    notes: >
+      Third and largest-scale target. Added 2026-08-28 at the user's explicit
+      request, specifically to demonstrate Implicit's practical-consumption
+      advantage at real metropolitan scale (~1.96M population, vs Muroran's
+      ~90K). Not used for texture testing in the baseline pipeline — Phase 7b
+      (docs/findings.md) established that Mago 3DTiler 1.16.2's CityGML
+      importer does not support texture conversion (confirmed against
+      upstream source and maintainer statements), so this integration uses
+      the LOD1 baseline only, same as Sarabetsu/Muroran.
+
   # Not a real dataset — exists only so tests/run-tests.sh's TBD guard test
   # (`fetch.sh fails on TBD_VERIFIED_SOURCE_REQUIRED`) has something to
   # test against that stays unresolved permanently. Testing against

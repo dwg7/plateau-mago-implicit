@@ -6,6 +6,52 @@ work session — it should always answer "what's the state right now and what's
 the next concrete step," not narrate history (that's what git log and
 `docs/findings.md` are for).
 
+## Status as of 2026-08-28 (this session)
+
+**Sapporo City (札幌市) added as a third municipality, at the user's
+explicit request — two clearly staged pieces of work, both real, both
+run against actual data:**
+
+1. **Phase 7b (texture sub-goal, small/isolated)**: extracted 3 real
+   textured buildings from Sapporo's LOD2 data, converted through Mago
+   in both modes. **Central finding: Mago 3DTiler 1.16.2 does not
+   convert CityGML texture/appearance data at all** — confirmed three
+   independent ways: (a) the output GLB has no `images`/`textures`, only
+   a flat default material; (b) Mago's own source
+   (`CityGmlConverter.java`, cloned at the exact pinned commit) contains
+   zero texture-handling code; (c) Gaia3D maintainers say so directly on
+   GitHub ([#81](https://github.com/Gaia3D/mago-3d-tiler/issues/81),
+   [#73](https://github.com/Gaia3D/mago-3d-tiler/issues/73)): "CityGML
+   texturing is not yet fully supported." **Per the user's explicit
+   instruction, all texture-dependent work is now discarded** — this
+   isn't a gap in this project's approach, it's an acknowledged upstream
+   limitation. Full detail: `docs/findings.md` Phase 7b.
+2. **Phase 8 (scale demonstration, full formal integration)**: real
+   third-municipality dataset, through the actual `config/sapporo.yml` +
+   `data/input-manifest.yml` + `make fetch/build/validate/publish`
+   pipeline (not a manual one-off like Phase 7). 646,474 buildings
+   (11.6x Muroran). Small-profile validated, both full-profile builds
+   succeeded (Explicit: 15,001 tiles/53m38s; Implicit: 6,450
+   tiles/33m27s, no new validator error class at this scale), both
+   published to `tunnel.optgeo.org`, viewer wired
+   (`sapporo_explicit_full`/`sapporo_implicit_full` in
+   `viewer/viewer.js`'s `VIEWPOINTS` + `viewer/index.html`'s dropdown),
+   verified locally (no console errors, correct URL resolution). **What
+   isn't done yet: the actual practical-consumption browser measurement**
+   — same `document.visibilityState: "hidden"` blocker as always, same
+   fix (the user runs it in their own real browser). A reusable script
+   now exists for this, `viewer/measure_practical_consumption.js` (new —
+   the 2026-08-26/27 measurement's script was never saved, this closes
+   that gap). Also: `CLAUDE.md`, `docs/scope.md`, `docs/limitations.md`,
+   `CONTRIBUTING.md`, `docs/test-plan.md` all updated from "two
+   municipalities" to "three" — a real, deliberate scope-boundary change,
+   not a side effect. Full detail: `docs/findings.md` Phase 8.
+
+**Not yet committed/pushed as of this note being written** — see "Next
+concrete step" below for the exact remaining steps (commit, push, wait
+for GitHub Pages to redeploy, hand the two dataset URLs + the
+measurement script to the user).
+
 ## Status as of 2026-08-25/26/27
 
 **2026-08-27, updated end-of-session:** found and fixed a real
@@ -922,6 +968,21 @@ step.
 
 Immediate next steps, roughly in priority order:
 
+0. **(2026-08-28, highest priority — this session's work)** Commit and
+   push the Sapporo Phase 7b/8 changes (`config/sapporo.yml`,
+   `data/input-manifest.yml`, `viewer/viewer.js`, `viewer/index.html`,
+   `viewer/measure_practical_consumption.js`, `docs/findings.md`,
+   `CLAUDE.md`, `docs/scope.md`, `docs/limitations.md`,
+   `CONTRIBUTING.md`, `docs/test-plan.md`, `docs/data-selection.md`),
+   confirm GitHub Pages redeploys (check
+   `https://dwg7.github.io/plateau-mago-implicit/` serves the updated
+   `viewer.js` — has the Sapporo dropdown entries), then hand the user:
+   `https://dwg7.github.io/plateau-mago-implicit/#dataset=sapporo_explicit_full`,
+   `..._implicit_full`, and `viewer/measure_practical_consumption.js` to
+   paste into DevTools — the same real-browser handoff that produced the
+   2026-08-28 Sarabetsu/Muroran numbers. Once the user reports back,
+   record the result in `docs/findings.md`'s Phase 8 section (currently
+   marked "Not confirmed" for exactly this).
 1. ~~Ask the user to spot-check the viewer live~~ **Done — user confirmed
    in their own browser (2026-08-27) that the fixes work**: terrain
    placement, `kitaphoto17` imagery, off-white buildings, and (implicitly,
