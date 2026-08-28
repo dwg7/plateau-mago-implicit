@@ -47,10 +47,21 @@ run against actual data:**
    municipalities" to "three" — a real, deliberate scope-boundary change,
    not a side effect. Full detail: `docs/findings.md` Phase 8.
 
-**Not yet committed/pushed as of this note being written** — see "Next
-concrete step" below for the exact remaining steps (commit, push, wait
-for GitHub Pages to redeploy, hand the two dataset URLs + the
-measurement script to the user).
+**All committed and pushed** (`e7fa91c`, `53814fb`). The
+practical-consumption measurement is done too, with a real result:
+Implicit reaches useful view 54.0% faster at Sapporo scale (123ms vs
+267.2ms) — wider than the 13-25% gap at Sarabetsu/Muroran scale — but
+needs only 26.2% fewer requests (152 vs 206) — narrower than the 56-65%
+gap there. **Along the way, the first measurement attempt surfaced a
+real bug**: `viewer.js`'s URL-hash load path (`restoreFromHash`, used by
+the measurement script's own instructions) never fired the
+`usefulViewTime` diagnostic, because it used `camera.setView()` (instant,
+no completion callback) while that diagnostic was only wired into
+`flyTo()`'s animated completion (the dropdown-selection path). Fixed
+same-day (`markUsefulView()`, shared between both camera-movement
+paths), verified, then re-measured for the real numbers above. Full
+detail: `docs/findings.md` Phase 8. Phase 8 is complete — nothing left
+to hand off here.
 
 ## Status as of 2026-08-25/26/27
 
@@ -968,21 +979,12 @@ step.
 
 Immediate next steps, roughly in priority order:
 
-0. **(2026-08-28, highest priority — this session's work)** Commit and
-   push the Sapporo Phase 7b/8 changes (`config/sapporo.yml`,
-   `data/input-manifest.yml`, `viewer/viewer.js`, `viewer/index.html`,
-   `viewer/measure_practical_consumption.js`, `docs/findings.md`,
-   `CLAUDE.md`, `docs/scope.md`, `docs/limitations.md`,
-   `CONTRIBUTING.md`, `docs/test-plan.md`, `docs/data-selection.md`),
-   confirm GitHub Pages redeploys (check
-   `https://dwg7.github.io/plateau-mago-implicit/` serves the updated
-   `viewer.js` — has the Sapporo dropdown entries), then hand the user:
-   `https://dwg7.github.io/plateau-mago-implicit/#dataset=sapporo_explicit_full`,
-   `..._implicit_full`, and `viewer/measure_practical_consumption.js` to
-   paste into DevTools — the same real-browser handoff that produced the
-   2026-08-28 Sarabetsu/Muroran numbers. Once the user reports back,
-   record the result in `docs/findings.md`'s Phase 8 section (currently
-   marked "Not confirmed" for exactly this).
+0. ~~Commit/push Sapporo Phase 7b/8, hand off practical-consumption
+   measurement~~ **Done, 2026-08-28.** Both commits pushed
+   (`e7fa91c`, `53814fb`), GitHub Pages redeployed and confirmed, real
+   measurement run by the user against both Sapporo URLs — see
+   `docs/findings.md` Phase 8 for the numbers and the `markUsefulView()`
+   bug found/fixed along the way. Phase 8 is closed; nothing pending here.
 1. ~~Ask the user to spot-check the viewer live~~ **Done — user confirmed
    in their own browser (2026-08-27) that the fixes work**: terrain
    placement, `kitaphoto17` imagery, off-white buildings, and (implicitly,

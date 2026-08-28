@@ -2013,13 +2013,13 @@ lands.
 
 ## Phase 8: Sapporo City (札幌市) — scale demonstration
 
-**Status: Fetch, inspect, small/full build, and validate all complete and
-real, 2026-08-28. Full builds published to the same public host as
-Sarabetsu/Muroran. Practical-consumption measurement handed off to the
-user — same real-browser methodology as the 2026-08-26/27 cross-phase
-measurement, blocked here for the same reason
-(`document.visibilityState: "hidden"` prevents this session's own
-browser tool from forcing real tile rendering).**
+**Status: Complete, 2026-08-28.** Fetch, inspect, small/full build,
+validate, publish, viewer wiring, and a real-browser practical-consumption
+measurement (run by the user, same methodology as the 2026-08-26/27
+cross-phase measurement) all done. Along the way, found and fixed a real
+tooling bug in `viewer.js` (see "Confirmed" below) — the first
+measurement pass surfaced it, the second pass (after the fix) produced
+the real numbers this phase set out to get.
 
 Run at the user's explicit request, after Phase 7b established Mago does
 not support CityGML texture conversion — Sapporo's role here is scale
@@ -2103,54 +2103,59 @@ checksum matched on re-verification). `make inspect DATASET=sapporo`
   fast because `flyTo`'s completion is camera-animation-based, not
   tile-render-based, consistent with how the diagnostic is defined).
 
-### Confirmed (continued) — real-browser measurement, first pass
+### Confirmed (continued) — real-browser measurement, real numbers
 
 The user ran `viewer/measure_practical_consumption.js` for real, in
 their own Brave, against both published Sapporo URLs
-(`#dataset=sapporo_explicit_full` / `..._implicit_full`) once GitHub
-Pages redeployed:
+(`#dataset=sapporo_explicit_full` / `..._implicit_full`). First pass
+exposed a real tooling bug (below); second pass, after the fix, produced
+a complete result:
 
-| Dataset | mode | firstVisibleTime (ms) | usefulViewTime (ms) | requests |
-|---|---|---|---|---|
-| Sapporo | Explicit | 494.7 | *(see below)* | 250 |
-| Sapporo | Implicit | 198.8 | *(see below)* | 228 |
+| Dataset | mode | firstVisibleTime (ms) | usefulViewTime (ms) | requests | transferred bytes |
+|---|---|---|---|---|---|
+| Sapporo | Explicit | 362.8 | 267.2 | 206 | 0 (Timing-Allow-Origin gap) |
+| Sapporo | Implicit | 282.5 | **123** | 152 | 9,408 (same-origin viewer assets only) |
 
-- ✓ **`firstVisibleTime` and `requestCount` are real and valid.**
-  Implicit reaches first content 2.5x faster (198.8ms vs 494.7ms) and
-  needs fewer requests (228 vs 250, an 8.8% reduction) — same direction
-  as the Sarabetsu/Muroran finding, though a much smaller request-count
-  gap than the 56-65% seen there. Whether that gap genuinely narrows at
-  this scale, or is a single-trial artifact, isn't distinguishable from
-  one measurement — flagged honestly, not smoothed over.
-- ? **`usefulViewTime` came back `null` for both — a real bug in this
-  session's own tooling, not a Sapporo-specific finding.** Root cause:
-  `viewer/measure_practical_consumption.js`'s own usage instructions
-  say to load a dataset via the `#dataset=<key>` URL hash. But
-  `viewer.js`'s hash-restore path (`restoreFromHash()`) positioned the
-  camera with `viewer.camera.setView(...)` — an instant snap with no
-  completion callback — while the diagnostic that sets `usefulViewTime`
-  was only ever wired into `flyTo()`'s animated `complete` callback,
-  which only the dropdown-selection code path calls. Loading via hash
-  (exactly what the script instructed) could therefore never set
-  `usefulViewTime`, and the script correctly timed out after 30s waiting
-  for a callback that was never going to fire. **Fixed same-day**:
-  extracted the diagnostic-marking logic into a shared `markUsefulView()`
-  function (`viewer/viewer.js`) and call it from both the `flyTo`
-  completion and immediately after `setView()` in the hash-restore path
-  — verified working locally (`window.__practicalConsumptionDiagnostics`
-  now reports `ready: true` with a real `usefulViewTime` when loaded via
-  hash). This also means the earlier 2026-08-26/27 Sarabetsu/Muroran
-  `usefulViewTime` numbers were necessarily measured via the
-  dropdown-selection path, not the hash-URL path this script's
+- ✓ **Implicit wins on every measured dimension, and the useful-view gap
+  is the widest seen in this project so far.** Useful view: Implicit
+  54.0% faster (123ms vs 267.2ms, i.e. Implicit reaches it in under half
+  the time) — well above the 13-25% range found at Sarabetsu/Muroran
+  scale. First content: 22.1% faster (282.5ms vs 362.8ms). Requests:
+  26.2% fewer (152 vs 206) — narrower than the 56-65% range at
+  Sarabetsu/Muroran scale, the opposite direction from the useful-view
+  gap. **The two metrics move in different directions relative to the
+  established range — the honest read is "Implicit's advantage doesn't
+  scale uniformly across metrics," not a single "wins more/less at
+  scale" headline.** Single-trial result each, same caveat as the
+  original 2026-08-26/27 measurement (n=1, real but not statistically
+  robust — see that measurement's own "Not confirmed" note).
+- ? **A real tooling bug found and fixed along the way, not a
+  Sapporo-specific finding.** First measurement pass returned
+  `usefulViewTime: null` for both modes. Root cause:
+  `viewer/measure_practical_consumption.js`'s own usage instructions say
+  to load a dataset via the `#dataset=<key>` URL hash. But `viewer.js`'s
+  hash-restore path (`restoreFromHash()`) positioned the camera with
+  `viewer.camera.setView(...)` — an instant snap with no completion
+  callback — while the diagnostic that sets `usefulViewTime` was only
+  ever wired into `flyTo()`'s animated `complete` callback, which only
+  the dropdown-selection code path calls. Loading via hash (exactly what
+  the script instructed) could therefore never set `usefulViewTime`.
+  **Fixed same-day**: extracted the diagnostic-marking logic into a
+  shared `markUsefulView()` function (`viewer/viewer.js`) and call it
+  from both the `flyTo` completion and immediately after `setView()` in
+  the hash-restore path — verified locally before the second, successful
+  measurement pass. This also means the earlier 2026-08-26/27
+  Sarabetsu/Muroran `usefulViewTime` numbers were necessarily measured
+  via the dropdown-selection path, not the hash-URL path this script's
   instructions describe — worth knowing if anyone tries to reproduce
-  those numbers directly.
+  those numbers directly. First-pass `firstVisibleTime`/`requestCount`
+  values (494.7ms/250 Explicit, 198.8ms/228 Implicit) were unaffected by
+  this bug but are superseded by the second-pass table above (a
+  different trial, same single-trial caveat, browser cache state likely
+  differed between the two passes).
 
 ### Not confirmed
 
-- ✗ **`usefulViewTime` for Sapporo still needs a second real-browser
-  measurement pass**, now that the bug above is fixed. The
-  `firstVisibleTime`/`requestCount` numbers above don't need re-measuring
-  — only `usefulViewTime` was affected.
 - ✗ **Implicit's byte-total advantage does not hold at this scale, on
   raw output size** — Implicit's full build is 440MB vs Explicit's
   145MB, the opposite of what "Implicit wins on requests" might suggest
@@ -2167,11 +2172,11 @@ Pages redeployed:
 
 ### Next smallest experiment
 
-Commit and push the `markUsefulView()` fix, confirm GitHub Pages
-redeploys, then ask the user to re-run
-`viewer/measure_practical_consumption.js` against both Sapporo URLs one
-more time to get a real `usefulViewTime` — everything else about this
-sub-goal is already done.
+Phase 8 is complete as scoped. If revisited: more trials (n>1) for
+Sapporo to check whether the request-count/useful-view directional
+split holds up, or a fourth data point at yet another scale to see
+whether the pattern found here (narrower request-count gap, wider
+useful-view gap) continues or reverses again.
 
 ---
 
@@ -2182,6 +2187,6 @@ sub-goal is already done.
 | Conversion feasibility | Partially confirmed | 1, 2, 4, 5, 6, 8 | Explicit fully confirmed for both municipalities' small_files; Implicit generated, geographically correct for both, fully validatable and fully compared against Explicit — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text), so "validates independently" is currently ✗. Both modes also convert both municipalities' full profiles (6,795 and 55,906 buildings) without crashing, and the METADATA_INVALID_LENGTH pattern holds consistently across both municipalities and both scales (4097 combined instances, 100% within the 4-byte-alignment-padding range). **(2026-08-26)** Discovered and fixed a real scope-boundary gap: full-profile builds were feeding Mago LOD0+LOD3 geometry alongside LOD1, contradicting CLAUDE.md's LOD1-only baseline — `tools/strip_higher_lod.py` now enforces this at the source-data level for every build, verified to shrink Sarabetsu's full-profile output 12-13% with no loss of LOD1 content (Muroran's output was already LOD0/LOD1-identical, so unaffected). **(2026-08-28, Phase 8)** Both modes also convert Sapporo's 646,474-building full profile (11.6x Muroran's scale) without crashing — 53m38s/33m27s build times, same already-documented METADATA_INVALID_LENGTH pattern only, no new error class at this larger scale |
 | Determinism | **Fails at full scale for both municipalities (L3/FAIL); Level 2 holds only for the single-building small profile** | 3, 4, 5, 6 | Phase 3/5 (single-building small profile, Sarabetsu and Muroran, 2 concurrency settings each) confirm L2/PASS after fixing a GLB-UUID tooling false-negative. Phase 4/6 (full municipality, same procedure, both municipalities) contradict this: L3/FAIL at both concurrency settings for both. Sarabetsu's failure traced to one dominant 826-building source file; Muroran's showed no single common file, refining the hypothesis to "batching multiple buildings into one content tile carries non-determinism risk in general," not a one-file defect. **(2026-08-26)** Stripping that same file's LOD3 geometry (a plausible alternate explanation) left the non-determinism completely unchanged — same tile count, same coordinates — ruling out LOD-complexity as the cause and further confirming batch size/count is the real driver. Small-profile results were correct but never generalizable; full-scale is the honest answer for this claim, for both municipalities |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
-| Practical consumption | Partially confirmed | 2, 8, cross-phase (Implicit vs Explicit) | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but navigation/memory/long-session behavior at scale is still untested. **(2026-08-27)** Static file/byte comparison: Implicit's initial `tileset.json` payload is 105-663x smaller and constant-size regardless of building count, but total file count/bytes don't consistently favor either mode. **(2026-08-28)** Real-browser measurement (user's own Brave, one trial per combination): Implicit needs 56-65% fewer network requests and reaches a useful view 13-25% faster than Explicit for both municipalities' full profiles — the practical-consumption question this project set out to answer now has a real, if single-trial, answer favoring Implicit. Byte totals still unmeasured (blocked by `Timing-Allow-Origin`, an instrumentation gap, not a data gap). **(2026-08-28, Phase 8)** Sapporo City (646,474 buildings, 11.6x Muroran) built and published to test whether this gap widens at real metropolitan scale — root `tileset.json` gap widened further (7,032x smaller for Implicit, vs 105-663x at Sarabetsu/Muroran scale), but raw published output size does NOT favor Implicit here (440MB vs Explicit's 145MB, the opposite direction) — a reminder that byte totals and the actual practical-consumption claim (requests/time-to-useful-view) are different things. Real-browser request-count/timing measurement for Sapporo not yet run — same user-in-the-loop handoff as before |
+| Practical consumption | Partially confirmed | 2, 8, cross-phase (Implicit vs Explicit) | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but navigation/memory/long-session behavior at scale is still untested. **(2026-08-27)** Static file/byte comparison: Implicit's initial `tileset.json` payload is 105-663x smaller and constant-size regardless of building count, but total file count/bytes don't consistently favor either mode. **(2026-08-28)** Real-browser measurement (user's own Brave, one trial per combination): Implicit needs 56-65% fewer network requests and reaches a useful view 13-25% faster than Explicit for both municipalities' full profiles — the practical-consumption question this project set out to answer now has a real, if single-trial, answer favoring Implicit. Byte totals still unmeasured (blocked by `Timing-Allow-Origin`, an instrumentation gap, not a data gap). **(2026-08-28, Phase 8)** Sapporo City (646,474 buildings, 11.6x Muroran) built, published, and measured in a real browser: Implicit reaches useful view 54.0% faster (123ms vs 267.2ms) — a *wider* gap than the 13-25% range at Sarabetsu/Muroran scale — but needs only 26.2% fewer requests (152 vs 206) — a *narrower* gap than the 56-65% range there. The two metrics move in opposite directions relative to the established range: Implicit's advantage does not scale uniformly across dimensions. Root `tileset.json` size gap widened further (7,032x smaller for Implicit vs 105-663x at Sarabetsu/Muroran scale), but raw published output size does NOT favor Implicit at this scale (440MB vs Explicit's 145MB) — byte totals and the actual practical-consumption claim (requests/time-to-useful-view) remain different things, not proxies for each other |
 
 Do not pre-fill conclusions. Record only evidence-based findings.
