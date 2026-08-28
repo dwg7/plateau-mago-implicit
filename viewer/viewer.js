@@ -240,6 +240,30 @@ Cesium.CesiumTerrainProvider.fromUrl('https://terrain.reearth.land/cesium-mesh/e
 viewer.scene.fog.enabled = false;
 viewer.scene.globe.depthTestAgainstTerrain = true;
 
+// Flatten building shading, and stop it changing with the real clock.
+// CesiumJS's default scene.light is a SunLight (Scene.js's own default,
+// `this.light = new SunLight()`) whose direction is computed from the
+// real sun position for the current time — by default the live system
+// clock, so a building's apparent shading drifts as real time passes.
+// User-reported 2026-08-29.
+//
+// CesiumJS has no public "unlit" mode for 3D Tiles/glTF PBR models —
+// confirmed still an open, unresolved feature request from 2019
+// (github.com/CesiumGS/cesium/issues/7870, "Consider adding an unlit
+// mode for 3D Tilesets"; the one prototype posted there patches
+// Cesium's own shader source directly, never shipped as a public API).
+// Best available approximation using only stable, public APIs: a fixed
+// (not clock-driven) DirectionalLight at low intensity — removes the
+// time-dependence entirely and minimizes, though doesn't fully zero
+// out, the directional shading Cesium's PBR shader still computes from
+// surface normals. Not independently confirmed by live rendering this
+// session (same `document.visibilityState: "hidden"` limitation as
+// every other viewer check) — worth the user's own look.
+viewer.scene.light = new Cesium.DirectionalLight({
+  direction: new Cesium.Cartesian3(0.35, -0.85, -0.35),
+  intensity: 0.35,
+});
+
 // Mitigate the roof/wall shimmer the user reported (2026-08-27) on real
 // PLATEAU buildings. Investigated two candidate causes before touching
 // anything: (1) duplicate/overlapping LOD1 geometry from Mago or the
