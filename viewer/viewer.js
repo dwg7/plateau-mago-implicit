@@ -137,7 +137,7 @@ let currentTileset = null;
 // tile.contentAvailable is already true, confirmed against the actual
 // pinned Cesium 1.144 source; the only way around that is private,
 // unstable internals, not worth relying on). User request, 2026-08-29.
-const BUILDING_BASE_COLOR = Cesium.Color.fromCssColorString('#F2EFE6');
+const BUILDING_BASE_COLOR = Cesium.Color.fromCssColorString('#FAFAFA');
 const TILE_FLASH_COLOR = Cesium.Color.fromCssColorString('#FFF59D');
 const TILE_FLASH_DURATION_MS = 600;
 let flashingTiles = [];
@@ -259,9 +259,14 @@ viewer.scene.globe.depthTestAgainstTerrain = true;
 // surface normals. Not independently confirmed by live rendering this
 // session (same `document.visibilityState: "hidden"` limitation as
 // every other viewer check) — worth the user's own look.
+//
+// Intensity raised 0.35 → 1.0 and the building color brightened toward
+// pure white (see BUILDING_BASE_COLOR/style below) after the user
+// reported the first pass too dark and asked for a bright white,
+// Corbusier-like look — 2026-08-29.
 viewer.scene.light = new Cesium.DirectionalLight({
   direction: new Cesium.Cartesian3(0.35, -0.85, -0.35),
-  intensity: 0.35,
+  intensity: 1.0,
 });
 
 // Mitigate the roof/wall shimmer the user reported (2026-08-27) on real
@@ -353,8 +358,8 @@ async function loadTileset(url, label) {
     // ([0.9, 0.9, 0.9]), fully rough/non-metal. Against a real aerial
     // photo basemap this reads as noticeably dark/"sunken" (the user's
     // word: 沈みすぎている) rather than the pale, often-white cladding
-    // typical of real Hokkaido buildings. Overriding to a flat, warm
-    // off-white is a viewer-only style choice — it doesn't touch the
+    // typical of real Hokkaido buildings. Overriding to a flat, near-white
+    // color is a viewer-only style choice — it doesn't touch the
     // GLB data itself, so it doesn't affect Explicit/Implicit comparison
     // or any determinism/validation finding.
     //
@@ -367,8 +372,14 @@ async function loadTileset(url, label) {
     // near-white style color barely changes it (~[0.95, 0.47, 0.23] —
     // still visibly orange), which is exactly why it looked unchanged.
     // `REPLACE` makes the style color the actual rendered color.
+    //
+    // Brightened #F2EFE6 → #FAFAFA (near-pure white) 2026-08-29, at the
+    // user's request for a brighter, "Corbusier white" look — paired
+    // with raising scene.light's intensity above (BUILDING_BASE_COLOR
+    // must stay in sync with this literal, since the tile-flash fade
+    // eases back to that constant).
     tileset.style = new Cesium.Cesium3DTileStyle({
-      color: "color('#F2EFE6')",
+      color: "color('#FAFAFA')",
     });
     tileset.colorBlendMode = Cesium.Cesium3DTileColorBlendMode.REPLACE;
 
