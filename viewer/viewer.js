@@ -23,80 +23,69 @@
 // user's request) rather than leaving a stale menu item pointing at
 // deleted data.
 //
-// destination/orientation use each build's own root tileset.json
-// bounding region (computed 2026-08-26) to center on the whole
-// municipality's building extent, not a guess — Sarabetsu spans roughly
-// 16km x 22km, Muroran roughly 11.5km x 15.5km. Both explicit_full and
-// implicit_full for a dataset intentionally use the *Explicit* build's
-// region, not the Implicit one's: Implicit's root region is padded out to
-// the quadtree grid's boundary (needed for valid subdivision), not
-// tightly fit to actual building content the way Explicit's is —
-// confirmed by comparing the two directly (Implicit's north edge sits
-// ~3-6km further out than Explicit's for both municipalities), which
-// shifted the computed center north of where the buildings actually are.
-//
-// Altitude is deliberately much lower than "fit the whole extent in one
-// shot" would need (e.g. Sarabetsu's 22km-wide extent would want ~22km+
-// altitude) — at that altitude the root tile's own geometricError already
-// satisfies CesiumJS's default maximumScreenSpaceError (16px) before ever
-// reaching a tile with actual content, so the view looks sparse/empty
-// rather than "whole municipality, zoomed out" (verified by computing the
-// SSE-vs-distance refinement threshold directly: root geometricError 512
-// stops refining beyond ~22km at threshold 16, which is almost exactly
-// where the old 22km viewpoint sat). Lower altitude trades "shows the
-// literal full extent" for "actually shows buildings" — a deliberate
-// choice per user feedback that a sparse full-extent view reads worse
-// than a denser partial one.
+// destination/orientation for all six entries below are now hand-tuned
+// by the user (2026-08-29), not auto-computed — each VIEWPOINTS entry's
+// own comment records the URL hash values they supplied. Originally
+// (2026-08-26) these were computed from each build's own root
+// tileset.json bounding region (Explicit's, not Implicit's — Implicit's
+// root region is padded to the quadtree grid boundary, not tightly fit
+// to actual building content) at a deliberately low, top-down altitude;
+// superseded by real human-chosen oblique viewpoints, which read better
+// than the auto-computed top-down defaults did.
 const VIEWPOINTS = {
+  // Sarabetsu/Muroran viewpoints hand-tuned by the user 2026-08-29,
+  // replacing the earlier auto-computed top-down defaults (same
+  // treatment Sapporo got first) — same values as the URL hashes they
+  // supplied.
   sarabetsu_explicit_full: {
     label: 'Sarabetsu 7k 旧',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(143.2044, 42.6462, 6000),
+    destination: Cesium.Cartesian3.fromDegrees(143.195052, 42.645487, 250),
     orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90),
-      roll: 0,
+      heading: Cesium.Math.toRadians(285.3),
+      pitch: Cesium.Math.toRadians(-15.2),
+      roll: Cesium.Math.toRadians(0.0),
     },
   },
   sarabetsu_implicit_full: {
-    label: 'Sarabetsu 7k 改',
+    label: 'Sarabetsu 7k Kai',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(143.2044, 42.6462, 6000),
+    destination: Cesium.Cartesian3.fromDegrees(143.195052, 42.645487, 250),
     orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90),
-      roll: 0,
+      heading: Cesium.Math.toRadians(285.3),
+      pitch: Cesium.Math.toRadians(-15.2),
+      roll: Cesium.Math.toRadians(0.0),
     },
   },
   muroran_explicit_full: {
     label: 'Muroran 56k 旧',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/explicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(140.9786, 42.3613, 5000),
+    destination: Cesium.Cartesian3.fromDegrees(141.024726, 42.363533, 482),
     orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90),
-      roll: 0,
+      heading: Cesium.Math.toRadians(207.2),
+      pitch: Cesium.Math.toRadians(-16.8),
+      roll: Cesium.Math.toRadians(0.0),
     },
   },
   muroran_implicit_full: {
-    label: 'Muroran 56k 改',
+    label: 'Muroran 56k Kai',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/implicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(140.9786, 42.3613, 5000),
+    destination: Cesium.Cartesian3.fromDegrees(141.024726, 42.363533, 482),
     orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90),
-      roll: 0,
+      heading: Cesium.Math.toRadians(207.2),
+      pitch: Cesium.Math.toRadians(-16.8),
+      roll: Cesium.Math.toRadians(0.0),
     },
   },
   // Sapporo City (札幌市) — third municipality, added 2026-08-28 to
   // demonstrate Implicit's practical-consumption advantage at real
   // metropolitan scale (646,474 buildings, ~11.6x Muroran's count).
-  // destination/orientation hand-tuned by the user 2026-08-29 (replacing
-  // the earlier auto-computed top-down view) — same values as the URL
-  // hash they supplied: #lon=141.355220&lat=43.047766&h=478&
-  // heading=348.9&pitch=-22.3&roll=360.0, an oblique, human-chosen
-  // viewpoint rather than the bounding-region-fit default the other two
-  // municipalities still use.
+  // destination/orientation hand-tuned by the user 2026-08-29 — same
+  // values as the URL hash they supplied: #lon=141.355220&lat=43.047766
+  // &h=478&heading=348.9&pitch=-22.3&roll=360.0 (the first of the three
+  // municipalities to get this treatment; Sarabetsu/Muroran followed
+  // above the same day, see the VIEWPOINTS-level comment near the top
+  // of this object).
   sapporo_explicit_full: {
     label: 'Sapporo 646k 旧',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sapporo/explicit/full/latest/tileset.json',
@@ -108,7 +97,7 @@ const VIEWPOINTS = {
     },
   },
   sapporo_implicit_full: {
-    label: 'Sapporo 646k 改',
+    label: 'Sapporo 646k Kai',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sapporo/implicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(141.355220, 43.047766, 478),
     orientation: {
