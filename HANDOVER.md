@@ -926,7 +926,7 @@ Also trimmed the post-flyTo status message to an empty string per the
 user's request ("情報量は削ろう") — it previously read "表示準備完了。
 マウス・タッチで操作できます。"
 
-## The `METADATA_INVALID_LENGTH` validator finding — status: genuinely ambiguous, not "confirmed Mago bug"
+## The `METADATA_INVALID_LENGTH` validator finding — status: likely a validator implementation inconsistency, still not a settled spec question
 
 `3d-tiles-validator` flags `BatchId`/`FileName` structural-metadata
 property buffer views as having the wrong byte length. Decoded by hand:
@@ -934,10 +934,20 @@ every flagged bufferView's declared `byteLength` exceeds its
 `stringOffsets`-derived content length by exactly enough to round up to
 4-byte alignment (e.g. content ends at byte 50, declared length 52) — the
 standard "pad binary buffers to 4-byte alignment" pattern, not obviously
-a content bug. Whether `EXT_structural_metadata`'s spec permits this
-padding or requires exact-length bufferViews has **not been checked
-against the normative spec text**. Don't report this upstream as a
-confirmed bug until that's resolved either way.
+a content bug. **Checked against the normative spec text (2026-08-25)**:
+`EXT_structural_metadata`'s spec is silent on whether the `values`
+bufferView's `byteLength` must exactly equal the `stringOffsets`-derived
+content length — it only explicitly permits padding at the GLB chunk
+level, not stated either way at the individual-bufferView level. **New
+evidence (2026-08-29)**: the validator's own source
+(`BinaryPropertyTableValidator.ts:286-287`) has a comment saying the
+check should verify the bufferView is *"sufficient"* (implying `>=`),
+but the actual comparison three lines later is strict equality (`!==`),
+rejecting any legitimate padding. The validator's own code disagrees
+with its own stated intent — a sharper finding than "ambiguous," though
+still not a spec violation (the spec itself doesn't settle it). Full
+detail: `docs/findings.md` Phase 1's "Upstream candidates." No issue
+filed — would need the user's explicit go-ahead first.
 
 ## All prior pipeline bugs (found + fixed, for reference — full detail in git log / docs/findings.md)
 
@@ -1071,9 +1081,14 @@ Immediate next steps, roughly in priority order:
    concurrency=4's non-determinism is a broad pool of ~19-32
    individually-high-probability-unstable tiles, not a fixed guaranteed
    set the way concurrency=1's exact 5 tiles are. This is now
-   well-evidenced for Muroran; Sarabetsu hasn't been sampled this deeply
-   yet (only Phase 4's original single pair) — the natural next
-   extension if this is revisited. Full detail: `docs/findings.md`
+   well-evidenced for Muroran. **Extended to Sarabetsu, 2026-08-29**: 3
+   more concurrency=4 builds + 2 more concurrency=1 builds found the same
+   shape — a stable 14-tile concurrency=4 core, concurrency=1's 9 tiles a
+   strict subset of it, one build showing 4 extra edge-instability tiles.
+   The pattern generalizes across both municipalities, not a
+   Muroran-specific texture. Full detail: `docs/findings.md`
+   "Cross-phase follow-up: the Muroran pattern generalizes to Sarabetsu."
+   Historical note on the 19-tile core: `docs/findings.md`
    "Cross-phase follow-up: the 19-tile core survives a real pipeline
    change."
 5. ~~Phase 7 (optional higher-detail/LOD2+/texture tests) remains
@@ -1122,11 +1137,18 @@ Lower-priority, tracked but not blocking:
   Sarabetsu Implicit build's `tileset.json` now declares
   `subtreeLevels: 3` (was 4), correctly produces 2 subtree files instead
   of 1 (levels 0-2 in the root subtree, level 3 in a child), and
-  `make validate` decodes both correctly. **Not yet applied to the live
-  published full-profile builds** — this only affects *future* builds;
-  the 4 currently-published combinations still use Mago's default of 4
-  and were not rebuilt/republished for this change (out of scope for a
-  "small, safe fix").
+  `make validate` decodes both correctly. **Applied to the live
+  published full-profile builds, 2026-08-29**: rebuilt and republished
+  Sarabetsu Implicit (760 tile contents, unchanged from before — the
+  change only affects subtree tree shape, not tiling structure) and
+  Muroran Implicit (553 tile contents, also unchanged); both confirmed
+  live via `curl` to declare `subtreeLevels: 3`. Both show only the
+  same already-known `METADATA_INVALID_LENGTH` validator pattern (687
+  and 528 errors respectively, matching their pre-change counts) — no
+  new error class from this change. Sapporo's full-profile Implicit
+  build (Phase 8, built after this fix already landed) already used
+  `subtreeLevels: 3` from the start, so all three municipalities are
+  now consistent.
 - ~~Optionally bisect which CesiumJS release between 1.117 and 1.144
   fixed the implicit-tiling bug~~ **Done lightly, 2026-08-29** (at the
   user's explicit "advance lightly and close it out" request): searched

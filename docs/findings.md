@@ -270,16 +270,45 @@ data (not by reading Mago's docs alone):
   - No prior GitHub issue in `CesiumGS/3d-tiles-validator` discusses this
     specific question (searched for `METADATA_INVALID_LENGTH` and
     `byteLength`/padding — no hits).
-  **Conclusion:** neither "Mago has a metadata bug" nor "the validator is
-  wrong" can be asserted as fact — the spec is silent on this specific
-  point, and the validator's strictness is a defensible-but-undocumented
-  design choice. `scripts/validate.sh` correctly continues to surface this
-  as a real validation failure (per its job of not hiding real validator
-  output). The appropriate next action, if pursued, is a clarification
-  *question* to `CesiumGS/3d-tiles-validator` or the `EXT_structural_metadata`
-  spec repo asking whether the `values` buffer view's `byteLength` must
+  **Conclusion (as of 2026-08-25):** neither "Mago has a metadata bug" nor
+  "the validator is wrong" can be asserted as fact — the spec is silent on
+  this specific point, and the validator's strictness is a
+  defensible-but-undocumented design choice. `scripts/validate.sh`
+  correctly continues to surface this as a real validation failure (per
+  its job of not hiding real validator output). The appropriate next
+  action, if pursued, is a clarification *question* to
+  `CesiumGS/3d-tiles-validator` or the `EXT_structural_metadata` spec
+  repo asking whether the `values` buffer view's `byteLength` must
   exactly match the content length or may include alignment padding — not
   a bug report against either project.
+- → **(2026-08-29, revisited at the user's request to "advance lightly")
+  New evidence tips this from "ambiguous" toward "likely a real
+  implementation inconsistency in the validator, though still not a spec
+  violation."** Cloned `CesiumGS/3d-tiles-validator` at commit `7fa62c5`
+  (confirmed via its own `package.json`: version `0.6.1`, exactly this
+  project's pinned validator) and re-read the check's surrounding code,
+  not just the comparison line already found on 2026-08-25.
+  `src/validation/metadata/BinaryPropertyTableValidator.ts:286-287`'s own
+  comment, directly above the `expectedByteLength` computation, reads:
+  *"Validate that the length of the 'values' buffer view is **sufficient**
+  for storing the values."* "Sufficient" describes a minimum-size check
+  (`actualByteLength >= expectedByteLength`) — but the actual
+  implementation three lines below (already found 2026-08-25, at what is
+  now line ~713 in this fresh clone) is strict equality
+  (`actualByteLength !== expectedByteLength`), rejecting any buffer view
+  *larger* than the exact minimum, including the standard 4-byte
+  alignment padding this extension's own spec explicitly permits at the
+  chunk level. **This is the validator's own code disagreeing with its
+  own stated intent** — a more concrete, actionable finding than "the
+  spec doesn't say," even though it still doesn't settle what the spec
+  *should* require. Doesn't change the practical conclusion (this
+  project's builds are correctly flagged as "does not pass this
+  validator's check," and `scripts/validate.sh` should keep reporting
+  that plainly) — but does shift what a well-formed upstream report would
+  say: not a spec-conformance question, but "your own `// sufficient`
+  comment and your `!==` check disagree — which one is intended?" No
+  issue filed (posting to a public tracker needs the user's explicit
+  go-ahead, not assumed from "advance lightly").
 - → `--tilingMode implicit` is explicitly marked `[Experimental]` in Mago
   3DTiler's own `--help` output (v1.16.2). Per `docs/limitations.md`, this
   is stated here accurately and neutrally, not as a defect — but it means
@@ -1692,6 +1721,92 @@ Sarabetsu-only finding.
 
 ---
 
+## Cross-phase follow-up: the Muroran pattern generalizes to Sarabetsu (2026-08-29)
+
+Answers the "Next smallest experiment" directly above, at the user's
+request ("advance items 2-5, lightly"). Built 3 more Sarabetsu Implicit
+full-profile builds at `CONCURRENCY=4` and 2 more at `CONCURRENCY=1`
+(`20260829T014355Z`, `20260829T014452Z`, `20260829T014553Z` at
+concurrency=4; `20260829T014654Z`, `20260829T014801Z` at concurrency=1),
+all same-day, same `git_commit` (`3380acc`) — checked before comparing,
+per the lesson from the geoid-fix boundary trap earlier in this file.
+These also happen to be the first Sarabetsu Implicit full-profile builds
+made after `subtreeLevels` was wired into real published output (see
+"small fixes" below) — 760 tile contents in every one of the 5, matching
+the pre-change count exactly, confirming that change didn't affect
+tiling structure here either.
+
+### A universal byte-level difference, investigated and explained (not new non-determinism)
+
+Every pairwise comparison showed 742-751 of 760 tile contents
+(97-99%) differing at the raw-SHA-256 level — far more than the actual
+`compare_manifests.py` "geometry"/structural-difference count (9-18
+tiles, see below). Rather than treat this as a new mystery, hand-decoded
+one flagged GLB's raw bytes (`data/R/3/0/0.glb`, both builds): the
+difference sits entirely in a UUID-shaped string
+(`2c4a3eff-...`/`ab139732-...`) immediately after the literal
+`...ldg_6697_op.gml` filename bytes — this **is** the already-known
+random UUID Mago embeds per run in every tile's structural metadata
+(`DECISIONS.md` D18), just observed here at raw-file granularity rather
+than through the normalized/redacted comparison. `tools/normalize.py`
+already redacts this before the "geometry" classification, so it
+correctly doesn't count toward the real structural-difference numbers —
+this is confirmation the redaction is working as intended at full scale,
+not a new problem.
+
+### Confirmed
+
+- ✓ **The Muroran pattern — a stable core plus build-specific edge
+  instability at concurrency=4, and a smaller-but-nonzero concurrency=1
+  set that's a strict subset of it — generalizes to Sarabetsu.** The 3
+  concurrency=4 pairwise comparisons show **a stable 14-tile
+  intersection** (`R/3/3/2`, `R/4/6/6`, `R/4/7/5`, `R/5/11/13`,
+  `R/5/12/13`, `R/5/13/12`, `R/5/13/13`, `R/5/14/11`, `R/5/14/12`,
+  `R/6/26/25`, `R/6/27/25`, `R/6/28/23`, `R/6/28/24`, `R/6/28/25`) —
+  present in all 3 pairings. One build (`T014355`) shows 4 additional
+  tiles (`R/4/7/6`, `R/5/21/7`, `R/6/23/27`, `R/6/24/27`) versus *both*
+  of the other two concurrency=4 builds, which agree with each other on
+  those 4 — the same "extra instability traces to one specific build,
+  not the pairing" shape Muroran showed (there, build `T3304`; here,
+  `T014355`), giving an 18-tile union. **Concurrency=1's 9 differing
+  tiles are a strict subset of the concurrency=4 14-tile core** —
+  `R/3/3/2`, `R/4/6/6`, `R/5/13/12`, `R/5/14/11`, `R/6/26/25`,
+  `R/6/27/25`, `R/6/28/23`, `R/6/28/24`, `R/6/28/25` — confirming Phase
+  6's "adds on top of the baseline" framing holds for Sarabetsu too, not
+  just Muroran.
+- ✓ **Concurrency=1 is not "rock solid" at Sarabetsu's full scale
+  either** (9 real geometry differences) — consistent with, not a
+  contradiction of, the existing summary-table finding that determinism
+  "fails at full scale for both municipalities... at both concurrency
+  settings." The earlier "concurrency=1 is rock solid" language refers
+  specifically to the single-building small profile (Phase 3), not full
+  scale — this result doesn't change that claim, it reconfirms the
+  full-scale one with real multi-pair evidence for Sarabetsu specifically
+  for the first time.
+
+### Not confirmed
+
+- ✗ Only 3 concurrency=4 pairs and 1 concurrency=1 pair — same "not a
+  large-n study" caveat Muroran's own equivalent finding carries. The
+  14-tile core and the `T014355`-specific 4-tile edge are both real
+  observations, not yet distinguished from "roughly how often this
+  happens" without more pairs.
+- ✗ Whether Sarabetsu's specific 14-tile core corresponds geographically
+  or structurally to anything meaningful (e.g. batch boundaries, dense
+  building clusters) hasn't been examined — same gap Muroran's finding
+  has.
+
+### Next smallest experiment
+
+This closes the "generalizes to Sarabetsu?" question cleanly — it does.
+If revisited further: examine what the 14 stable-core tiles have in
+common (batch size, building density) across both municipalities now
+that there are two independent core sets to compare, which might explain
+*why* these specific tiles are the unstable ones rather than just *that*
+they are.
+
+---
+
 ## Cross-phase follow-up: small fixes — validator pin, subtree_levels wiring, tooling dedup (2026-08-28)
 
 Three small, no-scope-risk items from the project's own tracked
@@ -2207,7 +2322,7 @@ useful-view gap) continues or reverses again.
 | Claim | Status | Phase evaluated | Notes |
 |---|---|---|---|
 | Conversion feasibility | Partially confirmed | 1, 2, 4, 5, 6, 8 | Explicit fully confirmed for both municipalities' small_files; Implicit generated, geographically correct for both, fully validatable and fully compared against Explicit — but `3d-tiles-validator` reports a real `METADATA_INVALID_LENGTH` finding whose spec conformance is genuinely ambiguous (checked against the normative text), so "validates independently" is currently ✗. Both modes also convert both municipalities' full profiles (6,795 and 55,906 buildings) without crashing, and the METADATA_INVALID_LENGTH pattern holds consistently across both municipalities and both scales (4097 combined instances, 100% within the 4-byte-alignment-padding range). **(2026-08-26)** Discovered and fixed a real scope-boundary gap: full-profile builds were feeding Mago LOD0+LOD3 geometry alongside LOD1, contradicting CLAUDE.md's LOD1-only baseline — `tools/strip_higher_lod.py` now enforces this at the source-data level for every build, verified to shrink Sarabetsu's full-profile output 12-13% with no loss of LOD1 content (Muroran's output was already LOD0/LOD1-identical, so unaffected). **(2026-08-28, Phase 8)** Both modes also convert Sapporo's 646,474-building full profile (11.6x Muroran's scale) without crashing — 53m38s/33m27s build times, same already-documented METADATA_INVALID_LENGTH pattern only, no new error class at this larger scale |
-| Determinism | **Fails at full scale for both municipalities (L3/FAIL); Level 2 holds only for the single-building small profile** | 3, 4, 5, 6 | Phase 3/5 (single-building small profile, Sarabetsu and Muroran, 2 concurrency settings each) confirm L2/PASS after fixing a GLB-UUID tooling false-negative. Phase 4/6 (full municipality, same procedure, both municipalities) contradict this: L3/FAIL at both concurrency settings for both. Sarabetsu's failure traced to one dominant 826-building source file; Muroran's showed no single common file, refining the hypothesis to "batching multiple buildings into one content tile carries non-determinism risk in general," not a one-file defect. **(2026-08-26)** Stripping that same file's LOD3 geometry (a plausible alternate explanation) left the non-determinism completely unchanged — same tile count, same coordinates — ruling out LOD-complexity as the cause and further confirming batch size/count is the real driver. Small-profile results were correct but never generalizable; full-scale is the honest answer for this claim, for both municipalities |
+| Determinism | **Fails at full scale for both municipalities (L3/FAIL); Level 2 holds only for the single-building small profile** | 3, 4, 5, 6 | Phase 3/5 (single-building small profile, Sarabetsu and Muroran, 2 concurrency settings each) confirm L2/PASS after fixing a GLB-UUID tooling false-negative. Phase 4/6 (full municipality, same procedure, both municipalities) contradict this: L3/FAIL at both concurrency settings for both. Sarabetsu's failure traced to one dominant 826-building source file; Muroran's showed no single common file, refining the hypothesis to "batching multiple buildings into one content tile carries non-determinism risk in general," not a one-file defect. **(2026-08-26)** Stripping that same file's LOD3 geometry (a plausible alternate explanation) left the non-determinism completely unchanged — same tile count, same coordinates — ruling out LOD-complexity as the cause and further confirming batch size/count is the real driver. Small-profile results were correct but never generalizable; full-scale is the honest answer for this claim, for both municipalities. **(2026-08-27/28)** Deeper multi-pair sampling for Muroran found a stable ~19-tile core at concurrency=4 (fully containing concurrency=1's smaller unstable set) plus build-specific edge instability — not a fixed guaranteed set. **(2026-08-29)** Confirmed the same shape holds for Sarabetsu (14-tile concurrency=4 core, concurrency=1's 9 tiles a strict subset, one build showing extra edge instability) — this is now a general property of the pipeline's full-scale non-determinism across both municipalities, not a Muroran-specific texture |
 | Reproducibility | Partially confirmed | 0 | Source checksums and Mago JAR checksum both independently re-verified (fetch.sh's own check; Dockerfile's own check) — a third party could reproduce Phase 0/1 fetch+build from this repo's config as-is |
 | Practical consumption | Partially confirmed | 2, 8, cross-phase (Implicit vs Explicit) | A real build, published to a real public host (tunnel.optgeo.org) over real HTTPS/CORS, loaded and rendered correctly in the GitHub Pages-hosted viewer in a real browser — but navigation/memory/long-session behavior at scale is still untested. **(2026-08-27)** Static file/byte comparison: Implicit's initial `tileset.json` payload is 105-663x smaller and constant-size regardless of building count, but total file count/bytes don't consistently favor either mode. **(2026-08-28)** Real-browser measurement (user's own Brave, one trial per combination): Implicit needs 56-65% fewer network requests and reaches a useful view 13-25% faster than Explicit for both municipalities' full profiles — the practical-consumption question this project set out to answer now has a real, if single-trial, answer favoring Implicit. Byte totals still unmeasured (blocked by `Timing-Allow-Origin`, an instrumentation gap, not a data gap). **(2026-08-28, Phase 8)** Sapporo City (646,474 buildings, 11.6x Muroran) built, published, and measured in a real browser: Implicit reaches useful view 54.0% faster (123ms vs 267.2ms) — a *wider* gap than the 13-25% range at Sarabetsu/Muroran scale — but needs only 26.2% fewer requests (152 vs 206) — a *narrower* gap than the 56-65% range there. The two metrics move in opposite directions relative to the established range: Implicit's advantage does not scale uniformly across dimensions. Root `tileset.json` size gap widened further (7,032x smaller for Implicit vs 105-663x at Sarabetsu/Muroran scale), but raw published output size does NOT favor Implicit at this scale (440MB vs Explicit's 145MB) — byte totals and the actual practical-consumption claim (requests/time-to-useful-view) remain different things, not proxies for each other |
 
