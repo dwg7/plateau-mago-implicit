@@ -506,8 +506,10 @@ the `METADATA_INVALID_LENGTH` validator finding.*
   `{visited:0, selected:0}` to `{visited:5, selected:1,
   numberOfFeaturesSelected:2, numberOfTrianglesSelected:14}`, matching our
   known "1 building, LOD0+LOD1" test data exactly. `viewer/index.html` now
-  pins 1.144. **Not bisected** to find which exact version between 1.117
-  and 1.144 (27 releases) fixed it — see ↓.
+  pins 1.144. **Best candidate for the exact fix identified 2026-08-29** —
+  see the "Next smallest experiment" note below; not literally bisected
+  by testing each release, since the actual traversal-blocking bug turned
+  out identifiable directly from CesiumJS's own changelog/PR history.
 - ✓ **Claim 4 (practical consumption) has real, positive first evidence**:
   a real build, published to a real public host
   (`tunnel.optgeo.org`, via `scripts/publish.sh`), loaded and rendered
@@ -554,10 +556,30 @@ anyone still pinned to an old CesiumJS release.
 
 ### Next smallest experiment
 
-↓ Optionally bisect which CesiumJS release between 1.117 and 1.144 fixed
-the implicit-tiling traversal bug, by checking that version's CHANGES.md
-— useful context (not blocking) if this project ever needs to state a
-minimum supported CesiumJS version precisely.
+↓ **(2026-08-29, done — lightly, at the user's request, not via literal
+bisection).** Downloaded CesiumJS's own `CHANGES.md` at the 1.144 tag
+and searched every release between 1.118 and 1.144 for 3D
+Tiles/implicit-tiling-related fixes. Strongest candidate found:
+[**CesiumGS/cesium#12972**](https://github.com/CesiumGS/cesium/pull/12972),
+*"Fixed parsing implicit content bounding volumes"* — merged
+2025-10-14, shipped in **CesiumJS 1.135** (2025-11-03, per `CHANGES.md`
+line 271's placement under that release's section). The PR's own
+description: content bounding-volume semantics
+(`CONTENT_BOUNDING_BOX`/`_REGION`/`_SPHERE`) "were being parsed from
+tile metadata, but they should have been parsed from content
+metadata," in `Implicit3DTileContent` specifically — a bad/degenerate
+bounding volume here is a plausible direct cause of a traversal that
+never selects the root tile as visible (this project's exact symptom).
+**Not independently re-verified by actually testing 1.134 vs 1.135
+against real data** — a genuine bisection would need to load real
+tilesets in a real browser at each candidate version, which
+`document.visibilityState: "hidden"` blocks in this session's own
+browser tool the same way it blocks every other visual check this
+project has needed a human for. Reported as the best-evidenced
+candidate from changelog/PR research, not a re-confirmed fact — the
+distinction matters and is stated plainly rather than rounded up to
+"confirmed." Closing this item at this confidence level, per the
+user's explicit "advance lightly and close it out" instruction.
 
 ↓ (2026-08-28: done — see "Cross-phase follow-up: small fixes" near the
 end of this file. Re-confirmed the flag name via a fresh `docker run

@@ -199,10 +199,12 @@ PLATEAU/Mago data problem.**
 same real build rendered correctly: `tileset.statistics` went from
 `{visited:0, selected:0}` to `{visited:5, selected:1,
 numberOfFeaturesSelected:2, numberOfTrianglesSelected:14}` — exactly
-matching the known "1 building, LOD0+LOD1" test data. Not bisected to
-find which exact release between 1.117 and 1.144 fixed it (27 releases
-apart) — low priority, only useful if this project ever needs to state a
-precise minimum-supported-CesiumJS version.
+matching the known "1 building, LOD0+LOD1" test data. **Best-evidenced
+candidate for the exact fixing release, identified 2026-08-29 via
+changelog/PR search (not literal bisection): CesiumJS 1.135**,
+[PR #12972](https://github.com/CesiumGS/cesium/pull/12972) ("Fixed
+parsing implicit content bounding volumes") — see `docs/findings.md`
+Phase 2 for the full reasoning and honest confidence caveat.
 
 **Mago 3DTiler is already on the latest possible version** — verified
 `main` branch HEAD and the `v1.16.2` tag point at the exact same commit
@@ -1125,8 +1127,19 @@ Lower-priority, tracked but not blocking:
   the 4 currently-published combinations still use Mago's default of 4
   and were not rebuilt/republished for this change (out of scope for a
   "small, safe fix").
-- Optionally bisect which CesiumJS release between 1.117 and 1.144 fixed
-  the implicit-tiling bug — still not done, still genuinely low priority.
+- ~~Optionally bisect which CesiumJS release between 1.117 and 1.144
+  fixed the implicit-tiling bug~~ **Done lightly, 2026-08-29** (at the
+  user's explicit "advance lightly and close it out" request): searched
+  CesiumJS's own `CHANGES.md`/PR history rather than literal bisection.
+  Best-evidenced candidate: **CesiumJS 1.135**, via
+  [PR #12972](https://github.com/CesiumGS/cesium/pull/12972) ("Fixed
+  parsing implicit content bounding volumes," merged 2025-10-14) — a
+  plausible direct cause of a traversal that never selects the root
+  tile. Not independently re-verified by testing 1.134 vs 1.135 against
+  real data (would need real browser rendering, blocked the same way as
+  every other visual check this project needs a human for) — reported
+  at that honest confidence level. Full detail: `docs/findings.md`
+  Phase 2's "Next smallest experiment."
 
 ## Where things live
 

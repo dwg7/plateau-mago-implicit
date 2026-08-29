@@ -40,8 +40,10 @@ Expanding feature scope requires separate investigation.
   `CesiumGS/3d-tiles-samples` implicit-tiling reference tileset, so it's a
   CesiumJS defect, not a PLATEAU/Mago data issue. **Fixed as of CesiumJS
   1.144** (current latest as of 2026-08-25) — `viewer/index.html` now
-  pins that version. Which exact release in between fixed it hasn't been
-  bisected. See `docs/findings.md` Phase 2.
+  pins that version. Best-evidenced candidate for the exact fix (via
+  changelog/PR research, not literal bisection): CesiumJS 1.135,
+  [PR #12972](https://github.com/CesiumGS/cesium/pull/12972). See
+  `docs/findings.md` Phase 2.
 
 ## Data limitations
 
