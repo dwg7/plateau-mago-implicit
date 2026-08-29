@@ -71,16 +71,7 @@ Muroran City (室蘭市) is selected because:
 - It is in the same PLATEAU program and uses the same CityGML structure as Sarabetsu
 - Comparing Sarabetsu and Muroran explains how spatial distribution affects tiling behavior
 
-## Phase 7b texture sub-goal: Sapporo City (札幌市) extract
-
-**This is not a third baseline municipality.** It's a scoped provenance
-note for the small, isolated data extract used in
-`docs/findings.md`'s "Phase 7b: texture sub-goal" — recorded here per
-this document's own policy ("Never fabricate or estimate values") even
-though it's not a full parallel entry to Sarabetsu/Muroran above. See
-`CLAUDE.md`'s "two municipalities only" boundary and
-`docs/findings.md`'s Phase 7b section for why this stays separate from
-the declared baseline.
+## Sapporo City (札幌市)
 
 | Field | Value |
 |---|---|
@@ -99,18 +90,52 @@ the declared baseline.
 | Archive size (bytes) | 2,718,857,710 |
 | License | CC BY 4.0 |
 | Attribution | 国土交通省 Project PLATEAU |
-| Selected building files | 3 of 604 `udx/bldg/*.gml` files, chosen for containing texture data: `64414293_bldg_6697_op.gml`, `64414279_bldg_6697_op.gml`, `64414380_bldg_6697_op.gml` |
-| Selected buildings | 1 textured building extracted from each file: `bldg_16052a8c-cc5c-470f-bfec-24c954e9238b`, `bldg_b8f611c9-0d44-4b14-8d63-a890f526881a`, `bldg_6d43503c-fa27-421f-83cb-2bbdc9a32be2` |
-| Reason for file selection | LOD2 coverage is a 3.27 km² subset of the city (651.36 km² LOD1 coverage); only 14 of the 604 mesh files have a paired `_appearance/` texture directory, and each of the 3 checked contained exactly one texture-bearing building — picked for a range of texture complexity (3, 23, 38 texture surfaces) |
+| Selected building files | 604 total under `udx/bldg/` (full list: `config/sapporo.yml` `source.building_files`); small_file for small-profile validation: `udx/bldg/64413140_bldg_6697_op.gml` |
+| Reason for file selection | Smallest bldg mesh file with exactly one building (11,517 bytes), of 16 single-building candidates found; minimizes variables for the initial parse/coordinate/height baseline, same reasoning as Sarabetsu/Muroran's small_file |
 
 ### Selection rationale
 
-Not a workflow-scaling or urban-density rationale like Sarabetsu/Muroran
-— chosen specifically because it's the smallest real PLATEAU dataset
-this project could confirm actually contains `app:ParameterizedTexture`
-elements (zero in both baseline municipalities, re-confirmed multiple
-times). Extraction and reproduction steps: `docs/findings.md`'s Phase 7b
-section.
+Sapporo City (札幌市) is selected because:
+- It is Hokkaido's capital and largest city by a wide margin (~1.96M
+  population, vs Muroran's ~90K) — the natural next step for testing
+  Implicit's practical-consumption advantage at real metropolitan scale
+- Added 2026-08-28/29 at the user's explicit request, as a genuine third
+  baseline municipality (`CLAUDE.md`'s "two municipalities only... do
+  not add a third without the user asking" boundary — the user did ask,
+  explicitly, for exactly this purpose)
+- Not chosen for texture support: a smaller-scope sub-goal (Phase 7b,
+  below) investigated Sapporo's real LOD2/texture data first, using a
+  hand-picked 3-building extract kept separate from this full-dataset
+  entry — that investigation found Mago 3DTiler does not convert CityGML
+  texture data at all (confirmed against Mago's own source and upstream
+  maintainer statements), so Sapporo's role in the actual baseline
+  (full LOD1 profile, 646,474 buildings) is scale only, same LOD1 scope
+  as Sarabetsu/Muroran
+
+**Verified 2026-08-28/29 (Phase 8):** `make inspect DATASET=sapporo`
+confirmed 646,474 buildings (95x Sarabetsu, 11.6x Muroran), single CRS
+(EPSG:6697) across the whole dataset, same axis order as
+Sarabetsu/Muroran. Full-profile builds (both modes) and a real-browser
+practical-consumption measurement are recorded in `docs/findings.md`
+Phase 8.
+
+### Phase 7b texture sub-goal — a separate, smaller extract, not this entry
+
+`docs/findings.md`'s "Phase 7b: texture sub-goal" used a different,
+much smaller extract from the same archive above: 3 of the 604
+`udx/bldg/*.gml` files, chosen for containing real texture data
+(`64414293_bldg_6697_op.gml`, `64414279_bldg_6697_op.gml`,
+`64414380_bldg_6697_op.gml` — of 14 files with a paired `_appearance/`
+texture directory out of 604 total), with one texture-bearing building
+extracted from each (`bldg_16052a8c-cc5c-470f-bfec-24c954e9238b`,
+`bldg_b8f611c9-0d44-4b14-8d63-a890f526881a`,
+`bldg_6d43503c-fa27-421f-83cb-2bbdc9a32be2` — picked for a range of
+texture complexity: 3, 23, 38 texture surfaces respectively). This ran
+*before* Sapporo was added as a full baseline municipality above, as an
+isolated test of whether Mago converts texture data at all (it doesn't
+— see `docs/findings.md`'s Phase 7b section) — kept as a separate note
+here since it used a different, non-representative subset of the
+archive than the full-profile entry above.
 
 ## Source data policy
 

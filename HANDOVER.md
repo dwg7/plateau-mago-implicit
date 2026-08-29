@@ -6,6 +6,92 @@ work session — it should always answer "what's the state right now and what's
 the next concrete step," not narrate history (that's what git log and
 `docs/findings.md` are for).
 
+## Status as of 2026-08-29 (this session)
+
+**Two unrelated threads: a project identity/purpose change, and closing
+out every item on the outstanding-issues list.**
+
+**1. Renamed to "PLATEAU Kai"** (display name only — the GitHub repo
+stays `dwg7/plateau-mago-implicit`, confirmed via `AskUserQuestion`, no
+broken links). Broader purpose adopted alongside the existing narrow
+research question, additively: applying 2026's latest open-source
+technology to Hokkaido PLATEAU data, aiming for faster PLATEAU display,
+as a way to test where 3D web mapping currently stands. `README.md`,
+`CLAUDE.md`, `docs/hypothesis.md`, `docs/respectful-positioning.md`,
+`CONTRIBUTING.md`, `CITATION.cff` all now lead with this framing, then
+explicitly keep the four-claims methodology, hard scope boundaries, and
+respectful-positioning guardrails as the specific mechanism underneath
+it — none of that content changed. `docs/architecture.md` gained a
+"Viewer terrain" section documenting a planned (not yet integrated,
+confirmed still actively bug-fixing via its own recent commits)
+`hfu/mapterhorn-japan-bridge` terrain source. Full rationale:
+`DECISIONS.md` D22.
+
+**2. Viewer polish, several rounds, all user-driven and verified
+locally**: title/panel → "PLATEAU Kai"; removed the "表示する都市" label
+and the routine loading/loaded status narration (kept `setStatus()` for
+real errors/validation/the initial hint); "詳細情報・開発者向け" →
+"開発者向け"; dropdown labels shortened to `{City} {Nk} {旧|Kai}"
+(旧=Explicit, Kai=Implicit) and reordered (all three Kai entries first,
+then all three 旧); newly-loaded tiles now flash pale yellow fading to
+the normal color over 600ms (`tileset.tileLoad` + per-frame
+`Cesium.Color.lerp`); building shading flattened and made
+time-of-day-independent (`scene.light` replaced with a fixed
+`DirectionalLight`, intensity raised 0.35→1.0→3.5 after two rounds of
+"too dark" feedback, color brightened `#F2EFE6`→`#FAFAFA`); all three
+municipalities' viewpoints replaced with real user-hand-tuned oblique
+camera positions (Sapporo, then Sarabetsu/Muroran, then Muroran refined
+again), superseding the original auto-computed top-down defaults.
+
+**3. Closed every item on the outstanding-issues list** (the user asked
+directly "ほかにアウトスタンディングイシューってあったっけ？", then to
+advance them):
+- **CesiumJS 1.117→1.144 bisect, closed lightly**: searched CesiumJS's
+  own `CHANGES.md`/PR history rather than literally re-testing 27
+  releases. Best-evidenced candidate: **CesiumJS 1.135**,
+  [PR #12972](https://github.com/CesiumGS/cesium/pull/12972) ("Fixed
+  parsing implicit content bounding volumes"). Reported at honest
+  confidence — a research-based candidate, not independently
+  re-verified against real data.
+- **`subtreeLevels` applied to published builds**: rebuilt and
+  republished Sarabetsu and Muroran Implicit full-profile (760/553 tile
+  contents, both unchanged from before — the config only affects subtree
+  tree shape) — both now declare `subtreeLevels: 3` live. All three
+  municipalities consistent (Sapporo already used it from Phase 8).
+- **Sarabetsu determinism sampling extended** to match Muroran's depth
+  (3 more concurrency=4 builds, 2 more concurrency=1): found the same
+  shape — a stable 14-tile concurrency=4 core, concurrency=1's 9 tiles a
+  strict subset, one build showing extra edge instability. The pattern
+  generalizes across both municipalities, not a Muroran-specific
+  texture. Also investigated and explained a near-universal
+  (742-751/760) raw-byte difference in every comparison — the
+  already-known per-run random UUID Mago embeds (`DECISIONS` D18),
+  correctly filtered by `tools/normalize.py` before the real
+  geometry-difference count; not new non-determinism.
+- **Phase 7 LOD3 structural comparison — overturned the original
+  finding.** Building an actual LOD1-only side-by-side (never done in
+  the original 2026-08-28 run) showed it's byte-for-byte
+  SHA-256-identical to the LOD3 (`PHASE7=1`) build, in both modes. Root
+  cause: the 4 buildings' direct-child `lod3Solid` element is a pure
+  `xlink:href` reference wrapper with no inline geometry — Mago never
+  actually incorporated the LOD3 detail, which lives nested in
+  `boundedBy` surfaces `strip_higher_lod.py` never touches either way.
+  **Corrected conclusion: Mago didn't crash on LOD3 data, but
+  higher-LOD conversion feasibility remains genuinely untested by this
+  project.**
+- **`METADATA_INVALID_LENGTH` validator finding refined**: cloned
+  `CesiumGS/3d-tiles-validator` at the exact pinned version (`0.6.1`)
+  and found the check's own code comment ("sufficient") disagrees with
+  its actual strict-equality (`!==`) implementation, which rejects
+  legitimate alignment padding. Sharper than "ambiguous," though still
+  not a settled spec question. No issue filed — would need the user's
+  go-ahead.
+
+All of the above committed and pushed across several commits
+(`66d981a` through `5618cee`); nothing outstanding from this session's
+own work. See `docs/findings.md` for full technical detail on each item
+(search for the phase/section names above).
+
 ## Status as of 2026-08-28 (this session)
 
 **Sapporo City (札幌市) added as a third municipality, at the user's
@@ -974,6 +1060,15 @@ re-verified against real data:
   Makubetsu Town's code — corrected to `01639`).
 
 ## Next concrete step
+
+**As of 2026-08-29: no outstanding next step.** Every item tracked below
+and in the "Lower-priority" list at the end of this section has been
+resolved (see the "Status as of 2026-08-29" section at the top of this
+file for what closed and how) — this numbered list is kept as a
+historical record of how each item got resolved, not a current to-do
+list. If picking this project back up, start from `docs/findings.md`'s
+Summary table and the top status sections of this file, not from the
+list below.
 
 **Phases 0–6 are done for real, for both municipalities. The viewer has
 now been through two full rounds of user-driven fixes** (2026-08-26 and
