@@ -1,0 +1,38 @@
+Phase 7 LOD3 sub-goal correction, 2026-08-29
+==============================================
+
+Command (Explicit mode, 4-building extract, same buildings/flags as the
+2026-08-28 run):
+
+  find output-lod1only/data -name "*.glb" | sort | xargs shasum -a256 | sed 's|.*/data/||' | sort > lod1only.txt
+  find output-phase7/data -name "*.glb" | sort | xargs shasum -a256 | sed 's|.*/data/||' | sort > phase7.txt
+  diff lod1only.txt phase7.txt
+
+Result: diff exit code 0 (zero differences). All 147 GLB files
+(Explicit) and all Implicit content files have identical SHA-256
+between the tools/strip_higher_lod.py (LOD1-only) build and the
+PHASE7=1 (LOD3-unstripped) build, for all 4 LOD3-bearing buildings
+(bldg_3ac5d900-490c-4709-8280-f8c6c52246ce,
+bldg_88f31791-edf9-4510-8370-959d780d7574,
+bldg_ad16daa0-f011-4e87-9fc7-8a13776bd571,
+bldg_e9a284d3-4151-4e9b-a73e-ebfa6e538052), in both Explicit and
+Implicit modes.
+
+Also independently re-confirmed on the smallest building alone
+(bldg_3ac5d900, 92 lod3MultiSurface elements) as a single-building
+isolation test: same result, zero differences, output directories
+byte-identical in total size too (192K Explicit, 284K Implicit, both
+builds).
+
+Root cause: all 4 buildings' direct-child bldg:lod3Solid element is a
+gml:Solid whose gml:exterior/gml:CompositeSurface contains only
+xlink:href references to face IDs (e.g.
+<gml:surfaceMember xlink:href="#face_..."/>), not inline gml:posList
+coordinates. tools/strip_higher_lod.py only removes this direct-child
+wrapper (by design, documented in its own docstring) - it never touches
+the nested bldg:boundedBy WallSurface/RoofSurface elements where the
+actual lod3MultiSurface polygon geometry lives. Since the wrapper Mago
+would need to parse for geometry carries no inline data either way,
+removing it changes nothing Mago actually reads.
+
+See docs/findings.md's Phase 7 section for the full write-up.

@@ -1092,22 +1092,29 @@ Immediate next steps, roughly in priority order:
    "Cross-phase follow-up: the 19-tile core survives a real pipeline
    change."
 5. ~~Phase 7 (optional higher-detail/LOD2+/texture tests) remains
-   untouched~~ **LOD3 sub-goal run 2026-08-28** (user approved crossing
-   this scope boundary first, per `CLAUDE.md`). `scripts/build.sh` now
-   has an opt-in `PHASE7=1` env var that bypasses
-   `tools/strip_higher_lod.py` (defaults off, verified byte-identical
-   Phase 1-6 output via SHA-256 with it unset). Extracted the 4 real
-   LOD3-bearing buildings from Sarabetsu's `63437175_bldg_6697_op.gml`
-   and ran both modes directly through Mago: both convert cleanly (147 /
-   57 tile contents), correct geographic placement, no new validator
-   error class beyond the already-known `METADATA_INVALID_LENGTH`
-   pattern. **Texture sub-goal explicitly marked not-evaluable** — zero
-   texture elements in either dataset or the CI fixture, would need a
-   third data source (a separate scope question, not decided). Full
-   detail, exact commands, kept strictly separate from the Phase 1-6
-   summary per `docs/test-plan.md`: `docs/findings.md` "Phase 7: Optional
-   higher-detail tests." Not done: the deeper structural tree comparison
-   Phase 2 did for LOD1-only content, applied to this LOD3 case.
+   untouched~~ **LOD3 sub-goal run 2026-08-28, central claim corrected
+   2026-08-29.** `scripts/build.sh` has an opt-in `PHASE7=1` env var that
+   bypasses `tools/strip_higher_lod.py` (defaults off, verified
+   byte-identical Phase 1-6 output via SHA-256 with it unset). Extracted
+   the 4 real LOD3-bearing buildings from Sarabetsu's
+   `63437175_bldg_6697_op.gml` and ran both modes directly through Mago:
+   both convert cleanly (147 / 57 tile contents), correct geographic
+   placement. **The original run inferred LOD3 was "actually being
+   processed" from tile counts alone — wrong.** Doing the deferred
+   structural comparison (2026-08-29) meant actually building an LOD1-only
+   version of the same 4 buildings side by side: it's byte-for-byte
+   SHA-256-identical to the PHASE7 build, in both modes. Root cause: all
+   4 buildings' direct-child `lod3Solid` element is a pure
+   `xlink:href`-reference wrapper with no inline geometry; the real
+   polygon data lives nested in `bldg:boundedBy` surfaces that
+   `strip_higher_lod.py` never touches either way (by design). **Mago
+   never actually incorporated the LOD3 geometry — it didn't crash, but
+   higher-LOD conversion feasibility remains genuinely untested.** Full
+   detail: `docs/findings.md` "Phase 7: Optional higher-detail tests,"
+   Confirmed section. **Texture sub-goal explicitly marked not-evaluable**
+   — zero texture elements in either dataset or the CI fixture, would
+   need a third data source (a separate scope question, not decided at
+   the time; later became Sapporo/Phase 7b/8, see above).
 
 Lower-priority, tracked but not blocking:
 

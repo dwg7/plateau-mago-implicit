@@ -1865,11 +1865,14 @@ follow-ups, done as the first step of a broader remaining-work roadmap.
 
 ## Phase 7: Optional higher-detail tests
 
-**Status: LOD3 sub-goal (Sarabetsu) run for real, 2026-08-28. Texture
-sub-goal (Sapporo, see "Phase 7b" below) also run for real, 2026-08-28,
-after the user explicitly asked for it as a separately-staged follow-up.
-Explicitly optional and separate — per `docs/test-plan.md`, failure here
-does not invalidate Phase 1-6, and per `CLAUDE.md`'s scope boundary, this
+**Status: LOD3 sub-goal (Sarabetsu) run for real, 2026-08-28, and its
+central claim corrected 2026-08-29 after a real structural comparison —
+Mago never actually incorporated the LOD3 geometry, contrary to the
+original run's estimate-based conclusion. Texture sub-goal (Sapporo, see
+"Phase 7b" below) also run for real, 2026-08-28, after the user
+explicitly asked for it as a separately-staged follow-up. Explicitly
+optional and separate — per `docs/test-plan.md`, failure here does not
+invalidate Phase 1-6, and per `CLAUDE.md`'s scope boundary, this
 section's results are never merged into the Phase 1-6 summary table
 below.**
 
@@ -1929,13 +1932,45 @@ docker run --rm -v <input>:/data/input -v <output>:/data/output \
 
 ### Confirmed
 
-- ✓ **Mago 3DTiler converts real LOD3 geometry without crashing, in both
-  modes.** Explicit: 147 tile contents, 9.4s. Implicit: 57 tile contents,
-  10.3s. Both completed cleanly — no exceptions, no silent truncation
-  (147/57 tile contents from just 4 buildings is far more geometric
-  complexity than a LOD1-only file of this building count would ever
-  produce, consistent with the real LOD3 detail actually being
-  processed, not dropped).
+- ~~✓ Mago 3DTiler converts real LOD3 geometry without crashing, in both
+  modes... consistent with the real LOD3 detail actually being
+  processed, not dropped.~~ **Corrected 2026-08-29 — this inference was
+  wrong, found while doing the structural comparison this section's own
+  "Not confirmed" list originally deferred.** "147/57 tile contents...
+  far more than a LOD1-only file would produce" was an *estimate*, never
+  checked against an actual side-by-side LOD1-only build of the same 4
+  buildings. Built one: `tools/strip_higher_lod.py` on the same 4-building
+  extract, both modes. **Result: byte-for-byte SHA-256-identical GLB
+  output to the PHASE7 (unstripped) build, in both Explicit (147/147
+  files match) and Implicit (all files match) — zero difference.**
+  Root-caused: `strip_higher_lod.py` only removes *direct-child*
+  `lod3Solid`/`lod3Geometry` elements (documented, deliberate scope —
+  see the tool's own docstring), and for all 4 of these buildings, that
+  direct-child `bldg:lod3Solid` is a `gml:Solid` containing **only
+  `xlink:href` references** to face IDs (`<gml:surfaceMember
+  xlink:href="#face_..."/>`) — no inline `gml:posList` coordinates at
+  all. The real LOD3 polygon geometry (the 92-2682 `lod3MultiSurface`
+  elements per building) lives nested inside `bldg:boundedBy`
+  `WallSurface`/`RoofSurface` elements, which `strip_higher_lod.py`
+  deliberately never touches either way (documented reason: removing
+  those would need cleanup of now-empty wrapper elements too). Since
+  removing or keeping the reference-only `lod3Solid` wrapper changes
+  nothing Mago actually reads, and the nested boundary-surface geometry
+  is identical in both builds regardless, **the true, honest finding is
+  the opposite of the original one: Mago 3DTiler does not incorporate
+  this dataset's LOD3 detail into its output at all**, for this
+  PLATEAU-style xlink-referenced boundary-surface encoding — not because
+  it drops it after reading it, but because the direct-child element it
+  actually parses for geometry carries no inline data to read. This
+  refines (doesn't contradict) `strip_higher_lod.py`'s own prior finding
+  on the full 826-building file (direct-child stripping alone caused
+  "only ~6.5%" size reduction despite 7,292 nested `lod3MultiSurface`
+  elements) — this isolated 4-building test shows that residual
+  contribution is not "small," it's **exactly zero** for buildings that,
+  like these 4, have no LOD0 either. **Higher-LOD conversion feasibility
+  (Phase 7's actual stated goal) remains genuinely untested by this
+  project** — Mago didn't crash, but it also never got real LOD3
+  geometry to convert.
 - ✓ **Geographic placement is correct.** Root bounding region decodes to
   143.193-143.194°E / 42.645-42.647°N (both modes) — squarely inside
   Sarabetsu's known extent, and the geoid-corrected height range
@@ -1952,11 +1987,19 @@ docker run --rm -v <input>:/data/input -v <output>:/data/output \
 
 ### Not confirmed
 
-- ✗ **No structural tree comparison against Phase 2's methodology done
-  yet** (Explicit's per-LOD sibling branch shape, Implicit's subtree
-  availability decode) — this run only confirmed conversion succeeds and
-  validates the same as every other build, not the detailed tree-shape
-  analysis Phase 2 did for the LOD1-only case.
+- ✗ **Structural tree comparison done (2026-08-29), and it directly
+  produced the correction above rather than a sibling-branch-count
+  answer.** There's no "3 sibling branches instead of 2" to report,
+  because LOD1-only and LOD1+`lod3Solid`-wrapper builds are structurally
+  (and byte-for-byte) identical for these 4 buildings — the comparison's
+  real finding was *that* identity, not a tree-shape difference. What
+  remains genuinely untested: whether Mago *would* incorporate LOD3
+  geometry if it were encoded as inline `gml:posList` data directly under
+  a `lod3Solid`/`lod3MultiSurface` element rather than via
+  `xlink:href`-referenced boundary surfaces — no such PLATEAU data has
+  been found in either dataset this project uses, so this remains an
+  open question about Mago's `CityGmlConverter` behavior, not a settled
+  one.
 - ✗ **The 8.9MB extracted test file was not committed to the repo** —
   it doesn't fit `CLAUDE.md`'s "only the small synthetic fixture
   `data/fixtures/test_building.gml` is checked in" convention, and this
@@ -1976,13 +2019,15 @@ docker run --rm -v <input>:/data/input -v <output>:/data/output \
 
 ### Next smallest experiment
 
-If Phase 7 is revisited: the structural tree comparison Phase 2 did for
-LOD1-only content, applied here — does Explicit now show 3 sibling
-branches (LOD0/LOD1/LOD3) instead of 2, and does Implicit's merged
-content tile's `propertyTable` grow accordingly? Would directly answer
-whether Mago's Implicit merging behavior (already confirmed to combine
-multiple LODs into one content tile for the LOD0+LOD1 case, Phase 2)
-extends cleanly to a third LOD.
+**Answered 2026-08-29 (see the corrected Confirmed entry above) — with a
+different, more consequential result than the question assumed.** If
+higher-LOD conversion feasibility is revisited for real: find or
+construct a PLATEAU-like source where LOD3 geometry is encoded as inline
+`gml:posList` coordinates directly under `lod3Solid`/`lod3MultiSurface`
+(not `xlink:href` references to boundary-surface faces, which this
+project's real data uses exclusively) — that would be the actual test of
+whether Mago's `CityGmlConverter` can convert LOD3 geometry at all, which
+remains unanswered by every LOD3 test run so far.
 
 ### Phase 7b: texture sub-goal (Sapporo City, 札幌市 — 2026-08-28)
 
