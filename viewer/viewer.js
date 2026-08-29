@@ -60,21 +60,21 @@ const VIEWPOINTS = {
   muroran_explicit_full: {
     label: 'Muroran 56k 旧',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/explicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(141.024726, 42.363533, 482),
+    destination: Cesium.Cartesian3.fromDegrees(141.051824, 42.367087, 759),
     orientation: {
-      heading: Cesium.Math.toRadians(207.2),
-      pitch: Cesium.Math.toRadians(-16.8),
-      roll: Cesium.Math.toRadians(0.0),
+      heading: Cesium.Math.toRadians(233.2),
+      pitch: Cesium.Math.toRadians(-17.2),
+      roll: Cesium.Math.toRadians(360.0),
     },
   },
   muroran_implicit_full: {
     label: 'Muroran 56k Kai',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/implicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(141.024726, 42.363533, 482),
+    destination: Cesium.Cartesian3.fromDegrees(141.051824, 42.367087, 759),
     orientation: {
-      heading: Cesium.Math.toRadians(207.2),
-      pitch: Cesium.Math.toRadians(-16.8),
-      roll: Cesium.Math.toRadians(0.0),
+      heading: Cesium.Math.toRadians(233.2),
+      pitch: Cesium.Math.toRadians(-17.2),
+      roll: Cesium.Math.toRadians(360.0),
     },
   },
   // Sapporo City (札幌市) — third municipality, added 2026-08-28 to
