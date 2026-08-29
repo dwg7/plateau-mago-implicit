@@ -1,6 +1,15 @@
-# plateau-mago-implicit
+# PLATEAU Kai (plateau-mago-implicit)
 
-This repository tests whether PLATEAU building CityGML for Muroran City (室蘭市) and Sarabetsu Village (更別村) can be converted into Implicit 3D Tiles using Mago 3DTiler in a deterministic and reproducible manner, and consumed comfortably with CesiumJS from static HTTP storage.
+**PLATEAU Kai** applies the latest (2026) open-source technology to
+Project PLATEAU building data for Hokkaido (北海道), aiming for faster
+PLATEAU display — using that as a way to test where 3D web mapping
+currently stands. The name plays on three meanings: 開 (open, from
+open-source), 北海道の「カイ」(Hokkaido's "kai"), and 快速の「快」
+(fast/speedy). See [DECISIONS.md](DECISIONS.md) D22 for the full
+rationale, including how this broader purpose relates to the project's
+original, narrower research question below.
+
+This repository tests whether PLATEAU building CityGML for Muroran City (室蘭市), Sarabetsu Village (更別村), and Sapporo City (札幌市) can be converted into Implicit 3D Tiles using Mago 3DTiler in a deterministic and reproducible manner, and consumed comfortably with CesiumJS from static HTTP storage. This remains the specific, rigorous methodology through which the broader PLATEAU Kai purpose above is evaluated — see the four claims below.
 
 The experiment does not propose a new standard, replace PLATEAU CityGML, or evaluate the general value of specialized commercial conversion and delivery services. Its narrower purpose is to determine whether an independent open-source regeneration path can be maintained for a derived 3D delivery view under different operational assumptions.
 
@@ -10,7 +19,7 @@ PLATEAU CityGML remains the source dataset. Generated 3D Tiles are treated as di
 
 ## Research question
 
-> Can building data from Project PLATEAU CityGML for Muroran City (室蘭市) and Sarabetsu Village (更別村) be converted into Implicit 3D Tiles using Mago 3DTiler in a deterministic and reproducible manner, and then consumed comfortably with CesiumJS from ordinary static HTTP storage?
+> Can building data from Project PLATEAU CityGML for Muroran City (室蘭市), Sarabetsu Village (更別村), and Sapporo City (札幌市) be converted into Implicit 3D Tiles using Mago 3DTiler in a deterministic and reproducible manner, and then consumed comfortably with CesiumJS from ordinary static HTTP storage?
 
 This experiment is presented in the working style of UN Open GIS Initiative DWG7: modest scope, rigorous recording, empirically cautious conclusions, and full reproducibility.
 
@@ -20,8 +29,9 @@ This experiment is presented in the working style of UN Open GIS Initiative DWG7
 |---|---|
 | **Sarabetsu Village (更別村)** | Smaller, rural target. Used to establish the small-to-municipal workflow, parsing behavior, coordinate correctness, Explicit versus Implicit comparison, and repeated-build repeatability. |
 | **Muroran City (室蘭市)** | Larger, urban target. Used to test denser building distribution, coastal terrain variation, larger output volume, subtree organization, and CesiumJS behavior at meaningful scale. |
+| **Sapporo City (札幌市)** | Largest-scale target (646,474 buildings). Added to demonstrate Implicit's practical-consumption advantage at real metropolitan scale, once Phase 7b established that texture conversion isn't supported by Mago 3DTiler and so wasn't the right reason to add a third municipality. |
 
-The two municipalities are complementary, not competitive.
+The three municipalities are complementary, not competitive.
 
 ## Core position
 
@@ -130,16 +140,11 @@ See [NOTICE](NOTICE) for full attribution.
 
 ## Experimental phases
 
-| Phase | Description | Status |
-|---|---|---|
-| 0 | Environment and source discovery | Complete (both municipalities) |
-| 1 | Small Sarabetsu Explicit baseline | Complete |
-| 2 | Small Sarabetsu Implicit output | Partially complete — generated and geographically verified; full validation blocked by a tooling gap (see findings) |
-| 3 | Determinism testing | Preliminary only — an early signal was found and root-caused, formal procedure not yet run |
-| 4 | Expanded Sarabetsu test | Not started |
-| 5 | Small Muroran test | Not started (a config spot-check only, not a phase run) |
-| 6 | Expanded Muroran test | Not started |
-| 7 | Optional higher-detail tests | Not started |
+Phase-by-phase status (0 through 8, covering all three municipalities)
+is tracked in one place, kept current as work happens:
+[docs/findings.md](docs/findings.md). A separate summary table here
+duplicated that tracking and had already gone stale once — see
+`docs/scope.md`'s phase table for the phase list itself.
 
 ## Pass criteria
 
@@ -154,23 +159,23 @@ See [docs/test-plan.md](docs/test-plan.md) for full criteria. Summary:
 
 ## Current status
 
-Real PLATEAU data has been fetched and inspected for both municipalities,
-and Sarabetsu Village's small-profile Explicit and Implicit builds run
-successfully end to end against a real, pinned Mago 3DTiler 1.16.2. Getting
-here required fixing several pipeline bugs that only surfaced when the
-tool was actually run (wrong CLI flags, a CRS/axis-order mismatch, and a
-"small" profile that was silently building the whole municipality) — see
-[docs/findings.md](docs/findings.md) for the full, evidence-based record,
-including two known tooling gaps (Implicit subtree format handling, and a
-non-deterministic UUID mago-3d-tiler embeds in GLB output) that currently
-block a fully trustworthy Phase 2/3 verdict.
-
-See [docs/findings.md](docs/findings.md) for the experiment log — the
-authoritative source for what's actually been verified, phase by phase.
+Real PLATEAU data has been fetched, built, validated, and published for
+all three municipalities (Phases 0–8), including full-profile builds at
+metropolitan scale (Sapporo: 646,474 buildings) and a real-browser
+practical-consumption measurement. Getting here required fixing several
+pipeline bugs and tooling gaps that only surfaced when the tools were
+actually run against real data — wrong CLI flags, a CRS/axis-order
+mismatch, a vertical-datum (geoid) mismatch, a non-deterministic UUID
+Mago embeds in GLB output, and others. See
+[docs/findings.md](docs/findings.md) for the full, evidence-based
+record — the authoritative source for what's actually been verified,
+phase by phase. It is not all good news: determinism fails at full
+scale for every municipality tested, and Mago 3DTiler does not support
+CityGML texture conversion — both reported plainly, not smoothed over.
 
 ## Limitations and non-goals
 
-- Tests two municipalities only. No planet-scale claims.
+- Tests three municipalities only. No planet-scale claims.
 - LOD1 buildings only in baseline.
 - Roads, terrain, vegetation, and other feature types excluded from baseline.
 - No spatial database, dynamic tile server, or cloud infrastructure required.

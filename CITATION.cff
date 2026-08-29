@@ -7,9 +7,11 @@ title: >
   plateau-mago-implicit: Implicit 3D Tiles from Project PLATEAU CityGML
   using Mago 3DTiler
 abstract: >
-  A small, rigorous, reproducible technical experiment testing whether building
-  data from Project PLATEAU CityGML for Muroran City (室蘭市) and Sarabetsu
-  Village (更別村) can be converted into Implicit 3D Tiles using Mago 3DTiler
+  Also known as PLATEAU Kai, applying the latest open-source technology to
+  Hokkaido PLATEAU data toward faster display. A small, rigorous, reproducible
+  technical experiment testing whether building data from Project PLATEAU
+  CityGML for Muroran City (室蘭市), Sarabetsu Village (更別村), and Sapporo
+  City (札幌市) can be converted into Implicit 3D Tiles using Mago 3DTiler
   in a deterministic and reproducible manner, and consumed comfortably with
   CesiumJS from ordinary static HTTP storage. Presented in the working style
   of UN Open GIS Initiative DWG7.
@@ -30,6 +32,8 @@ keywords:
   - DWG7
   - Muroran
   - Sarabetsu
+  - Sapporo
+  - PLATEAU Kai
 references:
   - type: software
     title: Mago 3DTiler

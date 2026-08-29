@@ -421,3 +421,57 @@ combinations; tile content counts were unchanged from the pre-fix builds
 not tiling structure — and `make validate` on all 4 shows only the
 already-documented, unrelated `METADATA_INVALID_LENGTH` alignment-padding
 pattern, no new error type.
+
+## D22 — Adopted "PLATEAU Kai" as the project's display identity and a broader purpose; the GitHub repo itself is not renamed
+
+**Status:** Accepted, 2026-08-29
+
+The user gave this project a new display name and a broader motivating
+purpose, on top of the existing narrow, rigorous research question
+(D1-D21 territory), rather than replacing it. Name: **PLATEAU Kai** —
+三重の意味 (three meanings): 開 (open, from open-source), 北海道の
+「カイ」(Hokkaido's "kai"), and 快速の「快」(fast/speedy). Purpose
+(user's own Japanese, verbatim): *"2026年最新のオープンソース技術を北海道
+PLATEAU データに施し、より快速な PLATEAU 表示を目指すことで、三次元ウェブ
+地図の現在位置をテストする"* — applying 2026's latest open-source
+technology to Hokkaido PLATEAU data, aiming for faster PLATEAU display,
+as a way to test where 3D web mapping currently stands.
+
+Explicitly asked and confirmed via `AskUserQuestion`: the actual GitHub
+repository stays at `dwg7/plateau-mago-implicit` — no rename. A repo
+rename would have broken the live GitHub Pages URL
+(`dwg7.github.io/plateau-mago-implicit`) and every link already recorded
+in `docs/findings.md`/`HANDOVER.md`/published build records, for a
+purely cosmetic gain; the user chose to keep the URL stable and treat
+"PLATEAU Kai" as a display/branding name layered on top, not a literal
+rename.
+
+Design choice for how the broader purpose relates to the existing
+narrow research question: additive, not a replacement. The four claims
+(conversion feasibility, determinism, reproducibility, practical
+consumption), the hard scope boundaries in `CLAUDE.md` (three
+municipalities, LOD1 baseline, Mago-only, CesiumJS-only, no spatial
+database), and the respectful-positioning guardrails in
+`docs/respectful-positioning.md` are all unchanged — the new purpose
+explains *why* this work matters now, the existing structure remains
+*how* it continues to be evaluated rigorously. Applied consistently:
+`README.md`, `CLAUDE.md`, `docs/hypothesis.md`,
+`docs/respectful-positioning.md`, `CONTRIBUTING.md`, and
+`CITATION.cff` all now lead with the PLATEAU Kai name/purpose, then
+explicitly frame the pre-existing narrow question as the specific
+methodology underneath it — not two disconnected framings competing on
+the same page.
+
+A concrete piece of "latest open-source technology": incorporating
+terrain from `hfu/mapterhorn-japan-bridge` (a GSI-DEM-to-Mapterhorn-
+PMTiles bridge, priority-merging Japan's best available DEM including
+1m GSI DEM1A airborne-laser data) once it stabilizes — see
+`docs/architecture.md`'s new "Viewer terrain" section. Checked its
+actual recent commit history via `gh api` before writing this down as a
+future item rather than immediate work: as of 2026-08-29 it's still
+actively bug-fixing (orphaned tiles, a downsampling convergence issue),
+genuinely not stable yet, consistent with the user's own "once it
+stabilizes" framing. Consequence: no technical integration work is
+planned now, and this isn't tracked as an open task to proactively
+re-check — revisit when the user raises it again, the same way D9's
+"ask before" pattern already governs unprompted scope changes.

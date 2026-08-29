@@ -1,11 +1,18 @@
 # Hypothesis
 
+This project's broader purpose — PLATEAU Kai, applying the latest
+open-source technology to Hokkaido PLATEAU data toward faster display,
+as a way to test where 3D web mapping currently stands (see
+`DECISIONS.md` D22) — is evaluated through the specific, rigorous
+research question and four claims below. They haven't changed; the
+purpose they serve has broadened.
+
 ## Research question
 
-> Can building data from Project PLATEAU CityGML for Muroran City (室蘭市) and
-> Sarabetsu Village (更別村) be converted into Implicit 3D Tiles using Mago 3DTiler
-> in a deterministic and reproducible manner, and then consumed comfortably with
-> CesiumJS from ordinary static HTTP storage?
+> Can building data from Project PLATEAU CityGML for Muroran City (室蘭市),
+> Sarabetsu Village (更別村), and Sapporo City (札幌市) be converted into Implicit
+> 3D Tiles using Mago 3DTiler in a deterministic and reproducible manner, and then
+> consumed comfortably with CesiumJS from ordinary static HTTP storage?
 
 ## Four claims under evaluation
 

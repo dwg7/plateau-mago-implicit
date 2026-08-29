@@ -8,10 +8,18 @@ not being claimed, evaluated, or criticized.
 
 ## What this experiment is
 
-A small, technical feasibility experiment that asks:
+**PLATEAU Kai's** broader purpose is applying the latest open-source
+technology to Hokkaido PLATEAU data toward faster display, as a way to
+test where 3D web mapping currently stands (`DECISIONS.md` D22). That
+purpose is pursued through a small, technical feasibility experiment
+that asks:
 
 > Can an independent open-source regeneration path for PLATEAU building CityGML
 > to Implicit 3D Tiles be maintained under specific operational assumptions?
+
+The guardrails below — what this experiment deliberately is not, and
+the language conventions for describing it — apply just as much under
+the broader purpose as they did under the narrower one.
 
 The operational assumptions are:
 - Only public source data

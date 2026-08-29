@@ -135,3 +135,22 @@ testing Implicit output.
 
 Axis order and epoch handling are recorded in dataset configuration files
 (`config/sarabetsu.yml`, `config/muroran.yml`, `crs:` block).
+
+## Viewer terrain (not part of the conversion pipeline above)
+
+`viewer/viewer.js` renders buildings over real elevation via Re:Earth
+Terrain (`terrain.reearth.land`, a quantized-mesh-1.0 service blending
+Mapterhorn's global DEM with the EGM2008 geoid) — a viewer-only concern,
+independent of the CityGML → Mago → 3D Tiles pipeline above; the
+building GLBs themselves carry no terrain data.
+
+**Planned future source**: `hfu/mapterhorn-japan-bridge` — a
+GSI-DEM-to-Mapterhorn-PMTiles bridge that priority-merges Japan's best
+available DEM (including 1m GSI DEM1A airborne-laser data) until
+upstream Mapterhorn's own Japan source catches up. Part of PLATEAU
+Kai's broader purpose (see `DECISIONS.md` D22) — swapping in
+higher-resolution, Japan-specific terrain once that project stabilizes.
+Not yet integrated: as of 2026-08-29 its own commit history still shows
+active bug-fixing (orphaned tiles, downsampling convergence issues),
+confirmed by checking its recent commits directly rather than assuming
+readiness. No integration work is planned until the user revisits this.

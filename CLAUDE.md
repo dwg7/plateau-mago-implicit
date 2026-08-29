@@ -4,12 +4,24 @@ Guidance for Claude Code (and other AI coding agents) working in this repository
 
 ## What this repository is
 
-A small, rigorous, reproducible technical experiment (UN Open GIS Initiative DWG7
-working style) testing whether Project PLATEAU (プロジェクト PLATEAU) CityGML
-building data for two Hokkaido municipalities — Sarabetsu Village (更別村) and
-Muroran City (室蘭市) — can be converted to **Implicit 3D Tiles** via **Mago
-3DTiler**, deterministically and reproducibly, and served to **CesiumJS** from
-plain static HTTP (no backend, no spatial database).
+**PLATEAU Kai** — applying the latest (2026) open-source technology to
+Project PLATEAU building data for Hokkaido, aiming for faster PLATEAU
+display, as a way to test where 3D web mapping currently stands. See
+`DECISIONS.md` D22 for the full naming rationale (開/カイ/快) and how
+this broader purpose relates to the project's original research
+question.
+
+Concretely, that purpose is pursued through a small, rigorous,
+reproducible technical experiment (UN Open GIS Initiative DWG7 working
+style) testing whether Project PLATEAU (プロジェクト PLATEAU) CityGML
+building data for three Hokkaido municipalities — Sarabetsu Village
+(更別村), Muroran City (室蘭市), and Sapporo City (札幌市) — can be
+converted to **Implicit 3D Tiles** via **Mago 3DTiler**, deterministically
+and reproducibly, and served to **CesiumJS** from plain static HTTP (no
+backend, no spatial database). This experiment — the four claims below,
+the hard scope boundaries, and the respectful-positioning stance — is
+the actual evaluation mechanism; the broader purpose above explains why
+it matters, not a license to relax any of it.
 
 Read [README.md](README.md) and, in order, `docs/hypothesis.md`, `docs/scope.md`,
 `docs/architecture.md`, `docs/test-plan.md` before making non-trivial changes.

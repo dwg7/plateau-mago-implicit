@@ -4,8 +4,11 @@ Thank you for your interest in this experiment. Contributions are welcome.
 
 ## Scope
 
-This repository tests a specific, narrow question (see [README.md](README.md)).
-Contributions should respect that scope.
+This repository (PLATEAU Kai) pursues a broader purpose — applying the
+latest open-source technology to Hokkaido PLATEAU data toward faster
+display — through a specific, rigorously bounded technical question
+(see [README.md](README.md)). Contributions should respect that
+bounded scope, not the broader purpose as license to expand it.
 
 Appropriate contributions include:
 
