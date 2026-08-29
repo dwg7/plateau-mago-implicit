@@ -49,7 +49,7 @@
 // than a denser partial one.
 const VIEWPOINTS = {
   sarabetsu_explicit_full: {
-    label: '更別村 — Explicit（全建物 6,795棟）',
+    label: 'Sarabetsu 7k 旧',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(143.2044, 42.6462, 6000),
     orientation: {
@@ -59,7 +59,7 @@ const VIEWPOINTS = {
     },
   },
   sarabetsu_implicit_full: {
-    label: '更別村 — Implicit（全建物 6,795棟）',
+    label: 'Sarabetsu 7k 改',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(143.2044, 42.6462, 6000),
     orientation: {
@@ -69,7 +69,7 @@ const VIEWPOINTS = {
     },
   },
   muroran_explicit_full: {
-    label: '室蘭市 — Explicit（全建物 55,906棟）',
+    label: 'Muroran 56k 旧',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/explicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(140.9786, 42.3613, 5000),
     orientation: {
@@ -79,7 +79,7 @@ const VIEWPOINTS = {
     },
   },
   muroran_implicit_full: {
-    label: '室蘭市 — Implicit（全建物 55,906棟）',
+    label: 'Muroran 56k 改',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/implicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(140.9786, 42.3613, 5000),
     orientation: {
@@ -91,32 +91,30 @@ const VIEWPOINTS = {
   // Sapporo City (札幌市) — third municipality, added 2026-08-28 to
   // demonstrate Implicit's practical-consumption advantage at real
   // metropolitan scale (646,474 buildings, ~11.6x Muroran's count).
-  // destination/orientation computed the same way as the other entries
-  // above: real full-profile Explicit build's own tileset.json bounding
-  // region (fit to actual building extent, ~31km x 32km — much larger
-  // than Sarabetsu/Muroran), center at lon 141.312568 / lat 43.040184.
-  // Altitude kept at 6000m, matching Sarabetsu's exact value and well
-  // below the ~19.8km distance at which this dataset's root
-  // geometricError (460.05) would stop refining at the default 16px SSE
-  // threshold — same reasoning as the comment block above.
+  // destination/orientation hand-tuned by the user 2026-08-29 (replacing
+  // the earlier auto-computed top-down view) — same values as the URL
+  // hash they supplied: #lon=141.355220&lat=43.047766&h=478&
+  // heading=348.9&pitch=-22.3&roll=360.0, an oblique, human-chosen
+  // viewpoint rather than the bounding-region-fit default the other two
+  // municipalities still use.
   sapporo_explicit_full: {
-    label: '札幌市 — Explicit（全建物 646,474棟）',
+    label: 'Sapporo 646k 旧',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sapporo/explicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(141.312568, 43.040184, 6000),
+    destination: Cesium.Cartesian3.fromDegrees(141.355220, 43.047766, 478),
     orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90),
-      roll: 0,
+      heading: Cesium.Math.toRadians(348.9),
+      pitch: Cesium.Math.toRadians(-22.3),
+      roll: Cesium.Math.toRadians(360.0),
     },
   },
   sapporo_implicit_full: {
-    label: '札幌市 — Implicit（全建物 646,474棟）',
+    label: 'Sapporo 646k 改',
     tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sapporo/implicit/full/latest/tileset.json',
-    destination: Cesium.Cartesian3.fromDegrees(141.312568, 43.040184, 6000),
+    destination: Cesium.Cartesian3.fromDegrees(141.355220, 43.047766, 478),
     orientation: {
-      heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-90),
-      roll: 0,
+      heading: Cesium.Math.toRadians(348.9),
+      pitch: Cesium.Math.toRadians(-22.3),
+      roll: Cesium.Math.toRadians(360.0),
     },
   },
 };
