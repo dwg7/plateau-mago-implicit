@@ -154,15 +154,23 @@ latest tag were confirmed to be the exact same commit, so no unreleased
 snapshot is being missed as of this writing). Full detail: `docs/findings.md`
 Phase 2, `DECISIONS.md` D20.
 
-**A real build is now published to a real public host:**
+**A real build is published to a real public host:**
 `https://tunnel.optgeo.org/plateau-mago-implicit/` (via `scripts/publish.sh`
 / `make publish`, safe-by-default dry run unless `--execute`; SSH target
 is `jaxa.optgeo.org`, distinct from the public HTTPS host — a Cloudflare
 Tunnel detail, see `HANDOVER.md`). The live GitHub Pages viewer
 (`https://dwg7.github.io/plateau-mago-implicit/`) loads and renders it
-correctly. `viewer/viewer.js`'s predefined `VIEWPOINTS` still point at
-same-origin `/tiles/...` paths, not yet repointed at the real hosted URLs
-— see `HANDOVER.md`'s next step.
+correctly, and `viewer/viewer.js`'s `VIEWPOINTS` are repointed at the
+real hosted URLs for all three municipalities.
+
+**This section is a historical log through Phase 2 (2026-08-25) — it is
+deliberately not kept current.** Phases 3-8 (determinism at scale, Muroran,
+LOD1-baseline enforcement, real terrain/geoid correction, Sapporo as a
+third municipality, and the "PLATEAU Kai" identity/purpose framing) all
+landed afterward. For what's actually true right now, read `HANDOVER.md`'s
+top status section and `docs/findings.md`'s summary table — not this
+section, which is kept only for its still-valid operational warnings above
+(the Mago CLI flag gotchas, the CesiumJS version pin reasoning).
 
 ## Working conventions
 
