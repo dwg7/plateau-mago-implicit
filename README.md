@@ -204,5 +204,5 @@ See [CITATION.cff](CITATION.cff).
 - [Mago 3DTiler](https://github.com/Gaia3D/mago-3d-tiler) — CityGML to 3D Tiles conversion
 - [CesiumJS](https://cesium.com/platform/cesiumjs/) — 3D Tiles viewer
 - [3D Tiles specification](https://github.com/CesiumGS/3d-tiles) — output format
-- [UN Open GIS Initiative DWG7](https://www.opengis.net/) — working style reference
+- [UN Open GIS Initiative DWG7](https://github.com/unopengis/7) — working style reference
 
