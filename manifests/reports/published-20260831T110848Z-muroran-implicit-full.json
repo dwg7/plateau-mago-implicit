@@ -1,0 +1,13 @@
+{
+  "schema_version": "1",
+  "build_id": "20260831T110848Z-muroran-implicit-full",
+  "dataset": "muroran",
+  "mode": "implicit",
+  "profile": "full",
+  "published_at": "2026-08-31T13:20:57Z",
+  "remote_host": "spacex.optgeo.org",
+  "remote_path": "/home/stars/data/plateau-mago-implicit/muroran/implicit/full/20260831T110848Z-muroran-implicit-full/",
+  "public_url": "https://depot.optgeo.org/plateau-mago-implicit/muroran/implicit/full/latest/tileset.json",
+  "root_tileset_sha256": "b218f64709e2311f272ad1af42c1eb4c62e9ad54edd03733f52c6fb817700767",
+  "source_build_manifest": "manifests/builds/20260831T110848Z-muroran-implicit-full.yml"
+}

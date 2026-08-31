@@ -475,3 +475,59 @@ stabilizes" framing. Consequence: no technical integration work is
 planned now, and this isn't tracked as an open task to proactively
 re-check — revisit when the user raises it again, the same way D9's
 "ask before" pattern already governs unprompted scope changes.
+
+## D23 — Migrated published 3D Tiles hosting from tunnel.optgeo.org to depot.optgeo.org
+
+**Status:** Accepted and executed, 2026-08-31
+
+`tunnel.optgeo.org` (D19's target) went offline — confirmed two ways:
+the public HTTPS front returned Cloudflare `530` (origin unreachable),
+and `ssh jaxa.optgeo.org` (the SSH/rsync target behind it) failed at the
+`cloudflared access ssh` layer itself with `websocket: bad handshake`,
+consistent with the whole Pi/cloudflared instance being down, not just
+the public site tunnel. Reported by the user as GitHub issue #4, which
+also specified the fix: migrate permanently to `depot.optgeo.org`
+(backed by the "stars" host, SSH via `spacex.optgeo.org`), and that
+host-side config work should go through the separate "stars" Claude Code
+agent while the actual data transfer happens from this project.
+
+**The old host's data could not be recovered** — `data/output/` on this
+machine was empty (per this project's own convention, gitignored/
+not committed) and jaxa was unreachable, so this wasn't a same-bytes
+relocation like D19 was from local output. All 3 datasets × 2 modes
+(Sarabetsu, Muroran, Sapporo — Explicit/Implicit, full profile) were
+rebuilt from the already-fetched local source CityGML (no re-download
+needed) via the project's existing standard pipeline (`make build` →
+`make validate` → `scripts/publish.sh --execute`), then published fresh
+to the new host. `scripts/publish.sh` needed zero code changes — it was
+already fully host-agnostic (`PUBLISH_HOST`/`PUBLISH_PATH`/
+`PUBLISH_USER`/`PUBLISH_URL_BASE` from the environment only), so this
+was purely an `.env` update.
+
+**Coordinated with the "stars" peer agent session before publishing**,
+per the issue's own instruction: asked it to read-only-inspect Martin's
+`config.yml` on the stars host, since `/home/stars/data` (the same root
+Caddy serves `depot.optgeo.org/` from) also holds Martin's PMTiles
+sources, and dumping thousands of unrelated GLB/JSON/subtree files there
+risked confusing Martin's directory scan. It reported back (having read
+Martin's actual scan implementation) that Martin only matches the
+`.pmtiles` extension exactly and silently ignores everything else, and
+confirmed the Caddy root really is `/home/stars/data`. Consequence:
+no server-side config change or restart was needed — a new
+`/home/stars/data/plateau-mago-implicit/` subdirectory is served
+automatically by the existing Caddy `file_server`, the same "no config
+change needed" shape D19 found for tunnel. (The stars agent also flagged
+that many small sequential file writes can trigger repeated Martin
+directory rescans — harmless per its own read of the scan code, since
+non-`.pmtiles` files are skipped immediately, but worth knowing if a
+future publish to this host is large enough to matter.)
+
+New values (real, not placeholders — see `.env.example`): SSH target
+`spacex.optgeo.org` (user `stars`), remote path
+`/home/stars/data/plateau-mago-implicit`, public base
+`https://depot.optgeo.org/plateau-mago-implicit`. `viewer/viewer.js`'s
+6 `VIEWPOINTS[*].tilesetUrl` entries were repointed to the new host
+after all 6 combinations were individually `curl`-verified live (200,
+correct `Content-Type`, CORS headers). This migration is intended as
+permanent, same as D19's original hosting decision — `tunnel.optgeo.org`
+is not being treated as a fallback to restore.

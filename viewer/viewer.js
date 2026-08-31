@@ -12,7 +12,7 @@
 
 // Predefined viewpoints.
 //
-// All entries point at real published builds on tunnel.optgeo.org
+// All entries point at real published builds on depot.optgeo.org
 // (scripts/publish.sh / make publish), so they resolve from the GitHub Pages
 // viewer with no local server needed — verified reachable via `curl -I`
 // 2026-08-26 (see HANDOVER.md "Real public hosting"). Only full-profile
@@ -39,7 +39,7 @@ const VIEWPOINTS = {
   // supplied.
   sarabetsu_explicit_full: {
     label: 'Sarabetsu 7k 旧',
-    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/full/latest/tileset.json',
+    tilesetUrl: 'https://depot.optgeo.org/plateau-mago-implicit/sarabetsu/explicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(143.195052, 42.645487, 250),
     orientation: {
       heading: Cesium.Math.toRadians(285.3),
@@ -49,7 +49,7 @@ const VIEWPOINTS = {
   },
   sarabetsu_implicit_full: {
     label: 'Sarabetsu 7k Kai',
-    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/full/latest/tileset.json',
+    tilesetUrl: 'https://depot.optgeo.org/plateau-mago-implicit/sarabetsu/implicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(143.195052, 42.645487, 250),
     orientation: {
       heading: Cesium.Math.toRadians(285.3),
@@ -59,7 +59,7 @@ const VIEWPOINTS = {
   },
   muroran_explicit_full: {
     label: 'Muroran 56k 旧',
-    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/explicit/full/latest/tileset.json',
+    tilesetUrl: 'https://depot.optgeo.org/plateau-mago-implicit/muroran/explicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(141.051824, 42.367087, 759),
     orientation: {
       heading: Cesium.Math.toRadians(233.2),
@@ -69,7 +69,7 @@ const VIEWPOINTS = {
   },
   muroran_implicit_full: {
     label: 'Muroran 56k Kai',
-    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/muroran/implicit/full/latest/tileset.json',
+    tilesetUrl: 'https://depot.optgeo.org/plateau-mago-implicit/muroran/implicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(141.051824, 42.367087, 759),
     orientation: {
       heading: Cesium.Math.toRadians(233.2),
@@ -88,7 +88,7 @@ const VIEWPOINTS = {
   // of this object).
   sapporo_explicit_full: {
     label: 'Sapporo 646k 旧',
-    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sapporo/explicit/full/latest/tileset.json',
+    tilesetUrl: 'https://depot.optgeo.org/plateau-mago-implicit/sapporo/explicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(141.355220, 43.047766, 478),
     orientation: {
       heading: Cesium.Math.toRadians(348.9),
@@ -98,7 +98,7 @@ const VIEWPOINTS = {
   },
   sapporo_implicit_full: {
     label: 'Sapporo 646k Kai',
-    tilesetUrl: 'https://tunnel.optgeo.org/plateau-mago-implicit/sapporo/implicit/full/latest/tileset.json',
+    tilesetUrl: 'https://depot.optgeo.org/plateau-mago-implicit/sapporo/implicit/full/latest/tileset.json',
     destination: Cesium.Cartesian3.fromDegrees(141.355220, 43.047766, 478),
     orientation: {
       heading: Cesium.Math.toRadians(348.9),

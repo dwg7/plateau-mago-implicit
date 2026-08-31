@@ -1,0 +1,13 @@
+{
+  "schema_version": "1",
+  "build_id": "20260831T111153Z-sapporo-explicit-full",
+  "dataset": "sapporo",
+  "mode": "explicit",
+  "profile": "full",
+  "published_at": "2026-08-31T13:24:51Z",
+  "remote_host": "spacex.optgeo.org",
+  "remote_path": "/home/stars/data/plateau-mago-implicit/sapporo/explicit/full/20260831T111153Z-sapporo-explicit-full/",
+  "public_url": "https://depot.optgeo.org/plateau-mago-implicit/sapporo/explicit/full/latest/tileset.json",
+  "root_tileset_sha256": "7e34c339ea2531230e2ba31fc76b563563e85d076b5af8f1793546d0034db78a",
+  "source_build_manifest": "manifests/builds/20260831T111153Z-sapporo-explicit-full.yml"
+}

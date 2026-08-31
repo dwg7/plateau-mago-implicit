@@ -6,6 +6,35 @@ work session — it should always answer "what's the state right now and what's
 the next concrete step," not narrate history (that's what git log and
 `docs/findings.md` are for).
 
+## Status as of 2026-08-31 (this session)
+
+**Issue #2 and #4 triage, plus a real hosting migration forced by an
+outage.** GitHub issue #2 (a wrong "UN Open GIS Initiative DWG7" link in
+`README.md`, pointing at `opengis.net` instead of
+`github.com/unopengis/7`) had a stalled Copilot PR (#3) with zero actual
+diff — fixed directly on `main` instead, PR closed as superseded.
+
+**Issue #4: `tunnel.optgeo.org` went offline for real** — confirmed via
+both the public HTTPS front (Cloudflare `530`) and SSH to
+`jaxa.optgeo.org` itself failing (`cloudflared access ssh`:
+`websocket: bad handshake`), so this wasn't just a Cloudflare Tunnel
+hiccup, the whole old host was unreachable. The already-published tile
+bytes could not be recovered (local `data/output/` was empty, per this
+project's own convention). **Migrated to `depot.optgeo.org`** (SSH via
+`spacex.optgeo.org`, the "stars" host) by rebuilding all 3 datasets × 2
+modes from already-fetched local source CityGML (no re-download needed)
+and publishing fresh — `scripts/publish.sh` needed no code changes, only
+a new `.env`. Coordinated with the separate "stars" peer agent session
+first (per the issue's own instruction) to confirm Martin's `config.yml`
+wouldn't be confused by non-`.pmtiles` files landing in the same
+`/home/stars/data` root Caddy serves from — it wasn't (Martin matches
+`.pmtiles` by extension only), so no server-side config change or
+restart was needed, same "no config change" shape as the original D19
+tunnel setup. All 6 combinations `curl`-verified live on the new host
+before `viewer/viewer.js`'s `VIEWPOINTS` were repointed. Full rationale:
+`DECISIONS.md` D23. This migration is intended as permanent — see "Real
+public hosting" below, now updated to depot.
+
 ## Status as of 2026-08-29 (this session)
 
 **Two unrelated threads: a project identity/purpose change, and closing
@@ -297,7 +326,18 @@ Phase 2 for the full reasoning and honest confidence caveat.
 (`ahead_by: 0, behind_by: 0` via the GitHub compare API). No newer
 unreleased fixes are being missed.
 
-## Real public hosting: tunnel.optgeo.org
+## Real public hosting: tunnel.optgeo.org (historical — see below for the current host)
+
+**Update 2026-08-31: `tunnel.optgeo.org`/`jaxa.optgeo.org` went offline
+and this project migrated to `depot.optgeo.org`/`spacex.optgeo.org`.**
+Everything in this section describes the original (now-defunct) setup —
+still useful for understanding the pattern (SSH target ≠ public host,
+directory layout, `scripts/publish.sh`'s mechanics), all of which carried
+over unchanged to the new host. Current real values: SSH
+`spacex.optgeo.org` (user `stars`), path
+`/home/stars/data/plateau-mago-implicit`, public base
+`https://depot.optgeo.org/plateau-mago-implicit`. Full detail:
+`DECISIONS.md` D23, "Status as of 2026-08-31" at the top of this file.
 
 The user's own infrastructure — Raspberry Pi 4B, Caddy + Cloudflare
 Tunnel + Martin (Martin serves PMTiles/vector tiles only, unrelated to
@@ -345,11 +385,16 @@ check this session; network-level (`fetch()`, layer/provider counts) and
 math-level (bounding-region computation) checks are solid, actual
 on-screen appearance needs the user's own browser.
 
-Real, currently-live URLs (`<dataset>/<mode>/full`):
+Real, live-at-the-time URLs (`<dataset>/<mode>/full`) — as of this
+2026-08-25/26 entry, only Sarabetsu/Muroran existed and the host was
+still tunnel.optgeo.org:
 - `sarabetsu/explicit/full`, `sarabetsu/implicit/full`
 - `muroran/explicit/full`, `muroran/implicit/full`
 
-  (pattern: `https://tunnel.optgeo.org/plateau-mago-implicit/<dataset>/<mode>/full/latest/tileset.json`)
+  (pattern at the time: `https://tunnel.optgeo.org/plateau-mago-implicit/<dataset>/<mode>/full/latest/tileset.json`
+  — **current pattern (2026-08-31+, all 3 datasets):**
+  `https://depot.optgeo.org/plateau-mago-implicit/<dataset>/<mode>/full/latest/tileset.json`,
+  see `DECISIONS.md` D23.)
 
 `config/tunnel-optgeo.Caddyfile` (a draft Caddy config with per-extension
 MIME/CORS/cache headers) exists in the repo but **was not applied** —
@@ -1282,7 +1327,7 @@ Lower-priority, tracked but not blocking:
 | Architecture decisions and why (D1–D19+) | `DECISIONS.md` |
 | Agent working conventions | `CLAUDE.md` |
 | Live GitHub Pages viewer | https://dwg7.github.io/plateau-mago-implicit/ |
-| Live published tiles | https://tunnel.optgeo.org/plateau-mago-implicit/ |
+| Live published tiles | https://depot.optgeo.org/plateau-mago-implicit/ (migrated from tunnel.optgeo.org 2026-08-31, `DECISIONS.md` D23) |
 
 ## Open questions for the user
 

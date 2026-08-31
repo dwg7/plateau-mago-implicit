@@ -1,14 +1,17 @@
-# Tile hosting plan (draft — not executed)
+# Tile hosting plan
 
-**Status: scaffolding built, nothing executed.** The local-only pieces —
-`scripts/publish.sh` (defaults to a safe dry run) and the draft
-`config/tunnel-optgeo.Caddyfile` — now exist and are tested against the
-real local build output. **No files have been transferred to any external
-host, no remote configuration has been changed, and no DNS/tunnel
-settings have been touched.** Applying the Caddy config and running
-`scripts/publish.sh --execute` for real both require the user's explicit
-go-ahead (per the project's action-permission rules — publishing to a
-public host is not something to do unprompted).
+**Status: accepted, executed, and — as of 2026-08-31 — migrated to a new
+host.** This file's body below is largely the original 2026-08-25 design
+document for the first target, `tunnel.optgeo.org` (see D19); most of it
+(rsync mechanism, directory layout convention, "no credentials in the
+repo" constraints) is unchanged and still accurate. **The live target is
+now `depot.optgeo.org`** (SSH: `spacex.optgeo.org`), not
+`tunnel.optgeo.org` — the original host went offline (GitHub issue #4)
+and all 6 dataset/mode full-profile combinations were rebuilt and
+re-published to the new host the same day. Full rationale: `DECISIONS.md`
+D23. Read "Target" below as describing the *original* host for context;
+current real values live in `.env`/`.env.example` and
+`viewer/viewer.js`'s `VIEWPOINTS`.
 
 ## Why
 
