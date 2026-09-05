@@ -198,6 +198,10 @@ See [docs/reproducibility.md](docs/reproducibility.md).
 
 See [CITATION.cff](CITATION.cff).
 
+## Related projects
+
+- [hfu/kitaphoto17-navara](https://github.com/hfu/kitaphoto17-navara) — same PLATEAU building data via Navara
+
 ## Upstream acknowledgements
 
 - [Project PLATEAU](https://www.mlit.go.jp/plateau/) — source building data
